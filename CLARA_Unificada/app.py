@@ -1312,6 +1312,27 @@ def present_reminder(parent: tk.Misc, alert: dict[str, str], db: sqlite3.Connect
     return window
 
 
+def compute_adaptive_window_geometry(screen_width: int, screen_height: int) -> dict[str, int | str]:
+    """Compute safe window dimensions and minsize that fit small screens and 125%/150% Windows DPI scaling."""
+    sw = max(680, int(screen_width or 1280))
+    sh = max(440, int(screen_height or 820))
+    min_w = min(680, max(560, sw - 40))
+    min_h = min(440, max(380, sh - 60))
+    width = min(1280, max(min_w, sw - 48))
+    height = min(820, max(min_h, sh - 72))
+    x = max(0, (sw - width) // 2)
+    y = max(0, (sh - height) // 3)
+    return {
+        "width": width,
+        "height": height,
+        "x": x,
+        "y": y,
+        "min_width": min_w,
+        "min_height": min_h,
+        "geometry": f"{width}x{height}+{x}+{y}",
+    }
+
+
 def sphere_radius_for_state(state: str, width: float = 150.0, height: float = 112.0) -> float:
     """Compute sphere radius; expands only when state == 'speaking'."""
     expanded = state == "speaking"
@@ -1339,17 +1360,17 @@ class ClaraSphere(tk.Canvas):
     def set_state(self, state: str) -> None:
         if state not in ("idle", "listening", "speaking"):
             state = "idle"
+        if self._animation_id is not None:
+            try:
+                self.after_cancel(self._animation_id)
+            except tk.TclError:
+                pass
+            self._animation_id = None
         self.state = state
         self.phase = 0.0
         if state == "speaking":
             self._tick()
         else:
-            if self._animation_id is not None:
-                try:
-                    self.after_cancel(self._animation_id)
-                except tk.TclError:
-                    pass
-                self._animation_id = None
             self.draw()
 
     def _tick(self) -> None:
@@ -2239,9 +2260,7 @@ class AssistantApp(tk.Tk):
                     pass
         super().__init__()
         self.title(APP_NAME)
-        self.geometry("1280x820")
-        # Avoid a minimum window taller than the available work area on scaled/small displays.
-        self.minsize(680, 440)
+        self._apply_adaptive_geometry()
         self.configure(bg="#07111f")
         self.db = connect_db()
         self.settings = load_settings()
@@ -2286,6 +2305,16 @@ class AssistantApp(tk.Tk):
         self.after(1500, self.check_reminders)
         self.after(200, self.process_ai_results)
         self.after(600, self.refresh_ollama_models)
+
+    def _apply_adaptive_geometry(self) -> None:
+        try:
+            sw = int(self.winfo_screenwidth())
+            sh = int(self.winfo_screenheight())
+        except Exception:
+            sw, sh = 1280, 820
+        spec = compute_adaptive_window_geometry(sw, sh)
+        self.minsize(int(spec["min_width"]), int(spec["min_height"]))
+        self.geometry(str(spec["geometry"]))
 
     def _setup_style(self) -> None:
         style = ttk.Style(self)
@@ -2349,12 +2378,16 @@ class AssistantApp(tk.Tk):
         for label, command, style_name in toolbar_actions:
             ttk.Button(toolbar, text=label, command=command, style=style_name).pack(side="left", padx=(0, 7), pady=2)
 
+        footer = ttk.Frame(root)
+        footer.pack(side="bottom", fill="x", pady=(8, 0))
+        ttk.Label(footer, text="Avisos de tareas/clases programados con Windows; sesión de usuario iniciada requerida.", style="Subtitle.TLabel").pack(anchor="w")
+
         body = ttk.Frame(root)
-        body.pack(fill="both", expand=True)
-        left = ttk.Frame(body, style="Card.TFrame", padding=18)
-        left.pack(side="left", fill="both", expand=True, padx=(0, 12))
-        right = ttk.Frame(body, style="Card.TFrame", padding=18)
-        right.pack(side="left", fill="both", expand=True, padx=(12, 0))
+        body.pack(side="top", fill="both", expand=True)
+        left = ttk.Frame(body, style="Card.TFrame", padding=14)
+        left.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        right = ttk.Frame(body, style="Card.TFrame", padding=14)
+        right.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
         left_heading = ttk.Frame(left, style="Card.TFrame")
         left_heading.pack(fill="x")
@@ -2387,7 +2420,7 @@ class AssistantApp(tk.Tk):
         # Grid reserves rows for the voice controls and text composer. The growing
         # transcript can shrink instead of pushing the input below the screen edge.
         right.grid_columnconfigure(0, weight=1)
-        right.grid_rowconfigure(4, weight=1)
+        right.grid_rowconfigure(4, weight=1, minsize=72)
         chat_banner = ttk.Frame(right, style="Card.TFrame")
         chat_banner.grid(row=0, column=0, sticky="ew", pady=(0, 2))
         chat_banner_text = ttk.Frame(chat_banner, style="Card.TFrame")
@@ -2399,29 +2432,30 @@ class AssistantApp(tk.Tk):
         self.sphere_state_label = ttk.Label(right, text="En espera · esfera compacta", background="#0d1b2d", foreground="#91aabd")
         self.sphere_state_label.grid(row=1, column=0, sticky="w", pady=(0, 6))
         model_row = ttk.Frame(right, style="Card.TFrame")
-        model_row.grid(row=2, column=0, sticky="ew", pady=(0, 10))
+        model_row.grid(row=2, column=0, sticky="ew", pady=(0, 8))
         ttk.Label(model_row, text="Modelo:", background="#0d1b2d").pack(side="left", padx=(0, 6))
         self.model_var = tk.StringVar(value="")
         self.model_combo = ttk.Combobox(model_row, textvariable=self.model_var, values=(), state="readonly", width=24)
         self.model_combo.pack(side="left", fill="x", expand=True)
         ttk.Button(model_row, text="Detectar Ollama", command=self.refresh_ollama_models).pack(side="left", padx=(8, 0))
         self.ollama_status = ttk.Label(right, text="IA local inactiva · tareas y recordatorios siguen funcionando", background="#0d1b2d", foreground="#91aabd")
-        self.ollama_status.grid(row=3, column=0, sticky="w", pady=(0, 8))
-        self.chat_log = tk.Text(right, height=8, wrap="word", state="disabled", relief="flat", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff", padx=12, pady=12, font=("Segoe UI", 10))
+        self.ollama_status.grid(row=3, column=0, sticky="w", pady=(0, 6))
+        self.chat_log = tk.Text(right, height=3, wrap="word", state="disabled", relief="flat", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff", padx=12, pady=10, font=("Segoe UI", 10))
         self.chat_log.grid(row=4, column=0, sticky="nsew")
         self.chat_log.tag_configure("speaker", font=("Segoe UI", 9, "bold"), foreground="#60e2df", spacing1=8)
         voice_row = ttk.Frame(right, style="Card.TFrame")
         voice_row.grid(row=5, column=0, sticky="ew", pady=(8, 0))
+        voice_row.grid_columnconfigure((0, 1, 2), weight=1)
         self.voice_button = ttk.Button(voice_row, text="🎙 Pulsar para hablar", command=self.toggle_voice)
-        self.voice_button.pack(side="left")
+        self.voice_button.grid(row=0, column=0, sticky="ew", padx=(0, 4))
         self.repeat_voice_button = ttk.Button(voice_row, text="🔊 Repetir última respuesta", command=self.speak_last_response)
-        self.repeat_voice_button.pack(side="left", padx=6)
+        self.repeat_voice_button.grid(row=0, column=1, sticky="ew", padx=4)
         self.voice_diag_button = ttk.Button(voice_row, text="🩺 Diagnóstico de voz", command=self.open_voice_diagnostics)
-        self.voice_diag_button.pack(side="left")
+        self.voice_diag_button.grid(row=0, column=2, sticky="ew", padx=(4, 0))
         self.voice_status = ttk.Label(right, text="Micrófono apagado", background="#0d1b2d", foreground="#91aabd")
         self.voice_status.grid(row=6, column=0, sticky="w", pady=(3, 0))
         self.chat_prompt_label = ttk.Label(right, text="Escribe un mensaje para Clara:", background="#0d1b2d", foreground="#eff8ff")
-        self.chat_prompt_label.grid(row=7, column=0, sticky="w", pady=(8, 3))
+        self.chat_prompt_label.grid(row=7, column=0, sticky="w", pady=(6, 3))
         entry_row = ttk.Frame(right, style="Card.TFrame")
         entry_row.grid(row=8, column=0, sticky="ew")
         self.chat_input = ttk.Entry(entry_row)
@@ -2429,10 +2463,6 @@ class AssistantApp(tk.Tk):
         self.chat_input.bind("<Return>", lambda _event: self.send_chat())
         self.send_button = ttk.Button(entry_row, text="Enviar", style="Accent.TButton", command=self.send_chat)
         self.send_button.pack(side="left", padx=(8, 0))
-
-        footer = ttk.Frame(root)
-        footer.pack(fill="x", pady=(14, 0))
-        ttk.Label(footer, text="Avisos de tareas/clases programados con Windows; sesión de usuario iniciada requerida.", style="Subtitle.TLabel").pack(anchor="w")
 
     def open_local_file_tools(self, intent: dict | None = None) -> None:
         """Open a manual, non-persistent search/inventory tool; intent only prefills a safe workflow."""
@@ -4165,7 +4195,7 @@ class AssistantApp(tk.Tk):
             return
         self.voice_active = True
         self.voice_stop = threading.Event()
-        self.set_sphere_state("idle")
+        self.set_sphere_state("listening")
         self.voice_button.configure(text="■ Detener micrófono")
         self.voice_status.configure(text="Iniciando reconocimiento local…")
         threading.Thread(target=self._voice_worker, args=(self.voice_stop, model_path), daemon=True).start()
@@ -5934,6 +5964,7 @@ Para operaciones de archivos, no devuelvas rutas, ni selecciones una carpeta/doc
 
     def emergency_stop(self) -> None:
         active = False
+        self.set_sphere_state("idle")
         if self.vt_busy:
             active = True
             self.vt_cancel_event.set()

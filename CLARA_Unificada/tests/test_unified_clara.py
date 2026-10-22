@@ -1013,6 +1013,65 @@ END:VCALENDAR\r
         self.assertEqual(send_chat_called, [])  # Nunca se envía sin pulsar Enviar manualmente
         self.assertFalse(fake_app.voice_active)  # Micrófono vuelve a quedar apagado
 
+    def test_etapa4_adaptive_geometry_sphere_states_and_honest_emergency_stop(self) -> None:
+        # 1. Geometría adaptativa en pantallas pequeñas y escalado Windows 100%, 125% y 150%
+        for sw, sh in ((1920, 1080), (1366, 768), (1092, 614), (910, 512), (800, 480)):
+            spec = app.compute_adaptive_window_geometry(sw, sh)
+            self.assertLessEqual(int(spec["width"]), sw)
+            self.assertLessEqual(int(spec["height"]), sh)
+            self.assertLessEqual(int(spec["min_width"]), int(spec["width"]))
+            self.assertLessEqual(int(spec["min_height"]), int(spec["height"]))
+            self.assertIn(f"{spec['width']}x{spec['height']}+", str(spec["geometry"]))
+
+        # 2. Esfera compacta en idle/listening y expandida únicamente en speaking
+        r_idle = app.sphere_radius_for_state("idle", 150, 112)
+        r_listening = app.sphere_radius_for_state("listening", 150, 112)
+        r_speaking = app.sphere_radius_for_state("speaking", 150, 112)
+        self.assertEqual(r_idle, r_listening)
+        self.assertGreater(r_speaking, r_idle)
+
+        # 3. Parada de emergencia honesta: cancela operaciones activas sin afirmar que revierte SQLite
+        chat_messages: list[tuple[str, str]] = []
+        sphere_states: list[str] = []
+        closed_responses: list[bool] = []
+
+        class _ClosableResponse:
+            def close(self) -> None:
+                closed_responses.append(True)
+
+        scan_cancel = threading.Event()
+        fake_app = SimpleNamespace(
+            vt_busy=True,
+            vt_cancel_event=threading.Event(),
+            local_scan_cancel_event=scan_cancel,
+            ai_busy=True,
+            cancel_event=threading.Event(),
+            response_lock=threading.Lock(),
+            active_response=_ClosableResponse(),
+            voice_active=True,
+            voice_stop=threading.Event(),
+            tts_active=True,
+            tts_cancel_event=threading.Event(),
+            ollama_status=SimpleNamespace(configure=lambda **_kw: None),
+            voice_status=SimpleNamespace(configure=lambda **_kw: None),
+            set_sphere_state=lambda st: sphere_states.append(st),
+            append_chat=lambda spk, txt, **_kw: chat_messages.append((spk, txt)),
+        )
+        app.AssistantApp.emergency_stop(fake_app)
+
+        self.assertTrue(fake_app.vt_cancel_event.is_set())
+        self.assertTrue(scan_cancel.is_set())
+        self.assertTrue(fake_app.cancel_event.is_set())
+        self.assertTrue(fake_app.voice_stop.is_set())
+        self.assertTrue(fake_app.tts_cancel_event.is_set())
+        self.assertEqual(closed_responses, [True])
+        self.assertEqual(sphere_states[-1], "idle")
+        self.assertEqual(len(chat_messages), 1)
+        speaker, msg = chat_messages[0]
+        self.assertEqual(speaker, "Control de emergencia")
+        self.assertIn("las tareas ya guardadas no se revierten", msg)
+        self.assertIn("llamada bloqueante del sistema de archivos puede tardar", msg)
+
 
 if __name__ == "__main__":
     unittest.main()
