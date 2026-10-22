@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "stores": {
+    "short_term": "list[MemoryItem]",
+    "long_term": "list[MemoryItem]",
+    "conversations": "list[MemoryItem]",
+    "preferences": "dict[key,value,updated_at]",
+    "projects": "dict[name,data,updated_at]"
+  }
+}

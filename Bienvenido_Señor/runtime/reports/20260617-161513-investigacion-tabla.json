@@ -1,0 +1,36 @@
+{
+  "title": "Investigacion estructurada",
+  "summary": "Organice resultados para: mis gastos.",
+  "assumptions": [
+    {
+      "key": "fuente",
+      "value": "busqueda web best-effort",
+      "confidence": 0.65
+    },
+    {
+      "key": "exactitud",
+      "value": "solo datos encontrados en el resumen",
+      "confidence": 0.6
+    }
+  ],
+  "risks": [],
+  "recommendation": "Para mejorar la tabla, especifique columnas y datos a investigar.",
+  "table": {
+    "title": "Tabla de investigacion",
+    "columns": [
+      "elemento",
+      "resumen",
+      "fuente"
+    ],
+    "rows": [
+      [
+        "No encontre resultados claros",
+        "No encontre resultados claros",
+        "resultado 1"
+      ]
+    ]
+  },
+  "chart": null,
+  "needs_input": [],
+  "created_at": "2026-06-17T16:15:13"
+}

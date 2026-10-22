@@ -1,0 +1,19 @@
+{
+  "title": "Simulacion beta de presupuesto",
+  "summary": "Puedo simular el presupuesto, pero falta el monto a proyectar.",
+  "assumptions": [
+    {
+      "key": "periodo",
+      "value": "7 dias",
+      "confidence": 0.6
+    }
+  ],
+  "risks": [],
+  "recommendation": "Ejemplo: simula si gasto 200 pesos diarios esta semana.",
+  "table": null,
+  "chart": null,
+  "needs_input": [
+    "monto diario o total a simular"
+  ],
+  "created_at": "2026-05-27T22:12:47"
+}

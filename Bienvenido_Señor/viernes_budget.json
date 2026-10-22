@@ -1,0 +1,39 @@
+{
+  "balance": 150.0,
+  "income": [
+    {
+      "id": "1779206229.192488",
+      "amount": 450.0,
+      "description": "Ingreso",
+      "date": "2026-05-19",
+      "timestamp": "2026-05-19T09:57:09.192516"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "1779206328.920549",
+      "amount": 50.0,
+      "description": "Gasto",
+      "category": "otros",
+      "date": "2026-05-19",
+      "timestamp": "2026-05-19T09:58:48.920589"
+    },
+    {
+      "id": "1779849680.258263",
+      "amount": 100.0,
+      "description": "gastos en",
+      "category": "otros",
+      "date": "2026-05-26",
+      "timestamp": "2026-05-26T20:41:20.258301"
+    },
+    {
+      "id": "1779986955.551888",
+      "amount": 150.0,
+      "description": "de  en la universidad.",
+      "category": "otros",
+      "date": "2026-05-28",
+      "timestamp": "2026-05-28T10:49:15.551911"
+    }
+  ],
+  "budget_limit": 0.0
+}

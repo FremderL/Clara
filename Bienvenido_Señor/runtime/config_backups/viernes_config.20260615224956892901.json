@@ -1,0 +1,324 @@
+{
+  "assistant_name": "Viernes",
+  "timezone": "America/Mexico_City",
+  "voice_enabled": true,
+  "push_to_talk_hotkey": "left alt",
+  "habit_monitor_timeout_seconds": 600,
+  "tts_type": "edge",
+  "tts_rate": 165,
+  "event_grace_minutes": 12,
+  "scheduler_stop_pause_minutes": 10,
+  "scheduler_duplicate_window_minutes": 15,
+  "ai_enabled": true,
+  "ai_base_url": "http://localhost:11434",
+  "ai_model": "llama3.2",
+  "ui": {
+    "mode": "modern"
+  },
+  "voice_profile": "default",
+  "wake_word": "viernes",
+  "security": {
+    "user_level": 1,
+    "allowed_roots": [],
+    "allowed_scripts": [],
+    "password_hash": ""
+  },
+  "plugins": {
+    "enabled": true,
+    "enabled_plugins": [],
+    "disabled": []
+  },
+  "automation": {
+    "startup_enabled": true,
+    "morning_wake_time": "08:30",
+    "auto_login_warning_acknowledged": false
+  },
+  "morning_wake_enabled": true,
+  "ambient_companion": {
+    "enabled": true,
+    "interval_minutes": 90,
+    "wake_time": "07:30",
+    "sleep_time": "22:30",
+    "messages": [
+      "Estoy atento. Si el dia se empieza a cargar, puedo ayudarle a ordenar lo siguiente.",
+      "Podemos revisar agenda, noticias o pendientes cuando quiera, pero tambien puedo sacar un tema distinto.",
+      "Si nota mucho ruido mental, lo bajamos a una accion clara y seguimos desde ahi.",
+      "Sigo por aqui. Puedo proponerle un tema, revisar contexto o ayudarle a preparar lo que viene."
+    ]
+  },
+  "conversation": {
+    "proactive_topics_enabled": true,
+    "small_talk": [
+      "Un paso claro a tiempo suele valer mas que muchas decisiones apuradas.",
+      "Si quiere, puedo ayudarle a ordenar lo siguiente para que el dia quede mas limpio.",
+      "A veces basta con dejar claras dos prioridades para que todo avance mejor.",
+      "Podemos revisar lo practico o conversar de algo distinto; no todo tiene que ser pendiente.",
+      "Me gusta cuando el dia tiene un poco de aire. Podemos dejar listo lo urgente y pensar con calma."
+    ],
+    "facts": [
+      "Dato curioso: Saturno flotaria en agua si existiera un oceano lo bastante grande.",
+      "Dato curioso: dormir bien mejora mas la memoria de lo que suele parecer.",
+      "Dato curioso: el primer correo electronico se envio en 1971.",
+      "Dato curioso: la luz del Sol tarda alrededor de ocho minutos en llegar a la Tierra.",
+      "Dato curioso: el vidrio puede reciclarse muchas veces sin perder demasiada calidad."
+    ],
+    "tips": [
+      "Consejo breve: preparar lo esencial la noche anterior reduce mucho la prisa del dia siguiente.",
+      "Consejo breve: si una tarea parece pesada, empezar por cinco minutos suele romper la inercia.",
+      "Consejo breve: revisar primero agenda y horario evita decisiones repetidas durante el dia.",
+      "Consejo breve: dejar solo lo necesario a la vista suele ayudar a mantener el enfoque.",
+      "Consejo breve: si hay demasiados pendientes, escoja uno que destrabe a los demas."
+    ],
+    "jokes": [
+      "¿Por que el programador confundio Halloween con Navidad? Porque OCT 31 es igual a DEC 25.",
+      "Le iba a contar un chiste sobre procesos, pero se quedo bloqueado esperando recursos.",
+      "El codigo compilo a la primera. Nadie se movio. Todos sospecharon.",
+      "Mi teclado queria vacaciones, pero dejo todo en pausa.",
+      "¿Por que la laptop estaba tranquila? Porque al fin entro en modo suspension sin interrupciones.",
+      "¿Cual es el colmo de un asistente digital? Que le pidan memoria y ya la tenga ocupada con pendientes."
+    ],
+    "quotes": [
+      "La constancia silenciosa suele construir resultados mas firmes que la prisa.",
+      "Tener claro lo siguiente que toca hacer reduce mucho el desgaste mental.",
+      "No hace falta resolverlo todo hoy; basta con avanzar de forma estable.",
+      "Organizar primero lo importante suele mejorar el resto del dia.",
+      "Lo constante no siempre se ve heroico, pero construye casi todo lo que dura."
+    ]
+  },
+  "proactivity": {
+    "enabled": true,
+    "mode": "conservative",
+    "interval_minutes": 120,
+    "lookahead_minutes": 120,
+    "max_per_tick": 1
+  },
+  "news_preferences": {
+    "preferred_topic": "world"
+  },
+  "default_city": "Colima, Colima, Mexico",
+  "weather_lat": 19.2454,
+  "weather_lon": -103.7246,
+  "class_schedule": {
+    "monday": [
+      "Sistemas Digitales",
+      "Desarrollo de Software"
+    ],
+    "tuesday": [
+      "Desarrollo Emprendedor",
+      "metodos numericos",
+      "servicios de internet"
+    ],
+    "wednesday": [
+      "Sistemas Digitales",
+      "POO",
+      "Desarrollo de Software"
+    ],
+    "thursday": [
+      "Ingles",
+      "Desarrollo Emprendedor",
+      "metodos numericos",
+      "servicios de internet"
+    ],
+    "friday": [
+      "Ingles",
+      "POO"
+    ],
+    "saturday": [],
+    "sunday": []
+  },
+  "weekly_routines": {
+    "default_university_day": {
+      "enabled_weekdays": [
+        "tuesday",
+        "wednesday"
+      ],
+      "reminders": [
+        {
+          "id": "wake_up",
+          "time": "07:30",
+          "message": "Buenos dias. Ya es hora de empezar el dia."
+        },
+        {
+          "id": "breakfast",
+          "time": "09:00",
+          "message": "Son las 9:00. Recuerde desayunar."
+        },
+        {
+          "id": "leave_countdown_120",
+          "time": "10:00",
+          "message": "Falta una hora para empezar a prepararse."
+        },
+        {
+          "id": "prep_warning",
+          "time": "11:00",
+          "message": "Ya toca empezar a prepararse para salir: desodorante, perfume, dientes, lonche, barrer, mochila y pendientes."
+        },
+        {
+          "id": "leave_countdown_60",
+          "time": "11:30",
+          "message": ""
+        },
+        {
+          "id": "leave_checklist",
+          "time": "12:00",
+          "message": "Salgo ya de la casa."
+        },
+        {
+          "id": "leave_checklist_followup",
+          "time": "",
+          "message": ""
+        }
+      ],
+      "bath_followup": {
+        "start": "19:35",
+        "repeat_minutes": 20,
+        "stop": "22:30",
+        "message": "Recuerde bañarse. Avise con: ya me bañe."
+      }
+    },
+    "monday": {
+      "skip_morning_routine": true,
+      "skip_recurring_reminders": true,
+      "attendance_on_arrival": true,
+      "leave_time": "16:50",
+      "expected_arrival_window": [
+        "17:00",
+        "17:30"
+      ],
+      "arrival_message": "Cuando llegue aviseme para pase de lista.",
+      "bath_followup": {
+        "start": "17:00",
+        "repeat_minutes": 15,
+        "stop": "19:30",
+        "message": "Recuerde bañarse. Avise con: ya me bañe."
+      }
+    },
+    "thursday": {
+      "leave_time": "11:00",
+      "reminders": [
+        {
+          "id": "thursday_wake",
+          "time": "07:30",
+          "message": "Buenos dias. Ya es hora de empezar el dia."
+        },
+        {
+          "id": "thursday_breakfast",
+          "time": "09:00",
+          "message": "Son las 9:00. Recuerde desayunar."
+        },
+        {
+          "id": "thursday_prep",
+          "time": "10:00",
+          "message": "Ya toca empezar a prepararse para salir: desodorante, perfume, dientes, lonche, barrer, mochila y pendientes."
+        },
+        {
+          "id": "thursday_leave",
+          "time": "11:00",
+          "message": "Salgo ya de la casa."
+        }
+      ],
+      "bath_followup": {
+        "start": "19:35",
+        "repeat_minutes": 20,
+        "stop": "22:30",
+        "message": "Recuerde bañarse. Avise con: ya me bañe."
+      }
+    },
+    "friday": {
+      "leave_time": "16:45",
+      "reminders": [
+        {
+          "id": "friday_wake",
+          "time": "07:30",
+          "message": "Buenos dias. Ya es hora de empezar el dia."
+        },
+        {
+          "id": "friday_breakfast",
+          "time": "09:00",
+          "message": "Son las 9:00. Recuerde desayunar."
+        },
+        {
+          "id": "friday_prep",
+          "time": "11:00",
+          "message": "Empiece a prepararse y recuerde preparar la maleta para regresar a casa."
+        },
+        {
+          "id": "friday_leave_checklist",
+          "time": "12:00",
+          "message": "Recuerde la rutina previa a salir."
+        }
+      ],
+      "packing_time": "14:30",
+      "packing_message": "Recuerde preparar la maleta para regresar a casa y revisar lo pendiente del lunes.",
+      "chores_time": "15:15",
+      "chores_message": "Antes de cerrar el dia, revise deberes, cargador, ropa y pendientes importantes.",
+      "stop_all_after": "16:45"
+    }
+  },
+  "quick_actions": [
+    "Informe del dia",
+    "Que sigue",
+    "Clima de hoy",
+    "Mi agenda",
+    "Verificar despertar",
+    "Probar despertar",
+    "Activar modo residente",
+    "Dime algo",
+    "Dato curioso",
+    "Dame un consejo",
+    "Agregar a la agenda",
+    "Llegue",
+    "Ya me bane",
+    "Dia libre hoy",
+    "Me cancelaron las clases hoy",
+    "Lista",
+    "Aplicaciones",
+    "Abre Chrome",
+    "Dime un chiste",
+    "Noticias",
+    "Presupuesto"
+  ],
+  "telegram": {
+    "enabled": false,
+    "token": "xxxxx",
+    "chat_id": "8028065392"
+  },
+  "analysis": {
+    "enabled": true,
+    "save_reports": true,
+    "allow_web_research": true,
+    "max_rows": 20,
+    "chart_backend": "matplotlib"
+  },
+  "analysis_beta": {
+    "enabled": true,
+    "save_reports": true,
+    "allow_web_research": true,
+    "max_rows": 20,
+    "chart_backend": "matplotlib"
+  },
+  "remote_control": {
+    "enabled": true,
+    "allowed_chat_ids": [
+      "8028065392"
+    ],
+    "owner_chat_ids": [
+      "8028065392"
+    ],
+    "trusted_chat_ids": [],
+    "read_only_chat_ids": [],
+    "require_confirmation": true,
+    "send_artifacts": true,
+    "history_limit": 100,
+    "poll_interval_seconds": 5,
+    "drop_pending_on_start": true,
+    "blocked_intents": []
+  },
+  "remote_calls": {
+    "enabled": false
+  },
+  "wol_mac": "00:00:00:00:00:00",
+  "telegram_token": "",
+  "telegram_chat_id": "",
+  "wake_name": "viernes"
+}

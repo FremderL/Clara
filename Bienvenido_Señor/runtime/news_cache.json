@@ -1,0 +1,18 @@
+{
+  "mexico": {
+    "fetched_at": "2026-05-18T17:14:27",
+    "source": "https://news.google.com/rss/headlines/section/topic/NATION?hl=es-419&gl=MX&ceid=MX:es-419",
+    "headlines": [
+      "Pide CSP elección judicial en 28; 'simplifican' reglas - Reforma",
+      "Sheinbaum confirma que UIF congeló cuentas a Rocha Moya; se realizó de manera preventiva, afirma - La Jornada"
+    ]
+  },
+  "world": {
+    "fetched_at": "2026-09-04T12:09:26",
+    "source": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=es-419&gl=MX&ceid=MX:es-419",
+    "headlines": [
+      "Declara juez nulo juicio contra Lindsay Clancy - El Norte",
+      "Un dron ruso alcanza la sede del servicio secreto en Kiev - DW.com"
+    ]
+  }
+}

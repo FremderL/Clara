@@ -1,0 +1,3914 @@
+{
+  "daily": {
+    "2026-04-03": {
+      "sent": [
+        "friday:friday_breakfast",
+        "friday:friday_prep",
+        "friday:friday_leave_checklist",
+        "friday_pack",
+        "friday_chores"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": true,
+      "attendance_done": false,
+      "day_closed": true
+    },
+    "2026-04-04": {
+      "sent": [],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "notes": []
+    },
+    "2026-04-09": {
+      "sent": [
+        "ambient:2026-04-09:0830",
+        "ambient:2026-04-09:1431",
+        "ambient:2026-04-09:1601"
+      ],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-09T16:01",
+      "notes": []
+    },
+    "2026-04-10": {
+      "sent": [
+        "ambient:2026-04-10:1030"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-10T10:30",
+      "notes": []
+    },
+    "2026-04-06": {
+      "sent": [
+        "monday_attendance_hint",
+        "monday_bath:0"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "notes": []
+    },
+    "2026-04-07": {
+      "sent": [
+        "default:wake_up"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "notes": []
+    },
+    "2026-04-08": {
+      "sent": [
+        "default:wake_up"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "notes": []
+    },
+    "2026-04-11": {
+      "sent": [
+        "ambient:2026-04-11:1216",
+        "ambient:2026-04-11:2220"
+      ],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-11T22:20",
+      "notes": []
+    },
+    "2026-04-14": {
+      "sent": [
+        "ambient:2026-04-14:0820",
+        "default:breakfast",
+        "ambient:2026-04-14:0950",
+        "default:leave_countdown_120",
+        "default:prep_warning",
+        "ambient:2026-04-14:1120",
+        "ambient:2026-04-14:1932",
+        "bath:0",
+        "bath:1",
+        "bath:2",
+        "bath:3",
+        "bath:4",
+        "ambient:2026-04-14:2102",
+        "bath:5",
+        "bath:6",
+        "bath:7",
+        "bath:8"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-14T21:02",
+      "notes": []
+    },
+    "2026-04-13": {
+      "sent": [
+        "ambient:2026-04-13:1154",
+        "monday_attendance_hint",
+        "monday_bath:1",
+        "monday_bath:2",
+        "ambient:2026-04-13:1730",
+        "monday_bath:3",
+        "monday_bath:4",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "monday_bath:8",
+        "ambient:2026-04-13:1900",
+        "ambient:2026-04-13:2030",
+        "ambient:2026-04-13:2200"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-13T22:00",
+      "notes": []
+    },
+    "2026-04-15": {
+      "sent": [
+        "ambient:2026-04-15:0848",
+        "default:prep_warning",
+        "ambient:2026-04-15:1138",
+        "default:leave_checklist",
+        "bath:3",
+        "ambient:2026-04-15:2054",
+        "bath:4",
+        "bath:5",
+        "bath:6",
+        "bath:7",
+        "bath:8",
+        "ambient:2026-04-15:2224"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-15T22:24",
+      "notes": []
+    },
+    "2026-04-16": {
+      "sent": [
+        "ambient:2026-04-16:0830",
+        "thursday:thursday_breakfast",
+        "thursday:thursday_prep",
+        "ambient:2026-04-16:1002",
+        "thursday:thursday_leave",
+        "thursday_bath:3",
+        "ambient:2026-04-16:2042",
+        "thursday_bath:4",
+        "thursday_bath:5",
+        "thursday_bath:6",
+        "thursday_bath:7",
+        "ambient:2026-04-16:2212",
+        "thursday_bath:8"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-16T22:12",
+      "notes": []
+    },
+    "2026-04-17": {
+      "sent": [
+        "ambient:2026-04-17:0914",
+        "ambient:2026-04-17:1044",
+        "friday:friday_prep",
+        "friday:friday_leave_checklist"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-17T10:44",
+      "notes": []
+    },
+    "2026-04-20": {
+      "sent": [
+        "monday_attendance_hint",
+        "monday_bath:2",
+        "ambient:2026-04-20:1737",
+        "monday_bath:3",
+        "monday_bath:4",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "monday_bath:8",
+        "ambient:2026-04-20:1907",
+        "monday_bath:9",
+        "ambient:2026-04-20:2037",
+        "ambient:2026-04-20:2207"
+      ],
+      "bath_done": true,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": true,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-20T22:07",
+      "notes": [],
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3
+    },
+    "2026-04-21": {
+      "sent": [
+        "default:wake_up",
+        "ambient:2026-04-21:0731",
+        "ambient:2026-04-21:0922",
+        "default:prep_warning",
+        "ambient:2026-04-21:1103",
+        "bath:4",
+        "ambient:2026-04-21:2114"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-21T21:14",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-22": {
+      "sent": [
+        "default:wake_up",
+        "ambient:2026-04-22:0731",
+        "default:breakfast",
+        "ambient:2026-04-22:0901",
+        "default:leave_countdown_120",
+        "ambient:2026-04-22:1057",
+        "default:leave_checklist",
+        "bath:4",
+        "bath:5",
+        "ambient:2026-04-22:2120"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-22T21:20",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-23": {
+      "sent": [
+        "ambient:2026-04-23:0805",
+        "thursday:thursday_breakfast",
+        "ambient:2026-04-23:0935",
+        "thursday:thursday_prep",
+        "thursday:thursday_leave"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-23T09:35",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-04-24": {
+      "sent": [
+        "ambient:2026-04-24:0919",
+        "ambient:2026-04-24:1050",
+        "friday:friday_prep",
+        "friday:friday_leave_checklist",
+        "ambient:2026-04-24:1436"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-24T14:36",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-27": {
+      "sent": [
+        "monday_attendance_hint",
+        "monday_bath:2",
+        "ambient:2026-04-27:1742",
+        "monday_bath:3",
+        "monday_bath:4",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "monday_bath:8",
+        "ambient:2026-04-27:1912",
+        "monday_bath:9",
+        "ambient:2026-04-27:2042",
+        "ambient:2026-04-27:2212"
+      ],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": true,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-27T22:12",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-28": {
+      "sent": [
+        "ambient:2026-04-28:0804",
+        "default:breakfast",
+        "ambient:2026-04-28:0934",
+        "default:leave_countdown_120",
+        "default:prep_warning",
+        "ambient:2026-04-28:1104",
+        "default:leave_checklist",
+        "bath:2"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-28T11:04",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-29": {
+      "sent": [
+        "ambient:2026-04-29:0806",
+        "ambient:2026-04-29:0936",
+        "default:leave_countdown_120",
+        "default:prep_warning",
+        "ambient:2026-04-29:1106",
+        "default:leave_checklist",
+        "bath:5"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-29T11:06",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-04-30": {
+      "sent": [
+        "ambient:2026-04-30:0827",
+        "ambient:2026-04-30:1013",
+        "thursday:thursday_leave"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-04-30T10:13",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-05-06": {
+      "sent": [
+        "default:leave_checklist",
+        "bath:2",
+        "ambient:2026-05-06:2028",
+        "bath:3",
+        "bath:4"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-06T20:28",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-05-07": {
+      "sent": [
+        "ambient:2026-05-07:0839",
+        "thursday:thursday_breakfast",
+        "thursday:thursday_prep",
+        "ambient:2026-05-07:1009",
+        "thursday:thursday_leave",
+        "thursday_bath:6",
+        "ambient:2026-05-07:2145",
+        "thursday_bath:7",
+        "thursday_bath:8"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-07T21:45",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-05-08": {
+      "sent": [
+        "ambient:2026-05-08:0852",
+        "friday:friday_breakfast",
+        "ambient:2026-05-08:1022",
+        "friday:friday_prep",
+        "ambient:2026-05-08:1350"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-08T13:50",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-05-11": {
+      "sent": [
+        "ambient:2026-05-11:1152",
+        "ambient:2026-05-11:1501",
+        "ambient:2026-05-11:1633",
+        "monday_bath:0",
+        "monday_bath:1",
+        "monday_bath:2",
+        "monday_bath:3",
+        "monday_bath:4",
+        "ambient:2026-05-11:1805",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "monday_bath:8",
+        "monday_bath:9",
+        "ambient:2026-05-11:1935"
+      ],
+      "bath_done": true,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": true,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-11T19:35",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-05-12": {
+      "sent": [
+        "ambient:2026-05-12:1034",
+        "default:prep_warning"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-12T10:34",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-05-13": {
+      "sent": [
+        "ambient:2026-05-13:0856",
+        "default:breakfast",
+        "default:leave_countdown_120",
+        "ambient:2026-05-13:1026",
+        "default:prep_warning",
+        "ambient:2026-05-13:1156",
+        "default:leave_checklist",
+        "bath:2",
+        "bath:3",
+        "ambient:2026-05-13:2036"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-13T20:36",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "notes": [],
+      "past_events_notified": [
+        "770218f0-d2b3-4691-b8a4-e4fb0668eca9",
+        "60a0ac97-fc71-44ed-a5f0-dbbbb4dc1840",
+        "94350a7d-4035-4637-bd34-186ba09d3c4c",
+        "19f45946-4075-4109-884a-5164c8634bc8"
+      ]
+    },
+    "2026-05-14": {
+      "sent": [
+        "ambient:2026-05-14:0839",
+        "thursday:thursday_breakfast",
+        "thursday:thursday_prep",
+        "ambient:2026-05-14:1009",
+        "thursday:thursday_leave",
+        "thursday_bath:3",
+        "thursday_bath:4",
+        "ambient:2026-05-14:2057",
+        "thursday_bath:6",
+        "thursday_bath:7",
+        "thursday_bath:8",
+        "ambient:2026-05-14:2227"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-14T22:27",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 3,
+      "notes": []
+    },
+    "2026-05-15": {
+      "sent": [
+        "ambient:2026-05-15:1635"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": true,
+      "last_companion_chat": "2026-05-15T16:35",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-05-18": {
+      "sent": [
+        "ambient:2026-05-18:1150",
+        "ambient:2026-05-18:1418",
+        "monday_attendance_hint",
+        "monday_bath:0",
+        "monday_bath:1",
+        "monday_bath:2",
+        "ambient:2026-05-18:1732",
+        "monday_bath:3",
+        "monday_bath:4",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "monday_bath:8",
+        "ambient:2026-05-18:1902",
+        "monday_bath:9",
+        "ambient:2026-05-18:2043"
+      ],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": true,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-18T20:43",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 2,
+      "notes": []
+    },
+    "2026-05-19": {
+      "sent": [
+        "ambient:2026-05-19:0850",
+        "default:wake_up",
+        "default:breakfast",
+        "default:leave_countdown_120",
+        "ambient:2026-05-19:1020",
+        "default:prep_warning",
+        "ambient:2026-05-19:1150",
+        "default:leave_checklist",
+        "bath:1",
+        "ambient:2026-05-19:2005",
+        "bath:2",
+        "bath:3",
+        "ambient:2026-05-19:2135"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-19T21:35",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "notes": [],
+      "recent_phrase_keys": [
+        "podemos dejar lista la salida por partes mochila pendientes y tiempo de traslado",
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera",
+        "si quiere mejorar control financiero conviene mirar categorias no solo el total gastado",
+        "consejo breve si una tarea le pesa reduzca el inicio a dos minutos y deje que el impulso haga el res",
+        "idea de planeacion separar lo fijo lo urgente y lo opcional deja el dia mucho mas manejable"
+      ],
+      "recent_ambient_topics": [
+        "habits",
+        "money",
+        "tips",
+        "planning"
+      ],
+      "last_inactive_at": "2026-05-19T23:28:51",
+      "last_active_at": "2026-05-19T23:11:04",
+      "last_idle_minutes": 125.0
+    },
+    "2026-05-20": {
+      "sent": [
+        "ambient:2026-05-20:0859",
+        "default:breakfast",
+        "agenda:22482d44-7770-4a03-a5fb-fe9f5fda2100:2026-05-20",
+        "default:leave_countdown_120",
+        "ambient:2026-05-20:1029",
+        "default:prep_warning",
+        "ambient:2026-05-20:1159",
+        "default:leave_checklist",
+        "bath:3",
+        "ambient:2026-05-20:2042",
+        "bath:4",
+        "bath:5",
+        "bath:8"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-20T20:42",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "tiene pendiente ir a papeleria a las 09 00",
+        "podemos dejar lista la salida por partes mochila pendientes y tiempo de traslado",
+        "la memoria de viernes va a ser mas util cuando conecte hora contexto y habitos no solo comandos suel",
+        "tema de estudio elegir una pregunta concreta antes de abrir apuntes suele hacer que el bloque rinda "
+      ],
+      "recent_ambient_topics": [
+        "tech",
+        "study"
+      ],
+      "notes": [],
+      "last_active_at": "2026-05-20T22:31:53",
+      "last_idle_minutes": 1383.0,
+      "last_inactive_at": "2026-05-20T22:42:24"
+    },
+    "2026-05-21": {
+      "sent": [
+        "ambient:2026-05-21:0829",
+        "thursday:thursday_wake",
+        "thursday:thursday_breakfast",
+        "ambient:2026-05-21:0959",
+        "thursday:thursday_prep",
+        "thursday:thursday_leave",
+        "ambient:2026-05-21:1930",
+        "thursday_bath:0"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-21T19:30",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "recuerde que hoy la salida es anticipada por su clase de ingles",
+        "hoy conviene cuidar el margen antes de ingles para que no se junte todo al final",
+        "consejo breve si una tarea le pesa reduzca el inicio a dos minutos y deje que el impulso haga el res"
+      ],
+      "recent_ambient_topics": [
+        "tips"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "22482d44-7770-4a03-a5fb-fe9f5fda2100"
+      ],
+      "last_active_at": "2026-05-21T20:07:44",
+      "last_idle_minutes": 1285.3,
+      "last_inactive_at": "2026-05-21T20:17:46"
+    },
+    "2026-05-22": {
+      "sent": [
+        "ambient:2026-05-22:0944",
+        "friday:friday_prep",
+        "agenda:be0c4f35-9097-452f-b0b1-a1ba08e60630:2026-05-22",
+        "ambient:2026-05-22:1114",
+        "ambient:2026-05-22:1624"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": true,
+      "last_companion_chat": "2026-05-22T16:24",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "senor lo siguiente en su agenda es y agenda pitch a las 11 00",
+        "el dinero se entiende mejor por patrones que se repite que sube y que puede esperar",
+        "dato curioso saturno flotaria en agua si existiera un oceano lo bastante grande"
+      ],
+      "recent_ambient_topics": [
+        "money",
+        "facts"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "22482d44-7770-4a03-a5fb-fe9f5fda2100"
+      ],
+      "last_active_at": "2026-05-22T10:16:27",
+      "last_idle_minutes": 2.6,
+      "last_inactive_at": "2026-05-22T10:28:29"
+    },
+    "2026-05-25": {
+      "sent": [
+        "ambient:2026-05-25:1149",
+        "ambient:2026-05-25:1443",
+        "monday_attendance_hint",
+        "monday_bath:1",
+        "proactive:alias:2026-05-25",
+        "ambient:2026-05-25:1718",
+        "monday_bath:2",
+        "monday_bath:3",
+        "monday_bath:4",
+        "monday_bath:5",
+        "monday_bath:6",
+        "monday_bath:7",
+        "ambient:2026-05-25:1848",
+        "monday_bath:8",
+        "monday_bath:9",
+        "proactive:calendar_review:2026-05-25",
+        "ambient:2026-05-25:2018",
+        "proactive:nlu_help:2026-05-25",
+        "ambient:2026-05-25:2148",
+        "proactive:memory_seed:2026-05-25"
+      ],
+      "bath_done": false,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": true,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-25T21:48",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "curiosidad la memoria suele recordar mejor cuando conecta una idea con un lugar una imagen o una his",
+        "idea de presupuesto separar gastos inevitables de compras impulsivas ayuda a decidir sin culpa y sin",
+        "para estudiar sin saturarse puede empezar con diez minutos de repaso activo y luego decidir si aumen",
+        "consejo breve revise primero lo que tiene hora fija eso ordena el resto del dia"
+      ],
+      "recent_ambient_topics": [
+        "habits",
+        "curiosity",
+        "money",
+        "news",
+        "study",
+        "tips"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "1c730d66-3804-44ee-b9a1-0c2168f428b0",
+        "22482d44-7770-4a03-a5fb-fe9f5fda2100",
+        "be0c4f35-9097-452f-b0b1-a1ba08e60630"
+      ],
+      "last_proactive_at": "2026-05-25T23:17",
+      "last_inactive_at": "2026-05-25T23:20:26",
+      "last_proactive_suggestion": {
+        "id": "memory_seed:2026-05-25",
+        "message": "Puedo ser mas preciso si me da datos estables. Por ejemplo: 'recuerda que prefiero salir con 20 minutos de margen'.",
+        "category": "memory",
+        "priority": 35,
+        "reason": "poca memoria personal disponible"
+      },
+      "last_nlu_intent": {
+        "intent": "wake_schedule_query",
+        "confidence": 0.98,
+        "reason": "consulta de horario de autoarranque y rutina matutina",
+        "slots": {
+          "time": "08:30",
+          "date_ref": "manana",
+          "pattern": "\\b(hora|horario)\\b.*\\b(autoarranque|despertar|rutina\\s+de\\s+la\\s+manana|rutina\\s+matutina)\\b"
+        },
+        "text": "cambia la hora de la rutina de la manana a las 8 30 am",
+        "timestamp": "2026-05-25T23:10:24"
+      },
+      "nlu_miss_count": 8,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "6374f8cf88d7d251",
+        "signals": [],
+        "timestamp": "2026-05-25T22:53:54"
+      },
+      "last_active_at": "2026-05-25T22:51:38",
+      "last_idle_minutes": 79.9
+    },
+    "2026-05-26": {
+      "sent": [
+        "proactive:alias:2026-05-26",
+        "proactive:calendar_review:2026-05-26",
+        "ambient:2026-05-26:0828",
+        "default:breakfast",
+        "ambient:2026-05-26:0958",
+        "default:leave_countdown_120",
+        "proactive:leave:2026-05-26:12:00",
+        "default:prep_warning",
+        "ambient:2026-05-26:1128",
+        "default:leave_checklist",
+        "agenda:44b798b9-cfc7-4cfe-b298-5549d0a51831:2026-05-26",
+        "proactive:pending_task:52826a2a63",
+        "bath:0",
+        "ambient:2026-05-26:1946",
+        "bath:2",
+        "proactive:memory_seed:2026-05-26",
+        "ambient:2026-05-26:2117"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-26T21:17",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "senor se acerca la hora de prepararse si quiere le repaso lo que debe llevar",
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera",
+        "le recuerdo que su proximo evento es agarrar comida a las 12 00",
+        "la atencion funciona mejor con limites claros por eso un bloque corto bien definido puede sentirse m",
+        "consejo breve revise primero lo que tiene hora fija eso ordena el resto del dia"
+      ],
+      "recent_ambient_topics": [
+        "curiosity",
+        "tips"
+      ],
+      "notes": [],
+      "last_proactive_at": "2026-05-26T21:12",
+      "last_proactive_suggestion": {
+        "id": "memory_seed:2026-05-26",
+        "message": "Puedo ser mas preciso si me da datos estables. Por ejemplo: 'recuerda que prefiero salir con 20 minutos de margen'.",
+        "category": "memory",
+        "priority": 35,
+        "reason": "poca memoria personal disponible"
+      },
+      "last_active_at": "2026-05-26T21:11:48",
+      "last_idle_minutes": 20.0,
+      "last_nlu_intent": {
+        "intent": "open_app",
+        "confidence": 0.93,
+        "reason": "apertura de aplicacion",
+        "slots": {
+          "app": "chrome"
+        },
+        "text": "abre chrome",
+        "timestamp": "2026-05-26T21:13:00"
+      },
+      "last_inactive_at": "2026-05-26T21:23:00",
+      "last_intent_decision": {
+        "intent": "open_app",
+        "confidence": 0.93,
+        "risk": "low",
+        "handler": "intent:open_app",
+        "reason": "apertura de aplicacion",
+        "slots": {
+          "app": "chrome"
+        },
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "Abre chrome",
+        "timestamp": "2026-05-26T21:13:00"
+      },
+      "nlu_miss_count": 1,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "1b9c9c81af409b83",
+        "signals": [],
+        "timestamp": "2026-05-26T21:12:06"
+      }
+    },
+    "2026-05-27": {
+      "sent": [
+        "proactive:pending_task:52826a2a63",
+        "proactive:alias:2026-05-27",
+        "ambient:2026-05-27:0832",
+        "default:breakfast",
+        "default:leave_countdown_120",
+        "ambient:2026-05-27:1002",
+        "default:wake_up",
+        "proactive:calendar_review:2026-05-27",
+        "default:prep_warning",
+        "ambient:2026-05-27:1132",
+        "default:leave_checklist",
+        "proactive:memory_seed:2026-05-27",
+        "bath:0",
+        "ambient:2026-05-27:1948",
+        "bath:1",
+        "bath:2",
+        "bath:3",
+        "bath:6",
+        "ambient:2026-05-27:2153",
+        "bath:7",
+        "proactive:nlu_help:2026-05-27"
+      ],
+      "bath_done": true,
+      "arrived": true,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-27T21:53",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera",
+        "senor se acerca la hora de prepararse si quiere le repaso lo que debe llevar",
+        "cuando el dia esta cargado una lista de tres prioridades suele funcionar mejor que una lista perfect",
+        "a veces la mejor decision no es hacer mas sino escoger mejor donde poner energia"
+      ],
+      "recent_ambient_topics": [
+        "planning",
+        "news",
+        "reflection"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "44b798b9-cfc7-4cfe-b298-5549d0a51831"
+      ],
+      "last_proactive_at": "2026-05-27T21:57",
+      "last_proactive_suggestion": {
+        "id": "nlu_help:2026-05-27",
+        "message": "He tenido dificultad entendiendo algunas frases de hoy. Puede decir 'lista' para ver comandos disponibles, o pedirme la accion con palabras mas directas.",
+        "category": "nlu",
+        "priority": 60,
+        "reason": "varios mensajes no capturados por NLU"
+      },
+      "last_active_at": "2026-05-27T21:56:59",
+      "last_idle_minutes": 645.8,
+      "last_intent_decision": {
+        "intent": "unknown",
+        "confidence": 0.0,
+        "risk": "low",
+        "handler": "fallback",
+        "reason": "sin regla local clara",
+        "slots": {},
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "Bsvshs",
+        "timestamp": "2026-05-27T23:25:11"
+      },
+      "last_inactive_at": "2026-05-27T22:59:37",
+      "last_nlu_intent": {
+        "intent": "telegram_test",
+        "confidence": 0.94,
+        "reason": "prueba de telegram",
+        "slots": {
+          "pattern": "\\bprobar\\s+telegram\\b"
+        },
+        "text": "probar telegram",
+        "timestamp": "2026-05-27T23:18:43"
+      },
+      "nlu_miss_count": 27,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "e336667f62511694",
+        "signals": [],
+        "timestamp": "2026-05-27T23:25:11"
+      }
+    },
+    "2026-05-28": {
+      "sent": [
+        "thursday:thursday_wake",
+        "proactive:pending_task:52826a2a63",
+        "ambient:2026-05-28:0850",
+        "thursday:thursday_prep",
+        "ambient:2026-05-28:1020",
+        "proactive:alias:2026-05-28",
+        "thursday:thursday_leave",
+        "proactive:calendar_review:2026-05-28"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-05-28T10:20",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "senor hoy sale temprano por ingles si quiere le recuerdo lo que necesita antes de las once",
+        "para estudiar sin saturarse puede empezar con diez minutos de repaso activo y luego decidir si aumen"
+      ],
+      "recent_ambient_topics": [
+        "study"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "44b798b9-cfc7-4cfe-b298-5549d0a51831",
+        "16d2bf1c-3503-4f6e-afc0-858f8bfad934"
+      ],
+      "last_proactive_at": "2026-05-28T17:50",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-05-28",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "last_intent_decision": {
+        "intent": "activity_calendar",
+        "confidence": 0.94,
+        "risk": "low",
+        "handler": "_activity_calendar_command",
+        "reason": "calendario operativo",
+        "slots": {
+          "date_ref": "hoy",
+          "pattern": "\\b(plan|calendario|actividad)\\s+de\\s+hoy\\b"
+        },
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "plan de hoy",
+        "timestamp": "2026-05-28T17:52:20"
+      },
+      "last_nlu_intent": {
+        "intent": "wake_status",
+        "confidence": 0.91,
+        "reason": "diagnostico de despertar",
+        "slots": {
+          "pattern": "\\b(verificar|diagnostico|revisar)\\s+despertar\\b"
+        },
+        "text": "verificar despertar",
+        "timestamp": "2026-05-28T10:21:38"
+      },
+      "last_inactive_at": "2026-05-28T18:02:20",
+      "last_active_at": "2026-05-28T17:52:20",
+      "last_idle_minutes": 413.1,
+      "recent_scheduler_emissions": [
+        {
+          "key": "67ac5bfccbedd212",
+          "timestamp": "2026-05-28T17:50:23"
+        }
+      ]
+    },
+    "2026-05-29": {
+      "sent": [
+        "proactive:pending_task:52826a2a63",
+        "proactive:alias:2026-05-29",
+        "proactive:calendar_review:2026-05-29",
+        "ambient:2026-05-29:0801",
+        "friday:friday_wake",
+        "friday:friday_breakfast",
+        "ambient:2026-05-29:0931",
+        "proactive:leave:2026-05-29:12:00",
+        "friday:friday_prep",
+        "ambient:2026-05-29:1101",
+        "friday:friday_leave_checklist",
+        "ambient:2026-05-29:1256"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": true,
+      "last_companion_chat": "2026-05-29T12:56",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "senor hoy es viernes si quiere puedo repasar su preparacion y la maleta para regresar",
+        "hoy es viernes conviene tener presente la maleta y lo necesario para volver a casa",
+        "a veces la mejor decision no es hacer mas sino escoger mejor donde poner energia",
+        "si quiere mejorar control financiero conviene mirar categorias no solo el total gastado"
+      ],
+      "recent_ambient_topics": [
+        "reflection",
+        "money"
+      ],
+      "notes": [],
+      "last_proactive_at": "2026-05-29T10:30",
+      "last_proactive_suggestion": {
+        "id": "leave:2026-05-29:12:00",
+        "message": "Senor, tiene clases hoy (Ingles, POO) y faltan 90 minutos para su salida de 12:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'.",
+        "category": "routine",
+        "priority": 90,
+        "reason": "salida proxima con clases registradas"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "99a02e5c42d91540",
+          "timestamp": "2026-05-29T12:56:39"
+        }
+      ]
+    },
+    "2026-06-15": {
+      "sent": [
+        "monday_attendance_hint",
+        "proactive:pending_task:52826a2a63"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "recent_scheduler_emissions": [
+        {
+          "key": "8e417a3a31633ef2",
+          "timestamp": "2026-06-15T22:35:35"
+        }
+      ],
+      "last_proactive_at": "2026-06-15T22:35",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "last_intent_decision": {
+        "intent": "unknown",
+        "confidence": 0.0,
+        "risk": "low",
+        "handler": "fallback",
+        "reason": "sin regla local clara",
+        "slots": {},
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "Probabilidad de lluvia",
+        "timestamp": "2026-06-15T23:15:55"
+      },
+      "last_inactive_at": "2026-06-15T23:25:56",
+      "nlu_miss_count": 3,
+      "last_nlu_miss": {
+        "handled_by": "semantic_router",
+        "inferred_intent": "clima",
+        "text_hash": "13e3c6c1139994e0",
+        "signals": [],
+        "timestamp": "2026-06-15T23:15:55"
+      },
+      "last_nlu_intent": {
+        "intent": "wake_status",
+        "confidence": 0.91,
+        "reason": "diagnostico de despertar",
+        "slots": {
+          "pattern": "\\bmodo\\s+residente\\b"
+        },
+        "text": "desactivar modo residente",
+        "timestamp": "2026-06-15T23:15:20"
+      },
+      "last_manual_stop_at": "2026-06-15T23:16:01"
+    },
+    "2026-06-16": {
+      "sent": [
+        "proactive:pending_task:52826a2a63"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_proactive_at": "2026-06-16T08:41",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "8e417a3a31633ef2",
+          "timestamp": "2026-06-16T08:41:29"
+        }
+      ]
+    },
+    "2026-06-17": {
+      "sent": [
+        "proactive:pending_task:52826a2a63"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_proactive_at": "2026-06-17T15:38",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "8e417a3a31633ef2",
+          "timestamp": "2026-06-17T15:38:43"
+        }
+      ],
+      "last_intent_decision": {
+        "intent": "unknown",
+        "confidence": 0.0,
+        "risk": "low",
+        "handler": "fallback",
+        "reason": "sin regla local clara",
+        "slots": {},
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "desactivar autoarranque",
+        "timestamp": "2026-06-17T16:16:29"
+      },
+      "last_nlu_intent": {
+        "intent": "wake_status",
+        "confidence": 0.91,
+        "reason": "diagnostico de despertar",
+        "slots": {
+          "pattern": "\\bmodo\\s+residente\\b"
+        },
+        "text": "desactivar modo residente",
+        "timestamp": "2026-06-17T16:15:55"
+      },
+      "nlu_miss_count": 1,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "038d86ae78e6c46e",
+        "signals": [],
+        "timestamp": "2026-06-17T16:16:29"
+      },
+      "scheduler_suppressed_until": "2026-06-17T16:27:17",
+      "scheduler_suppressed_reason": "manual_stop",
+      "last_manual_stop_at": "2026-06-17T16:17:17"
+    },
+    "2026-07-02": {
+      "sent": [
+        "proactive:pending_task:52826a2a63",
+        "thursday_bath:3"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_proactive_at": "2026-07-02T16:19",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "eeb7b88866274ee0",
+          "timestamp": "2026-07-02T20:37:53"
+        }
+      ],
+      "last_intent_decision": {
+        "intent": "agenda_full",
+        "confidence": 0.93,
+        "risk": "low",
+        "handler": "intent:agenda_full",
+        "reason": "consulta de agenda completa",
+        "slots": {
+          "pattern": "\\b(mi|toda\\s+mi)\\s+agenda\\b"
+        },
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "dime mi agenda",
+        "timestamp": "2026-07-02T16:20:55"
+      },
+      "last_nlu_intent": {
+        "intent": "agenda_full",
+        "confidence": 0.93,
+        "reason": "consulta de agenda completa",
+        "slots": {
+          "pattern": "\\b(mi|toda\\s+mi)\\s+agenda\\b"
+        },
+        "text": "dime mi agenda",
+        "timestamp": "2026-07-02T16:20:55"
+      },
+      "last_inactive_at": "2026-07-02T17:09:29"
+    },
+    "2026-07-04": {
+      "sent": [
+        "proactive:pending_task:52826a2a63"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_proactive_at": "2026-07-04T11:40",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "8e417a3a31633ef2",
+          "timestamp": "2026-07-04T11:40:46"
+        }
+      ]
+    },
+    "2026-07-06": {
+      "sent": [
+        "monday_attendance_hint"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "recent_scheduler_emissions": [
+        {
+          "key": "ed0862670794eaba",
+          "timestamp": "2026-07-06T20:27:42"
+        }
+      ]
+    },
+    "2026-08-04": {
+      "sent": [
+        "default:wake_up",
+        "bath:7",
+        "bath:8",
+        "proactive:pending_task:52826a2a63"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "recent_scheduler_emissions": [
+        {
+          "key": "8e417a3a31633ef2",
+          "timestamp": "2026-08-04T22:30:08"
+        }
+      ],
+      "last_proactive_at": "2026-08-04T22:30",
+      "last_proactive_suggestion": {
+        "id": "pending_task:52826a2a63",
+        "message": "Pendiente abierto para 2026-05-26 a las 12:00: agarrar comida. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "last_intent_decision": {
+        "intent": "unknown",
+        "confidence": 0.0,
+        "risk": "low",
+        "handler": "fallback",
+        "reason": "sin regla local clara",
+        "slots": {},
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "solo para despedirte, adios.",
+        "timestamp": "2026-08-04T22:46:12"
+      },
+      "last_nlu_intent": {
+        "intent": "agenda_full",
+        "confidence": 0.93,
+        "reason": "consulta de agenda completa",
+        "slots": {
+          "pattern": "\\b(mi|toda\\s+mi)\\s+agenda\\b"
+        },
+        "text": "esta agregado en un recordatorio en mi agenda",
+        "timestamp": "2026-08-04T22:43:21"
+      },
+      "nlu_miss_count": 4,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "f2862d4b2e8696ea",
+        "signals": [],
+        "timestamp": "2026-08-04T22:46:12"
+      }
+    },
+    "2026-08-12": {
+      "sent": [
+        "default:wake_up",
+        "proactive:pending_task:455d278545"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-12T14:59",
+      "last_proactive_suggestion": {
+        "id": "pending_task:455d278545",
+        "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "b72d82c13d03b3b9",
+          "timestamp": "2026-08-12T14:59:53"
+        }
+      ]
+    },
+    "2026-08-16": {
+      "sent": [
+        "proactive:pending_task:455d278545"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-16T19:00",
+      "last_proactive_suggestion": {
+        "id": "pending_task:455d278545",
+        "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "b72d82c13d03b3b9",
+          "timestamp": "2026-08-16T19:00:48"
+        }
+      ]
+    },
+    "2026-08-17": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-17:0854",
+        "ambient:2026-08-17:1024",
+        "proactive:alias:2026-08-17",
+        "ambient:2026-08-17:1154",
+        "proactive:calendar_review:2026-08-17",
+        "ambient:2026-08-17:1452",
+        "monday_attendance_hint",
+        "ambient:2026-08-17:2229"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-17T22:29",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "para estudiar sin saturarse puede empezar con diez minutos de repaso activo y luego decidir si aumen",
+        "dato curioso saturno flotaria en agua si existiera un oceano lo bastante grande",
+        "consejo breve si hay demasiados pendientes escoja uno que destrabe a los demas",
+        "senor cuando llegue aviseme para registrar su llegada y hacer el pase de lista"
+      ],
+      "recent_ambient_topics": [
+        "study",
+        "facts",
+        "habits",
+        "tips"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-17T14:51",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-08-17",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "50fc695bd8ae2ee0",
+          "timestamp": "2026-08-17T22:29:23"
+        }
+      ],
+      "last_inactive_at": "2026-08-17T10:03:25",
+      "last_active_at": "2026-08-17T09:05:55",
+      "last_idle_minutes": 1.9,
+      "last_intent_decision": {
+        "intent": "budget_summary",
+        "confidence": 0.93,
+        "risk": "low",
+        "handler": "intent:budget_summary",
+        "reason": "consulta de presupuesto",
+        "slots": {
+          "pattern": "\\b(presupuesto|balance)\\b"
+        },
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "deja en $0 el balance",
+        "timestamp": "2026-08-17T09:06:19"
+      },
+      "last_nlu_intent": {
+        "intent": "budget_summary",
+        "confidence": 0.93,
+        "reason": "consulta de presupuesto",
+        "slots": {
+          "pattern": "\\b(presupuesto|balance)\\b"
+        },
+        "text": "deja en $0 el balance",
+        "timestamp": "2026-08-17T09:06:19"
+      }
+    },
+    "2026-08-18": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-18:0803",
+        "default:wake_up",
+        "default:breakfast",
+        "ambient:2026-08-18:0933",
+        "default:leave_countdown_120",
+        "proactive:calendar_review:2026-08-18",
+        "default:prep_warning",
+        "ambient:2026-08-18:1107"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-18T11:07",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "podemos dejar lista la salida por partes mochila pendientes y tiempo de traslado",
+        "senor se acerca la hora de prepararse si quiere le repaso lo que debe llevar",
+        "consejo breve revise primero lo que tiene hora fija eso ordena el resto del dia"
+      ],
+      "recent_ambient_topics": [
+        "tips"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-18T10:02",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-08-18",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "a74432666f4dfb12",
+          "timestamp": "2026-08-18T11:00:39"
+        },
+        {
+          "key": "5bdc318476e4d4cd",
+          "timestamp": "2026-08-18T11:07:39"
+        }
+      ]
+    },
+    "2026-08-19": {
+      "sent": [
+        "default:wake_up",
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-19:0740",
+        "default:breakfast",
+        "ambient:2026-08-19:0910",
+        "proactive:calendar_review:2026-08-19",
+        "default:leave_countdown_120",
+        "ambient:2026-08-19:1040",
+        "default:prep_warning",
+        "proactive:leave:2026-08-19:12:00"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-19T10:40",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "senor se acerca la hora de prepararse si quiere le repaso lo que debe llevar",
+        "conviene irse preparando con calma si desea le enumero lo necesario antes de salir",
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera"
+      ],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "recent_scheduler_emissions": [
+        {
+          "key": "305ebcb57fd9805c",
+          "timestamp": "2026-08-19T11:39:57"
+        }
+      ],
+      "last_proactive_at": "2026-08-19T11:39",
+      "last_proactive_suggestion": {
+        "id": "leave:2026-08-19:12:00",
+        "message": "Senor, tiene clases hoy (Matematicas discretas, Metodologias agiles, Estructuras de computadoras.) y faltan 20 minutos para su salida de 12:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'.",
+        "category": "routine",
+        "priority": 90,
+        "reason": "salida proxima con clases registradas"
+      }
+    },
+    "2026-08-20": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-20:0751",
+        "thursday:thursday_breakfast",
+        "ambient:2026-08-20:0921",
+        "proactive:leave:2026-08-20:11:00",
+        "thursday:thursday_prep",
+        "ambient:2026-08-20:1051",
+        "thursday:thursday_leave",
+        "proactive:calendar_review:2026-08-20",
+        "thursday_bath:6",
+        "thursday_bath:7",
+        "ambient:2026-08-20:2200"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-20T22:00",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "hoy toca salir mas temprano por ingles puedo repasar su preparacion en cualquier momento",
+        "senor hoy sale temprano por ingles si quiere le recuerdo lo que necesita antes de las once",
+        "un paso claro a tiempo suele valer mas que muchas decisiones apuradas",
+        "un descanso real de cinco minutos puede rendir mas que seguir empujando con la cabeza cansada"
+      ],
+      "recent_ambient_topics": [
+        "small_talk",
+        "wellbeing"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-20T16:01",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-08-20",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "eeb7b88866274ee0",
+          "timestamp": "2026-08-20T21:48:05"
+        },
+        {
+          "key": "00d5aaf174ec912b",
+          "timestamp": "2026-08-20T22:00:50"
+        }
+      ],
+      "last_active_at": "2026-08-20T22:15:37",
+      "last_idle_minutes": 5052.2,
+      "last_intent_decision": {
+        "intent": "mark_bath_done",
+        "confidence": 0.95,
+        "risk": "medium",
+        "handler": "intent:mark_bath_done",
+        "reason": "confirmacion de bano",
+        "slots": {
+          "pattern": "\\b(ya\\s+)?me\\s+bane\\b"
+        },
+        "requires_confirmation": true,
+        "mutates": true,
+        "command_preview": "ya me bañe",
+        "timestamp": "2026-08-20T22:15:37"
+      },
+      "last_inactive_at": "2026-08-20T22:25:37"
+    },
+    "2026-08-21": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "proactive:calendar_review:2026-08-21",
+        "ambient:2026-08-21:0829",
+        "friday:friday_wake",
+        "friday:friday_breakfast",
+        "ambient:2026-08-21:0959",
+        "proactive:leave:2026-08-21:12:00",
+        "friday:friday_prep",
+        "ambient:2026-08-21:1129",
+        "ambient:2026-08-21:1631"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-21T16:31",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "si gusta puedo repasar la preparacion de hoy y lo que debe llevar para regresar",
+        "senor hoy es viernes si quiere puedo repasar su preparacion y la maleta para regresar",
+        "la atencion funciona mejor con limites claros por eso un bloque corto bien definido puede sentirse m",
+        "la claridad no siempre aparece antes de empezar muchas veces aparece cuando ya dio el primer paso"
+      ],
+      "recent_ambient_topics": [
+        "curiosity",
+        "reflection"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-21T10:30",
+      "last_proactive_suggestion": {
+        "id": "leave:2026-08-21:12:00",
+        "message": "Senor, tiene clases hoy (Matematicas discretas, Metodologias agiles.) y faltan 90 minutos para su salida de 12:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'.",
+        "category": "routine",
+        "priority": 90,
+        "reason": "salida proxima con clases registradas"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "f920185fcbcb02e9",
+          "timestamp": "2026-08-21T16:31:19"
+        }
+      ]
+    },
+    "2026-08-25": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-25:0807",
+        "default:wake_up",
+        "default:breakfast",
+        "ambient:2026-08-25:0937",
+        "default:leave_countdown_120",
+        "proactive:calendar_review:2026-08-25",
+        "default:prep_warning",
+        "bath:1",
+        "bath:7",
+        "bath:8"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-25T09:37",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "senor se acerca la hora de prepararse si quiere le repaso lo que debe llevar",
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera"
+      ],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-25T10:06",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-08-25",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "eeb7b88866274ee0",
+          "timestamp": "2026-08-25T22:20:28"
+        }
+      ]
+    },
+    "2026-08-26": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-26:0821",
+        "default:wake_up",
+        "default:breakfast",
+        "ambient:2026-08-26:0951",
+        "default:leave_countdown_120",
+        "proactive:calendar_review:2026-08-26",
+        "default:prep_warning",
+        "ambient:2026-08-26:1121"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-26T11:21",
+      "ambient_news_count": 1,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera",
+        "podemos dejar lista la salida por partes mochila pendientes y tiempo de traslado"
+      ],
+      "recent_ambient_topics": [
+        "news"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-26T10:20",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-08-26",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "64c7164b1a0b330b",
+          "timestamp": "2026-08-26T11:21:06"
+        }
+      ]
+    },
+    "2026-08-27": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-27:0753",
+        "thursday:thursday_wake",
+        "thursday:thursday_breakfast",
+        "ambient:2026-08-27:0923",
+        "proactive:leave:2026-08-27:11:00",
+        "thursday:thursday_prep",
+        "ambient:2026-08-27:1054",
+        "thursday:thursday_leave"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-27T10:54",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "hoy conviene cuidar el margen antes de ingles para que no se junte todo al final",
+        "recuerde que hoy la salida es anticipada por su clase de ingles",
+        "una forma limpia de avanzar es explicar el tema en voz alta como si se lo contara a alguien mas"
+      ],
+      "recent_ambient_topics": [
+        "study"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-27T09:52",
+      "last_proactive_suggestion": {
+        "id": "leave:2026-08-27:11:00",
+        "message": "Senor, tiene clases hoy (Lesgislacion y derecho informatico, Bases de datos, Estructura de datos.) y faltan 67 minutos para su salida de 11:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'.",
+        "category": "routine",
+        "priority": 90,
+        "reason": "salida proxima con clases registradas"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "33da50a5584347af",
+          "timestamp": "2026-08-27T10:54:01"
+        },
+        {
+          "key": "65284781d3654dc1",
+          "timestamp": "2026-08-27T11:00:21"
+        }
+      ]
+    },
+    "2026-08-28": {
+      "sent": [
+        "friday:friday_wake",
+        "proactive:pending_task:455d278545",
+        "ambient:2026-08-28:0830",
+        "friday:friday_breakfast",
+        "ambient:2026-08-28:1000",
+        "proactive:leave:2026-08-28:12:00",
+        "friday:friday_prep",
+        "ambient:2026-08-28:1134",
+        "friday:friday_leave_checklist"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-08-28T11:34",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "senor hoy es viernes si quiere puedo repasar su preparacion y la maleta para regresar",
+        "viernes pide dos revisiones lo de hoy y lo que no debe quedarse olvidado para el lunes",
+        "algo interesante cambiar de contexto por unos minutos puede ayudar a ver un problema desde otro angu"
+      ],
+      "recent_ambient_topics": [
+        "curiosity"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-28T10:30",
+      "last_proactive_suggestion": {
+        "id": "leave:2026-08-28:12:00",
+        "message": "Senor, tiene clases hoy (Matematicas discretas, Metodologias agiles.) y faltan 90 minutos para su salida de 12:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'.",
+        "category": "routine",
+        "priority": 90,
+        "reason": "salida proxima con clases registradas"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "f5d0dfe7b5cd3341",
+          "timestamp": "2026-08-28T12:07:48"
+        }
+      ],
+      "last_inactive_at": "2026-08-28T09:04:51",
+      "last_intent_decision": {
+        "intent": "unknown",
+        "confidence": 0.0,
+        "risk": "low",
+        "handler": "fallback",
+        "reason": "sin regla local clara",
+        "slots": {},
+        "requires_confirmation": false,
+        "mutates": false,
+        "command_preview": "inicio de secion inactivo",
+        "timestamp": "2026-08-28T12:08:42"
+      },
+      "last_nlu_intent": {
+        "intent": "wake_status",
+        "confidence": 0.91,
+        "reason": "diagnostico de despertar",
+        "slots": {
+          "pattern": "\\bmodo\\s+residente\\b"
+        },
+        "text": "desactivar modo residente",
+        "timestamp": "2026-08-28T12:07:00"
+      },
+      "nlu_miss_count": 2,
+      "last_nlu_miss": {
+        "handled_by": "ollama",
+        "inferred_intent": "natural_language",
+        "text_hash": "f6be8b2a56f7dcb9",
+        "signals": [],
+        "timestamp": "2026-08-28T12:08:42"
+      }
+    },
+    "2026-08-29": {
+      "sent": [
+        "proactive:pending_task:455d278545"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-29T21:49",
+      "last_proactive_suggestion": {
+        "id": "pending_task:455d278545",
+        "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "b72d82c13d03b3b9",
+          "timestamp": "2026-08-29T21:49:55"
+        }
+      ]
+    },
+    "2026-08-31": {
+      "sent": [
+        "proactive:pending_task:455d278545"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-08-31T10:50",
+      "last_proactive_suggestion": {
+        "id": "pending_task:455d278545",
+        "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "b72d82c13d03b3b9",
+          "timestamp": "2026-08-31T10:50:52"
+        }
+      ]
+    },
+    "2026-09-01": {
+      "sent": [
+        "tuesday:wake_up",
+        "proactive:leave:2026-09-01:10:00",
+        "proactive:pending_task:455d278545",
+        "tuesday:prep_warning",
+        "proactive:calendar_review:2026-09-01",
+        "ambient:2026-09-01:1930",
+        "ambient:2026-09-01:2104"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-09-01T21:04",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "para estudiar sin saturarse puede empezar con diez minutos de repaso activo y luego decidir si aumen",
+        "consejo breve si una tarea parece pesada empezar por cinco minutos suele romper la inercia"
+      ],
+      "recent_ambient_topics": [
+        "study",
+        "tips"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-09-01T18:05",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-09-01",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "6e4283e4c674ff7b",
+          "timestamp": "2026-09-01T21:04:03"
+        }
+      ],
+      "last_inactive_at": "2026-09-01T23:11:18",
+      "last_active_at": "2026-09-01T21:04:06",
+      "last_idle_minutes": 48.1,
+      "last_intent_decision": {
+        "intent": "mark_bath_done",
+        "confidence": 0.95,
+        "risk": "medium",
+        "handler": "intent:mark_bath_done",
+        "reason": "confirmacion de bano",
+        "slots": {
+          "pattern": "\\b(ya\\s+)?me\\s+bane\\b"
+        },
+        "requires_confirmation": true,
+        "mutates": true,
+        "command_preview": "ya me bañe",
+        "timestamp": "2026-09-01T19:45:41"
+      }
+    },
+    "2026-09-02": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-09-02:0828",
+        "wednesday:wake_up",
+        "wednesday:breakfast",
+        "ambient:2026-09-02:0958",
+        "proactive:calendar_review:2026-09-02",
+        "wednesday:prep_warning",
+        "wednesday:leave_checklist",
+        "wednesday_bath:3",
+        "wednesday_bath:4"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-09-02T09:58",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [
+        "ya se aproxima la preparacion para salir puedo recordarle su lista cuando quiera",
+        "podemos dejar lista la salida por partes mochila pendientes y tiempo de traslado"
+      ],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_active_at": "2026-09-02T21:08:02",
+      "last_idle_minutes": 16.2,
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-09-02T10:27",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-09-02",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "eeb7b88866274ee0",
+          "timestamp": "2026-09-02T21:07:59"
+        }
+      ],
+      "last_inactive_at": "2026-09-02T21:07:59"
+    },
+    "2026-09-03": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-09-03:0926",
+        "thursday:thursday_wake",
+        "thursday:thursday_prep",
+        "ambient:2026-09-03:1056",
+        "thursday:thursday_leave",
+        "proactive:calendar_review:2026-09-03",
+        "thursday_bath:3",
+        "thursday_bath:6"
+      ],
+      "bath_done": true,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "2026-09-03T10:56",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "hoy toca salir mas temprano por ingles puedo repasar su preparacion en cualquier momento",
+        "si quiere podemos revisar el siguiente compromiso y preparar solo lo necesario para ese tramo"
+      ],
+      "recent_ambient_topics": [
+        "planning"
+      ],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_active_at": "2026-09-03T22:38:46",
+      "last_idle_minutes": 41.0,
+      "last_proactive_at": "2026-09-03T11:55",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-09-03",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "eeb7b88866274ee0",
+          "timestamp": "2026-09-03T21:54:10"
+        }
+      ],
+      "last_manual_stop_at": "2026-09-03T21:55:00",
+      "last_inactive_at": "2026-09-03T22:38:43",
+      "last_intent_decision": {
+        "intent": "mark_bath_done",
+        "confidence": 0.95,
+        "risk": "medium",
+        "handler": "intent:mark_bath_done",
+        "reason": "confirmacion de bano",
+        "slots": {
+          "pattern": "\\b(ya\\s+)?me\\s+bane\\b"
+        },
+        "requires_confirmation": true,
+        "mutates": true,
+        "command_preview": "ya me bañe",
+        "timestamp": "2026-09-03T21:54:31"
+      }
+    },
+    "2026-09-04": {
+      "sent": [
+        "proactive:pending_task:455d278545",
+        "ambient:2026-09-04:0843",
+        "friday:friday_breakfast",
+        "ambient:2026-09-04:1013",
+        "proactive:calendar_review:2026-09-04",
+        "friday:friday_prep",
+        "ambient:2026-09-04:1143",
+        "friday:friday_leave_checklist"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": true,
+      "last_companion_chat": "2026-09-04T11:43",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [
+        "si gusta puedo repasar la preparacion de hoy y lo que debe llevar para regresar",
+        "senor hoy es viernes si quiere puedo repasar su preparacion y la maleta para regresar",
+        "dato curioso el primer correo electronico se envio en 1971"
+      ],
+      "recent_ambient_topics": [
+        "facts"
+      ],
+      "notes": [],
+      "last_inactive_at": "2026-09-04T19:42:09",
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_active_at": "2026-09-04T19:22:36",
+      "last_idle_minutes": 446.2,
+      "last_manual_stop_at": "2026-09-04T08:32:33",
+      "last_proactive_at": "2026-09-04T10:42",
+      "last_proactive_suggestion": {
+        "id": "calendar_review:2026-09-04",
+        "message": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+        "category": "calendar",
+        "priority": 45,
+        "reason": "calendario operativo con varios bloques"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "f5d0dfe7b5cd3341",
+          "timestamp": "2026-09-04T12:00:28"
+        }
+      ]
+    },
+    "2026-09-05": {
+      "sent": [
+        "proactive:pending_task:455d278545"
+      ],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 3,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "past_events_notified": [
+        "45c8c841-c952-45f0-b79d-0a9d40560177"
+      ],
+      "last_proactive_at": "2026-09-05T04:40",
+      "last_proactive_suggestion": {
+        "id": "pending_task:455d278545",
+        "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+        "category": "pending",
+        "priority": 62,
+        "reason": "pendiente abierto proximo"
+      },
+      "recent_scheduler_emissions": [
+        {
+          "key": "b72d82c13d03b3b9",
+          "timestamp": "2026-09-05T04:40:49"
+        }
+      ]
+    },
+    "2026-09-06": {
+      "sent": [],
+      "bath_done": false,
+      "arrived": false,
+      "left_home": false,
+      "attendance_done": false,
+      "day_closed": false,
+      "last_companion_chat": "",
+      "ambient_news_count": 0,
+      "ambient_news_cap": 2,
+      "recent_phrase_keys": [],
+      "recent_ambient_topics": [],
+      "notes": [],
+      "last_active_at": "2026-09-06T20:37:28",
+      "last_idle_minutes": 2954.6
+    }
+  },
+  "day_overrides": {},
+  "habit_history": [
+    {
+      "habit": "left_home",
+      "timestamp": "2026-04-03T22:47",
+      "weekday": "friday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-06T17:10",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-04T00:19",
+      "weekday": "saturday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-04T00:19",
+      "weekday": "saturday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-09T14:31",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-11T01:43",
+      "weekday": "saturday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-11T01:58",
+      "weekday": "saturday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-20T18:51",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-20T19:35",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-20T19:41",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-04-20T22:07",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-04-21T21:14",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-04-22T21:20",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-27T17:45",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-04-27T17:45",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-11T12:01",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-11T20:49",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-11T20:56",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-13T20:36",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-18T17:32",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-18T17:33",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T02:39",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T10:17",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T11:03",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T16:33",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T20:13",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-19T20:56",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T21:06",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-19T23:28",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-20T22:31",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-20T22:42",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-21T20:07",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-21T20:17",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-22T10:13",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-22T10:28",
+      "weekday": "friday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-25T17:17",
+      "weekday": "monday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-25T17:18",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-25T17:28",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-25T19:15",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-25T20:07",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-25T21:31",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-25T23:20",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-26T08:35",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-26T11:18",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-26T18:12",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-26T20:34",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-26T20:51",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-26T21:23",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T08:43",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T09:28",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T09:56",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T10:12",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T10:30",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T11:11",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "arrived",
+      "timestamp": "2026-05-27T21:58",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-05-27T22:00",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T22:26",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-27T22:59",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-28T09:27",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-28T09:48",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-28T10:32",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-28T10:59",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-05-28T18:02",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-06-15T23:02",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-06-15T23:25",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-07-02T17:09",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-17T09:04",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-17T09:16",
+      "weekday": "monday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-17T10:03",
+      "weekday": "monday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-08-20T22:15",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-20T22:25",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-28T08:43",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-08-28T09:04",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-01T10:55",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-01T18:05",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-09-01T19:45",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-01T21:04",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-01T23:11",
+      "weekday": "tuesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-02T11:09",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-02T11:57",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-02T20:51",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-02T21:07",
+      "weekday": "wednesday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T11:55",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T15:40",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T15:54",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T20:53",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T21:53",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "bath_done",
+      "timestamp": "2026-09-03T21:54",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-03T22:38",
+      "weekday": "thursday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T03:40",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T08:32",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T09:19",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T11:23",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T11:46",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T12:06",
+      "weekday": "friday"
+    },
+    {
+      "habit": "inactive",
+      "timestamp": "2026-09-04T19:42",
+      "weekday": "friday"
+    }
+  ],
+  "classes_by_date": {},
+  "learned_web": [
+    {
+      "query": "que es el suicidio",
+      "summary": "Sin embargo,",
+      "timestamp": "2026-05-19T10:00:24"
+    },
+    {
+      "query": "que es el pib de un pais",
+      "summary": "La diferencia entre",
+      "timestamp": "2026-05-19T10:00:54"
+    },
+    {
+      "query": "que es el",
+      "summary": "1. el, la | Definición | Diccionario de la lengua española | RAE - ASALE: El , la es un artículo determinado que se usa ante sustantivos o sintagmas nominales. Según su posición y función, puede indicar referencia, información, identificación, interpretación, elemento constitutivo, faceta, parte o ponderación. 2. El o Él - Diccionario de Dudas: El es un artículo determinado que se utiliza generalmente precediendo a un sustantivo o sintagma nominal. É l , en cambio, es un pronombre personal que se emplea para referirse a la persona, animal o cosa de que se habla. El es un monosílabo átono, en virtud de lo cual se escribe sin acentuación... 3. EL | translate Spanish to English - Cambridge Dictionary: El can be an article, a pronoun, or a prefix in Spanish. Learn how to use it in different contexts and meanings with examples and definitions.",
+      "timestamp": "2026-05-19T12:06:50"
+    },
+    {
+      "query": "cuando sale el episodio 9 de the amaizing digital circus",
+      "summary": "1. The Amazing Digital Circus - Season 1 • Episode 9 - Plex: The Amazing Digital Circus - Season 1 • Episode 9 - The Last Act release date is June 19, 2026 starring Lizzie Freeman, Alex Rochon, Michael Kovach and directed by Gooseworx. Get notified when The Amazing Digital Circus - S1 • E9 - The Last Act is available to stream! 2. ESTRENO CINES EPISODIO 9 en ESPAÑOL The Amazing Digital Circus: Episodio 9 En Cines Estreno Oficial Fecha Digital Circus El Asombroso Circo Digital en Español. Conoce mi explicación y análisis a todas las nuevas novedades, información y avances con nuevas ... 3. Episode Guide | The Amazing Digital Circus Wiki | Fandom: Below are all the released and planned episodes of The Amazing Digital Circus .",
+      "timestamp": "2026-05-26T18:02:24"
+    }
+  ],
+  "last_proactive_suggestion": {
+    "id": "pending_task:455d278545",
+    "message": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+    "category": "pending",
+    "priority": 62,
+    "reason": "pendiente abierto proximo"
+  },
+  "nlu_telemetry_salt": "a4f526ebd6f24706b65580baff8d9b7d",
+  "nlu_telemetry": [
+    {
+      "timestamp": "2026-05-25T19:56:16",
+      "handled_by": "semantic_router",
+      "inferred_intent": "agenda",
+      "text_hash": "b0d137a33799ad4c",
+      "char_count": 56,
+      "token_count": 8,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-25T19:56:32",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "974591ea567ba44d",
+      "char_count": 5,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-25T21:20:16",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "999ba560ecba9054",
+      "char_count": 9,
+      "token_count": 2,
+      "signals": [
+        "question"
+      ]
+    },
+    {
+      "timestamp": "2026-05-25T21:20:56",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "dac08ac9b28d708f",
+      "char_count": 12,
+      "token_count": 4,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-25T21:21:46",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "00a047a7a9355edd",
+      "char_count": 13,
+      "token_count": 3,
+      "signals": [
+        "appish"
+      ]
+    },
+    {
+      "timestamp": "2026-05-25T22:51:38",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "c797705218852bda",
+      "char_count": 45,
+      "token_count": 10,
+      "signals": [
+        "time",
+        "change"
+      ]
+    },
+    {
+      "timestamp": "2026-05-25T22:53:15",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "5c3c23aa255fcb5e",
+      "char_count": 44,
+      "token_count": 10,
+      "signals": [
+        "time",
+        "routine"
+      ]
+    },
+    {
+      "timestamp": "2026-05-25T22:53:54",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "6374f8cf88d7d251",
+      "char_count": 19,
+      "token_count": 4,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-26T21:12:06",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "1b9c9c81af409b83",
+      "char_count": 9,
+      "token_count": 2,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T10:20:56",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "61ce21409f999c9e",
+      "char_count": 11,
+      "token_count": 2,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T21:56:59",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "2c1820fc45ea81e7",
+      "char_count": 27,
+      "token_count": 5,
+      "signals": [
+        "question",
+        "date"
+      ]
+    },
+    {
+      "timestamp": "2026-05-27T22:00:57",
+      "handled_by": "semantic_router",
+      "inferred_intent": "agenda",
+      "text_hash": "901b4cc0b44cba7b",
+      "char_count": 30,
+      "token_count": 5,
+      "signals": [
+        "delete"
+      ]
+    },
+    {
+      "timestamp": "2026-05-27T22:16:19",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "03b6d9fd82f6e224",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "65625ccb6e1abc3a",
+      "char_count": 11,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "71954bc306378644",
+      "char_count": 10,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "bea4ba30311ba87b",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "e336667f62511694",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "0e676e1c5706dff6",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "06fafab40b41d047",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "034d5e5c97154fc5",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "5bf2a21544556f02",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:19:13",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "5f46317fe55f2aab",
+      "char_count": 9,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "65625ccb6e1abc3a",
+      "char_count": 11,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "71954bc306378644",
+      "char_count": 10,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "bea4ba30311ba87b",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "e336667f62511694",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "0e676e1c5706dff6",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "06fafab40b41d047",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "034d5e5c97154fc5",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "5bf2a21544556f02",
+      "char_count": 6,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "5f46317fe55f2aab",
+      "char_count": 9,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:22:02",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "d88e602c0cd12965",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:25:11",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "65625ccb6e1abc3a",
+      "char_count": 11,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:25:11",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "71954bc306378644",
+      "char_count": 10,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:25:11",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "bea4ba30311ba87b",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-05-27T23:25:11",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "e336667f62511694",
+      "char_count": 7,
+      "token_count": 1,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-06-15T23:09:01",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "999ba560ecba9054",
+      "char_count": 9,
+      "token_count": 2,
+      "signals": [
+        "question"
+      ]
+    },
+    {
+      "timestamp": "2026-06-15T23:09:31",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "999ba560ecba9054",
+      "char_count": 9,
+      "token_count": 2,
+      "signals": [
+        "question"
+      ]
+    },
+    {
+      "timestamp": "2026-06-15T23:15:55",
+      "handled_by": "semantic_router",
+      "inferred_intent": "clima",
+      "text_hash": "13e3c6c1139994e0",
+      "char_count": 22,
+      "token_count": 3,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-06-17T16:16:29",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "038d86ae78e6c46e",
+      "char_count": 23,
+      "token_count": 2,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-08-04T22:41:07",
+      "handled_by": "semantic_router",
+      "inferred_intent": "agenda",
+      "text_hash": "8dbd3d502d703679",
+      "char_count": 37,
+      "token_count": 6,
+      "signals": [
+        "question"
+      ]
+    },
+    {
+      "timestamp": "2026-08-04T22:42:18",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "9de9570fe532f73c",
+      "char_count": 32,
+      "token_count": 6,
+      "signals": [
+        "question"
+      ]
+    },
+    {
+      "timestamp": "2026-08-04T22:45:35",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "23e3569ba964faee",
+      "char_count": 24,
+      "token_count": 4,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-08-04T22:46:12",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "f2862d4b2e8696ea",
+      "char_count": 26,
+      "token_count": 4,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-08-28T12:07:30",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "9fba90e2fee687f4",
+      "char_count": 25,
+      "token_count": 3,
+      "signals": []
+    },
+    {
+      "timestamp": "2026-08-28T12:08:42",
+      "handled_by": "ollama",
+      "inferred_intent": "natural_language",
+      "text_hash": "f6be8b2a56f7dcb9",
+      "char_count": 25,
+      "token_count": 4,
+      "signals": []
+    }
+  ],
+  "last_intent_decision": {
+    "intent": "mark_bath_done",
+    "confidence": 0.95,
+    "risk": "medium",
+    "handler": "intent:mark_bath_done",
+    "reason": "confirmacion de bano",
+    "slots": {
+      "pattern": "\\b(ya\\s+)?me\\s+bane\\b"
+    },
+    "requires_confirmation": true,
+    "mutates": true,
+    "command_preview": "ya me bañe",
+    "timestamp": "2026-09-03T21:54:31"
+  },
+  "last_config_validation": {
+    "timestamp": "2026-08-28T10:57:34",
+    "valid": true,
+    "errors": [],
+    "warnings": []
+  },
+  "last_wake_attempt": {
+    "timestamp": "2026-09-03T09:31:15",
+    "session_state": "interactiva",
+    "brief": "Briefing inteligente de hoy. Hoy es jueves 3 de septiembre. Hoy sale temprano por su clase de ingles; conviene revisar salida y preparacion. | Autoarranque y rutina de la manana: hora configurada 08:30. Para hoy, la rutina matutina se inicia cuando Windows ejecute la tarea programada Viernes Morning Wake a esa hora. Para que funcione, la laptop debe quedar en suspension y Windows debe permitir temporizadores de reactivacion. | Clima en Colima, Colima, Mexico: cloudy, con probabilidad de lluvia. Temperatura actual: 22 grados. | Clases para jueves 3 de septiembre: Lesgislacion y derecho informatico, Bases de datos, Estructura de datos.. | No hay eventos en la agenda para jueves 3 de septiembre. | No hay pendientes para 2026-09-03. | Siguiente accion: Preparacion para salir de 10:00 a 11:00. | Riesgos: hay clases y salida configurada a las 11:00; 1 evento(s) pasado(s) por limpiar. | Sugerencias operativas: 1. Senor, tiene clases hoy (Lesgislacion y derecho informatico, Bases de datos, Estructura de datos.) y faltan 89 minutos para su salida de 11:00. Conviene preparar lo esencial; si cambio el plan, diga 'cambia salida a las HH:MM solo para hoy'. | Noticias destacadas: Nicolás Maduro busca librarse del juicio en EU: Sus abogados alegan ‘inmunidad soberana’ - El Financiero | Von der Leyen y Rutte amenazan con \"más presión\" a Moscú - dw.com",
+    "safe_unlock_policy": "no_bypass"
+  },
+  "last_wake_success": true,
+  "wake_run_history": [
+    {
+      "timestamp": "2026-08-04T22:09:41",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-04T22:22:24",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-12T14:59:41",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-12T15:05:41",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-16T19:00:39",
+      "session_state": "desconocida",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-17T08:30:08",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-18T08:30:07",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-19T07:38:52",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-19T08:30:08",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-21T08:30:07",
+      "session_state": "bloqueada",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-25T08:12:21",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-25T08:30:09",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-26T08:30:08",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-27T08:30:09",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-28T08:30:06",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-29T21:49:47",
+      "session_state": "desconocida",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-08-31T10:50:40",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-09-01T08:30:09",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-09-02T08:30:07",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    },
+    {
+      "timestamp": "2026-09-03T09:31:15",
+      "session_state": "interactiva",
+      "safe_unlock_policy": "no_bypass"
+    }
+  ],
+  "games": {},
+  "last_analysis_beta": {
+    "title": "Reporte del dia",
+    "summary": "Reporte operativo generado para 2026-08-04.",
+    "assumptions": [
+      {
+        "key": "fuente",
+        "value": "agenda, clases y pendientes locales",
+        "confidence": 0.9
+      }
+    ],
+    "risks": [
+      "hay pendientes abiertos"
+    ],
+    "recommendation": "Use este reporte como vista previa; no se cambio ningun dato.",
+    "table": {
+      "title": "Resumen operativo",
+      "columns": [
+        "area",
+        "cantidad",
+        "detalle"
+      ],
+      "rows": [
+        [
+          "agenda",
+          "0",
+          "sin datos"
+        ],
+        [
+          "clases",
+          "3",
+          "Desarrollo Emprendedor, metodos numericos, servicios de internet"
+        ],
+        [
+          "pendientes",
+          "1",
+          "limpiar"
+        ]
+      ]
+    },
+    "chart": null,
+    "needs_input": [],
+    "timestamp": "2026-08-04T22:44:01",
+    "report_path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260804-224401-report.json"
+  },
+  "analysis_reports": [
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260804-224401-report.json",
+      "title": "Reporte del dia",
+      "timestamp": "2026-08-04T22:44:01"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260617-161513-investigacion-tabla.json",
+      "title": "Investigacion estructurada",
+      "timestamp": "2026-06-17T16:15:12"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221527-simulation.json",
+      "title": "Simulacion beta",
+      "timestamp": "2026-05-27T22:15:27"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221247-simulation.json",
+      "title": "Simulacion beta de presupuesto",
+      "timestamp": "2026-05-27T22:12:47"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221247-simulation.json",
+      "title": "Simulacion beta de presupuesto",
+      "timestamp": "2026-05-27T22:12:47"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221208-report.json",
+      "title": "Reporte beta del dia",
+      "timestamp": "2026-05-27T22:12:08"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221113-investigacion-tabla.json",
+      "title": "Investigacion estructurada beta",
+      "timestamp": "2026-05-27T22:11:12"
+    },
+    {
+      "path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221112-investigacion-tabla.json",
+      "title": "Investigacion estructurada beta",
+      "timestamp": "2026-05-27T22:11:11"
+    }
+  ],
+  "last_execution_receipt": {
+    "id": "c97e947f6731",
+    "requested_action": "report",
+    "executed_action": "analysis",
+    "status": "verified",
+    "success": true,
+    "timestamp": "2026-08-04T22:44:01",
+    "evidence": [
+      {
+        "kind": "analysis",
+        "detail": "resultado estructurado: Reporte del dia",
+        "confirmed": true
+      },
+      {
+        "kind": "file",
+        "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260804-224401-report.json",
+        "confirmed": true
+      }
+    ],
+    "changed_domains": [
+      "analysis_reports"
+    ],
+    "errors": [],
+    "rollback_available": false,
+    "plan_id": "",
+    "result_message": "Reporte operativo generado para 2026-08-04."
+  },
+  "execution_receipts": [
+    {
+      "id": "c97e947f6731",
+      "requested_action": "report",
+      "executed_action": "analysis",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-08-04T22:44:01",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Reporte del dia",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260804-224401-report.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Reporte operativo generado para 2026-08-04."
+    },
+    {
+      "id": "065342d73d1a",
+      "requested_action": "Plan para ayudar con hoy: revisar contexto y preparar ajustes seguros.",
+      "executed_action": "show_activity_calendar, cancel_task",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-08-04T22:39:46",
+      "evidence": [
+        {
+          "kind": "state_diff",
+          "detail": "cambio confirmado en state",
+          "confirmed": true
+        },
+        {
+          "kind": "state_diff",
+          "detail": "cambio confirmado en pending_tasks",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "state",
+        "pending_tasks"
+      ],
+      "errors": [],
+      "rollback_available": true,
+      "plan_id": "7ace0998f8",
+      "result_message": "Calendario de 2026-08-04: 11:00-12:00 Preparacion para salir | 12:00-12:20 Salida | 12:30-15:00 Clases: Desarrollo Emprendedor, metodos numericos, servicios de internet | 21:00-21:20 Revision nocturna Pendiente cancelado: agarrar comida."
+    },
+    {
+      "id": "0094788d2ca8",
+      "requested_action": "investigacion-tabla",
+      "executed_action": "analysis",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-06-17T16:15:12",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Investigacion estructurada",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260617-161513-investigacion-tabla.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Organice resultados para: mis gastos."
+    },
+    {
+      "id": "43779751c0ef",
+      "requested_action": "simulation",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:15:27",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Simulacion beta",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221527-simulation.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Puedo simular el escenario, pero necesito al menos un dato numerico o una condicion concreta."
+    },
+    {
+      "id": "3a41756381d4",
+      "requested_action": "simulation",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:12:47",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Simulacion beta de presupuesto",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221247-simulation.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Puedo simular el presupuesto, pero falta el monto a proyectar."
+    },
+    {
+      "id": "d06fe813933b",
+      "requested_action": "simulation",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:12:47",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Simulacion beta de presupuesto",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221247-simulation.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Puedo simular el presupuesto, pero falta el monto a proyectar."
+    },
+    {
+      "id": "a5a0c0919d88",
+      "requested_action": "report",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:12:08",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Reporte beta del dia",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221208-report.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Reporte operativo generado para 2026-05-27."
+    },
+    {
+      "id": "d941c5a50ca1",
+      "requested_action": "investigacion-tabla",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:11:12",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Investigacion estructurada beta",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221113-investigacion-tabla.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Organice resultados para: mis gastos."
+    },
+    {
+      "id": "823d80b36fd5",
+      "requested_action": "investigacion-tabla",
+      "executed_action": "analysis_beta",
+      "status": "verified",
+      "success": true,
+      "timestamp": "2026-05-27T22:11:11",
+      "evidence": [
+        {
+          "kind": "analysis",
+          "detail": "resultado estructurado: Investigacion estructurada beta",
+          "confirmed": true
+        },
+        {
+          "kind": "file",
+          "detail": "reporte guardado: C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260527-221112-investigacion-tabla.json",
+          "confirmed": true
+        }
+      ],
+      "changed_domains": [
+        "analysis_reports"
+      ],
+      "errors": [],
+      "rollback_available": false,
+      "plan_id": "",
+      "result_message": "Organice resultados para: mis gastos."
+    }
+  ],
+  "remote_control": {
+    "pending_confirmations": {},
+    "history": [
+      {
+        "timestamp": "2026-05-28T09:34:42",
+        "chat_id": "8028065392",
+        "direction": "out",
+        "text": "ignorado: greeting",
+        "status": "ignored",
+        "detail": "",
+        "permission": "owner",
+        "update_id": 0
+      },
+      {
+        "timestamp": "2026-05-28T09:34:42",
+        "chat_id": "8028065392",
+        "direction": "in",
+        "text": "Hola",
+        "status": "received",
+        "detail": "",
+        "permission": "owner",
+        "update_id": 0
+      },
+      {
+        "timestamp": "2026-05-28T08:50:06",
+        "chat_id": "",
+        "direction": "system",
+        "text": "ignore backlog inicial: 15 update(s)",
+        "status": "ignored",
+        "detail": "Se descartaron mensajes previos para evitar spam al iniciar polling.",
+        "permission": "",
+        "update_id": 0
+      }
+    ],
+    "last_poll_at": "2026-05-28T09:35:15",
+    "last_error": "",
+    "update_offset": 380775345,
+    "last_activity_at": "2026-05-28T09:34:42"
+  },
+  "last_analysis": {
+    "title": "Reporte del dia",
+    "summary": "Reporte operativo generado para 2026-08-04.",
+    "assumptions": [
+      {
+        "key": "fuente",
+        "value": "agenda, clases y pendientes locales",
+        "confidence": 0.9
+      }
+    ],
+    "risks": [
+      "hay pendientes abiertos"
+    ],
+    "recommendation": "Use este reporte como vista previa; no se cambio ningun dato.",
+    "table": {
+      "title": "Resumen operativo",
+      "columns": [
+        "area",
+        "cantidad",
+        "detalle"
+      ],
+      "rows": [
+        [
+          "agenda",
+          "0",
+          "sin datos"
+        ],
+        [
+          "clases",
+          "3",
+          "Desarrollo Emprendedor, metodos numericos, servicios de internet"
+        ],
+        [
+          "pendientes",
+          "1",
+          "limpiar"
+        ]
+      ]
+    },
+    "chart": null,
+    "needs_input": [],
+    "timestamp": "2026-08-04T22:44:01",
+    "report_path": "C:\\Users\\KAISER\\Bienvenido_Señor\\runtime\\reports\\20260804-224401-report.json"
+  },
+  "last_task_reference": "52826a2a63"
+}

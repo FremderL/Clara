@@ -1,0 +1,86 @@
+{
+  "wake_names": ["jarvis"],
+  "speech_engine": "vosk",
+  "vosk_model_path": "vosk-model-small-es-0.42",
+  "language_recognition": "es-ES",
+  "tts": {
+    "gender": "male",
+    "rate": 160,
+    "macos_say_voice": ""
+  },
+  "reminder_default_minutes": 30,
+  "search_engine_url": "https://www.google.com/search?q=",
+  "weather_location": "",
+  "morning_use_briefing": true,
+  "morning_run_sequence_after_briefing": false,
+  "proactive_mix_casual": true,
+  "morning_time": "07:00",
+  "morning_sequence": [
+    {"type": "open_url", "value": "https://www.youtube.com/"},
+    {"type": "open_app", "value": "Cursor"}
+  ],
+  "proactive_interval_minutes": 40,
+  "proactive_prompts": [
+    "¿Revisamos su agenda o los recordatorios pendientes?",
+    "Si necesita buscar algo en internet, diga: Jarvis, búscame, y el tema.",
+    "Puede anotar una tarea diciendo: Jarvis, recuérdame, y qué y cuándo.",
+    "Para oír todo lo que puedo hacer: Jarvis, ayuda extendida.",
+    "¿Quiere que abramos el entorno de trabajo o un enlace habitual?",
+    "Un descanso breve también cuenta. ¿Desea que le proponga una búsqueda útil?",
+    "Diga dime algo si quiere una frase al azar o un consejo de estudio.",
+    "Los comandos de voz extra están en el archivo de configuración; puede ampliarlos sin pagar nada."
+  ],
+  "casual_phrases": [
+    "Recuerde: dividir el estudio en bloques cortos suele rendir más que una maratón única.",
+    "Si hoy solo avanza un poco, igual es progreso. La constancia vence al talento ocioso.",
+    "Puede usar la agenda de Jarvis para liberar memoria mental y concentrarse en lo importante.",
+    "Buscar en la web con su voz le ahorra tiempo; pruebe con un tema que le cueste en clase.",
+    "Beber agua y estirarse un minuto mejora el enfoque más de lo que parece.",
+    "Si se siente abrumado, anote tres tareas pequeñas y haga solo la primera.",
+    "La curiosidad es gratis: pregunte algo a Jarvis y pídale que lo busque en internet.",
+    "Un proyecto personal, aunque sea pequeño, enseña más que muchas horas de teoría sola."
+  ],
+  "help_speech_chunks": [
+    "Rutina matutina: buenos días, fecha, clima vía wttr punto in y eventos de hoy. Opcional: morning_run_sequence_after_briefing true para YouTube o Cursor después. Ponga weather_location con su ciudad si el clima falla.",
+    "Agenda. Agrega a la agenda más texto; ya completé o marca como hecho más palabras clave; borra de la agenda más texto para quitar una entrada. Si hay varias coincidencias, pida más detalle. Recuérdame sin hora pregunta cuándo. Diga cancelar para salir.",
+    "Búsqueda. Si dice busca sin tema, pregunto qué buscar. Sin API de pago.",
+    "Ejecuta rutina matutina requiere código. Agrega a la rutina matutina con hablar o enlace requiere administrador. Aprende comando y atajos del JSON.",
+    "Limpia la agenda con código admin. Limpia recordatorios viejos archiva cumplidos. Dime algo u ocio para frases al azar."
+  ],
+  "security": {
+    "access_code": "1234",
+    "admin_code": "040913",
+    "code_ttl_seconds": 120
+  },
+  "sensitive_keywords": [
+    "aprende",
+    "registra comando",
+    "nuevo comando",
+    "rutina matutina",
+    "elimina comando",
+    "código admin",
+    "abre terminal",
+    "ejecuta",
+    "limpia la agenda",
+    "borra todos los recordatorios"
+  ],
+  "voice_commands": {
+    "abre youtube": {"action": "open_url", "value": "https://www.youtube.com/", "level": 1},
+    "abre google": {"action": "open_url", "value": "https://www.google.com/", "level": 1},
+    "abre gmail": {"action": "open_url", "value": "https://mail.google.com/", "level": 1},
+    "abre wikipedia": {"action": "open_url", "value": "https://es.wikipedia.org/", "level": 1},
+    "abre github": {"action": "open_url", "value": "https://github.com/", "level": 1},
+    "qué hora es": {"action": "speak", "value": "No llevo reloj atómico, pero puede mirar la barra del sistema, señor.", "level": 0},
+    "buenos días": {"action": "speak", "value": "Buenos días, señor. ¿En qué trabajamos hoy?", "level": 0},
+    "buenas tardes": {"action": "speak", "value": "Buenas tardes, señor.", "level": 0},
+    "buenas noches": {"action": "speak", "value": "Buenas noches, señor. Descanse si puede.", "level": 0},
+    "gracias jarvis": {"action": "speak", "value": "A su servicio, señor.", "level": 0}
+  },
+  "paths": {
+    "new_project": "~/Desktop/nuevo_proyecto",
+    "youtube_url": "https://www.youtube.com/",
+    "welcome_message": "Bienvenido a casa, Señor."
+  },
+  "clap_enabled": true,
+  "clap_threshold": 0.2
+}

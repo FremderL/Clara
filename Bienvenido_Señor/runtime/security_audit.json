@@ -1,0 +1,1396 @@
+[
+  {
+    "id": "abf9a3171b50",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "abf9a3171b50",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "3ce19eece228",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "3ce19eece228",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpzxg58f7_\\x.txt"
+  },
+  {
+    "id": "9038e41d98ac",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "9038e41d98ac",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp5xainnz1\\nota.txt"
+  },
+  {
+    "id": "08aaec4ce2c3",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "08aaec4ce2c3",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpfvoz5wy5\\x.txt"
+  },
+  {
+    "id": "af69c8edfe5f",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "af69c8edfe5f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp_v_7fdxn\\x.txt"
+  },
+  {
+    "id": "a23f3e2b95df",
+    "timestamp": "2026-08-04T22:07:05",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "a23f3e2b95df",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpfjipzhew"
+  },
+  {
+    "id": "a44ae6067196",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "a44ae6067196",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "c928b229c82a",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "c928b229c82a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpxezdfwek\\x.txt"
+  },
+  {
+    "id": "2ec9e4025512",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "2ec9e4025512",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpjbqpeuzb\\nota.txt"
+  },
+  {
+    "id": "a645e0db9535",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "a645e0db9535",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp6gxq2yyf\\x.txt"
+  },
+  {
+    "id": "84965b8c2936",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "84965b8c2936",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpv0hob4fz\\x.txt"
+  },
+  {
+    "id": "586d83f278f5",
+    "timestamp": "2026-06-17T16:09:29",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "586d83f278f5",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpar4k3e39"
+  },
+  {
+    "id": "84b87291a6d3",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "84b87291a6d3",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "d414f7403be4",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "d414f7403be4",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpd3ln911k\\x.txt"
+  },
+  {
+    "id": "9c666f7ce719",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "9c666f7ce719",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp01by54vr\\nota.txt"
+  },
+  {
+    "id": "87ee18bd1b6a",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "87ee18bd1b6a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmph_ei51p1\\x.txt"
+  },
+  {
+    "id": "bc262f9dbcc3",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "bc262f9dbcc3",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpwolonvni\\x.txt"
+  },
+  {
+    "id": "fcacaf81ee0e",
+    "timestamp": "2026-06-17T16:08:11",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "fcacaf81ee0e",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpeg4u97dg"
+  },
+  {
+    "id": "dc5a16ec0b05",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "dc5a16ec0b05",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "0c30ef03b97f",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "0c30ef03b97f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpzmpcfuez\\x.txt"
+  },
+  {
+    "id": "d21e5f87d355",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d21e5f87d355",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp7ob32lqn\\nota.txt"
+  },
+  {
+    "id": "8a6210655e71",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "8a6210655e71",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp_7qjnv3i\\x.txt"
+  },
+  {
+    "id": "c693a37f5021",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "c693a37f5021",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpw8dpffmg\\x.txt"
+  },
+  {
+    "id": "a6a92810cdf1",
+    "timestamp": "2026-06-17T16:08:00",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "a6a92810cdf1",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpbvhvf71k"
+  },
+  {
+    "id": "f0d2a6c07ded",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "f0d2a6c07ded",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "9fab6538e2fb",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "9fab6538e2fb",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpxepivvzs\\x.txt"
+  },
+  {
+    "id": "89c479ba0f99",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "89c479ba0f99",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpz5yi1k9t\\nota.txt"
+  },
+  {
+    "id": "7e9eab62c5e4",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "7e9eab62c5e4",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp03sdenw6\\x.txt"
+  },
+  {
+    "id": "43d66ed7da8d",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "43d66ed7da8d",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpmgzb66is\\x.txt"
+  },
+  {
+    "id": "d46dcbf68fb1",
+    "timestamp": "2026-06-17T15:46:57",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d46dcbf68fb1",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp2ozj0gov"
+  },
+  {
+    "id": "d2ad18948fcc",
+    "timestamp": "2026-06-17T15:46:44",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d2ad18948fcc",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "cf4ca5701d9f",
+    "timestamp": "2026-06-17T15:46:44",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "cf4ca5701d9f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmphgedyjly\\x.txt"
+  },
+  {
+    "id": "f5ed497c1c89",
+    "timestamp": "2026-06-17T15:46:44",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "f5ed497c1c89",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpowq7s9h8\\nota.txt"
+  },
+  {
+    "id": "411ceefed46e",
+    "timestamp": "2026-06-17T15:46:44",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "411ceefed46e",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp2muftzve\\x.txt"
+  },
+  {
+    "id": "83e89b36c2ba",
+    "timestamp": "2026-06-17T15:46:43",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "83e89b36c2ba",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpo5m82cr2\\x.txt"
+  },
+  {
+    "id": "73e964931f2c",
+    "timestamp": "2026-06-17T15:46:43",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "73e964931f2c",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmplm9lyzm7"
+  },
+  {
+    "id": "b1d6f03b3d9f",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "b1d6f03b3d9f",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "c173baefd387",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "c173baefd387",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp79f__b8p\\x.txt"
+  },
+  {
+    "id": "7570dd51c242",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "7570dd51c242",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmph6uru3sr\\nota.txt"
+  },
+  {
+    "id": "6011c3c0d354",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "6011c3c0d354",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpuomgyfa9\\x.txt"
+  },
+  {
+    "id": "4236fb34b621",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "4236fb34b621",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpyswuw73o\\x.txt"
+  },
+  {
+    "id": "115c220752a1",
+    "timestamp": "2026-06-17T15:46:12",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "115c220752a1",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpopwiwvqu"
+  },
+  {
+    "id": "956cb2c2afb6",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "956cb2c2afb6",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "b36ba0ced2fa",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "b36ba0ced2fa",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpzavd85se\\x.txt"
+  },
+  {
+    "id": "0bf60be0adfc",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "0bf60be0adfc",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmprar1hdgy\\nota.txt"
+  },
+  {
+    "id": "19cbc188f0fd",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "19cbc188f0fd",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpdh1t7_p6\\x.txt"
+  },
+  {
+    "id": "22723964ab1a",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "22723964ab1a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp7uupaw5h\\x.txt"
+  },
+  {
+    "id": "4f484c458c6e",
+    "timestamp": "2026-06-15T22:58:25",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "4f484c458c6e",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp_kz6wufe"
+  },
+  {
+    "id": "3c7e4b811e0a",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "3c7e4b811e0a",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "5b31fc56bc02",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "5b31fc56bc02",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp54x_g_41\\x.txt"
+  },
+  {
+    "id": "4d0bfe6f9ec6",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "4d0bfe6f9ec6",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpsfiaxp70\\nota.txt"
+  },
+  {
+    "id": "b1d0eab23a0a",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "b1d0eab23a0a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp5em06s0i\\x.txt"
+  },
+  {
+    "id": "27fd38b3edc1",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "27fd38b3edc1",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpexnvv_e_\\x.txt"
+  },
+  {
+    "id": "68effd95dc63",
+    "timestamp": "2026-06-15T22:58:15",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "68effd95dc63",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmple8c0sj4"
+  },
+  {
+    "id": "8f7e7a5001ac",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "8f7e7a5001ac",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "dbb9d2b344bb",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "dbb9d2b344bb",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmplcywmk95\\x.txt"
+  },
+  {
+    "id": "c7c3bcb4cd6a",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "c7c3bcb4cd6a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpxcauicu4\\nota.txt"
+  },
+  {
+    "id": "12af51affb3f",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "12af51affb3f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpfm71drs2\\x.txt"
+  },
+  {
+    "id": "85c5b4765c97",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "85c5b4765c97",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpyrmfoo4n\\x.txt"
+  },
+  {
+    "id": "35076ea92327",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "35076ea92327",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp7s97fcjz"
+  },
+  {
+    "id": "d8d6660ce4d8",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d8d6660ce4d8",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "2debf37e5639",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "2debf37e5639",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpw0pzoyi6\\x.txt"
+  },
+  {
+    "id": "2eb122dae4b7",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "2eb122dae4b7",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp4hslrqwx\\nota.txt"
+  },
+  {
+    "id": "329434c6999f",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "329434c6999f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpj2ygqsyg\\x.txt"
+  },
+  {
+    "id": "d8aa5ccedd76",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d8aa5ccedd76",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmph347dey9\\x.txt"
+  },
+  {
+    "id": "281f50b38980",
+    "timestamp": "2026-06-15T22:27:40",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "281f50b38980",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp6bdhud2d"
+  },
+  {
+    "id": "7decb78e13fa",
+    "timestamp": "2026-06-15T22:26:34",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "7decb78e13fa",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "9914b46e4704",
+    "timestamp": "2026-06-15T22:26:34",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "9914b46e4704",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpzu749cip\\x.txt"
+  },
+  {
+    "id": "fc02f93f51f2",
+    "timestamp": "2026-06-15T22:26:34",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "fc02f93f51f2",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp8awqw326\\nota.txt"
+  },
+  {
+    "id": "cf371da25041",
+    "timestamp": "2026-06-15T22:26:34",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "cf371da25041",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpv__87zlk\\x.txt"
+  },
+  {
+    "id": "41b2c1ccf821",
+    "timestamp": "2026-06-15T22:26:33",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "41b2c1ccf821",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmphwev2mnx\\x.txt"
+  },
+  {
+    "id": "9044f7073599",
+    "timestamp": "2026-06-15T22:26:33",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "9044f7073599",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp22barwk6"
+  },
+  {
+    "id": "cc2e9e6e1c3c",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "cc2e9e6e1c3c",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "27fe73ddffb0",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "27fe73ddffb0",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpeptfk4lb\\x.txt"
+  },
+  {
+    "id": "d32443cd1a85",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "d32443cd1a85",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp4vq2cul5\\nota.txt"
+  },
+  {
+    "id": "ee1eca039e1f",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "ee1eca039e1f",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpwd_o3pib\\x.txt"
+  },
+  {
+    "id": "e161ba732ece",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "e161ba732ece",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmptwieplrr\\x.txt"
+  },
+  {
+    "id": "1dcdb5a222bb",
+    "timestamp": "2026-06-15T22:24:49",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "1dcdb5a222bb",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpvs90lbhj"
+  },
+  {
+    "id": "e7d90c187305",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "e7d90c187305",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "7346e276a968",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "7346e276a968",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp7hxueg8g\\x.txt"
+  },
+  {
+    "id": "28c3f9d367af",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "28c3f9d367af",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp42p3bszh\\nota.txt"
+  },
+  {
+    "id": "768df6d7ce91",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "768df6d7ce91",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp15cudcdw\\x.txt"
+  },
+  {
+    "id": "c637bf9e58cd",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "write_file",
+    "decision": "allowed",
+    "level": 2,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "c637bf9e58cd",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpt8zzpjod\\x.txt"
+  },
+  {
+    "id": "fdb6960ae389",
+    "timestamp": "2026-06-15T22:24:41",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "fdb6960ae389",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpbrt8f1br"
+  },
+  {
+    "id": "a76424346785",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "a76424346785",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "28e9f1222b0a",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 2,
+    "detail": "ruta fuera de recursos autorizados",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "28e9f1222b0a",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\Bienvenido_Señor\\C"
+  },
+  {
+    "id": "9c079b748a4e",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "9c079b748a4e",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmprwzss1ts\\nota.txt"
+  },
+  {
+    "id": "4d439941218e",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "4d439941218e",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\Bienvenido_Señor\\C"
+  },
+  {
+    "id": "f3dd2af58b14",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 2,
+    "detail": "ruta fuera de recursos autorizados",
+    "metadata": {
+      "requires_confirmation": true
+    },
+    "correlation_id": "f3dd2af58b14",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\Bienvenido_Señor\\C"
+  },
+  {
+    "id": "7aa4d0c4f836",
+    "timestamp": "2026-06-15T22:24:26",
+    "action": "list_resources",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "permitido",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "7aa4d0c4f836",
+    "actor": "local",
+    "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp1x7294ci"
+  },
+  {
+    "id": "0bd2f6f27143",
+    "timestamp": "2026-06-15T22:24:08",
+    "action": "unknown_tool",
+    "decision": "denied",
+    "level": 3,
+    "detail": "accion no registrada",
+    "metadata": {
+      "requires_confirmation": false
+    },
+    "correlation_id": "0bd2f6f27143",
+    "actor": "local",
+    "target": ""
+  },
+  {
+    "id": "8c648f36d520",
+    "timestamp": "2026-06-15T21:56:38",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpn88so63k\\nota.txt"
+    }
+  },
+  {
+    "id": "52fcbd2c2e92",
+    "timestamp": "2026-06-15T21:56:38",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  },
+  {
+    "id": "eee0eefa4943",
+    "timestamp": "2026-06-15T21:56:38",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpn0zd6i79\\nota.txt"
+    }
+  },
+  {
+    "id": "1010a312704d",
+    "timestamp": "2026-06-15T21:56:38",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  },
+  {
+    "id": "b467414a9a59",
+    "timestamp": "2026-06-15T21:53:51",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpzp6v07w8\\nota.txt"
+    }
+  },
+  {
+    "id": "200c10d6bd24",
+    "timestamp": "2026-06-15T21:53:51",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  },
+  {
+    "id": "cd0c894eded4",
+    "timestamp": "2026-06-15T21:52:34",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp_0jwr3z3\\nota.txt"
+    }
+  },
+  {
+    "id": "48144f3f4503",
+    "timestamp": "2026-06-15T21:52:34",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  },
+  {
+    "id": "e845601158ff",
+    "timestamp": "2026-06-15T21:52:22",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmpjij1_bf8\\nota.txt"
+    }
+  },
+  {
+    "id": "6872e65dda9d",
+    "timestamp": "2026-06-15T21:52:22",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  },
+  {
+    "id": "1a193b003094",
+    "timestamp": "2026-06-15T21:51:49",
+    "action": "read_file",
+    "decision": "allowed",
+    "level": 1,
+    "detail": "Leer archivos dentro de recursos autorizados.",
+    "metadata": {
+      "target": "C:\\Users\\KAISER\\AppData\\Local\\Temp\\tmp5q2sqkr6\\nota.txt"
+    }
+  },
+  {
+    "id": "5c6ce3f0384a",
+    "timestamp": "2026-06-15T21:51:49",
+    "action": "write_file",
+    "decision": "denied",
+    "level": 1,
+    "detail": "nivel insuficiente",
+    "metadata": {}
+  }
+]

@@ -1,0 +1,1778 @@
+{
+  "3a6ec450f7": {
+    "id": "3a6ec450f7",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:24:07",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "9831fa79",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "cb700d0c",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "9831fa79"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "d88510e0",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "cb700d0c"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "a95c8cab",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "d88510e0"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "443ca67e",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "a95c8cab"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "28d406fa",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "443ca67e"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "2c6b8b5205": {
+    "id": "2c6b8b5205",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:24:26",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "98bb9af0",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "bd5cb09d",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "98bb9af0"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "4d00149e",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "bd5cb09d"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "a4618caf",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "4d00149e"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "a0593ed1",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "a4618caf"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "f17079f0",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "a0593ed1"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "83d83a07cc": {
+    "id": "83d83a07cc",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:24:41",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "68dd9b2b",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "6a56a580",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "68dd9b2b"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "24245085",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "6a56a580"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "5a31403c",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "24245085"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "f144b169",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "5a31403c"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "f3990283",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "f144b169"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "cbe7903fdc": {
+    "id": "cbe7903fdc",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:24:49",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "df0665f3",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "08deae12",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "df0665f3"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "a9043354",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "08deae12"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "77517af2",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "a9043354"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "c438e4a5",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "77517af2"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "99eec260",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "c438e4a5"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "0895122478": {
+    "id": "0895122478",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:26:33",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "82212b08",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "4b35dc63",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "82212b08"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "180632dc",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "4b35dc63"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "2b40f644",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "180632dc"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "cbf5d675",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "2b40f644"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "8fed8cec",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "cbf5d675"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "6d2e2f740a": {
+    "id": "6d2e2f740a",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:27:40",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "b0190822",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "b18f398d",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "b0190822"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "ef453b7b",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "b18f398d"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "1e47fd4f",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "ef453b7b"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "10738c1c",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "1e47fd4f"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "9c1015dc",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "10738c1c"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "bebc112d99": {
+    "id": "bebc112d99",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:27:40",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "6932dce6",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "ec228108",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "6932dce6"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "1bf99457",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "ec228108"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "dfd6f268",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "1bf99457"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "841e5131",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "dfd6f268"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "e55bcc78",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "841e5131"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "56f1dd0866": {
+    "id": "56f1dd0866",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:58:15",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "2a4a78e3",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "f8db996e",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "2a4a78e3"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "0e73e55f",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "f8db996e"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "c3dd0036",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "0e73e55f"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "eaa5b154",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "c3dd0036"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "1209c769",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "eaa5b154"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "678730faee": {
+    "id": "678730faee",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-15T22:58:25",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "08305909",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "3920ac7e",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "08305909"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "06929fa2",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "3920ac7e"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "b046f8b5",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "06929fa2"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "7d9119e1",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "b046f8b5"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "348ef7a2",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "7d9119e1"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "cc1d00cb6f": {
+    "id": "cc1d00cb6f",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T15:46:12",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "f7147878",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "f9af89c4",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "f7147878"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "2d88e7e1",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "f9af89c4"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "ef712dda",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "2d88e7e1"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "dec16d15",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "ef712dda"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "c90ebc7c",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "dec16d15"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "259fdac866": {
+    "id": "259fdac866",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T15:46:43",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "74d1a5c2",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "2855666d",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "74d1a5c2"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "680934e1",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "2855666d"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "57bf77c0",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "680934e1"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "b6da114f",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "57bf77c0"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "2d06ee2c",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "b6da114f"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "cc2f97a2a5": {
+    "id": "cc2f97a2a5",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T15:46:57",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "752fbb4a",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "fc4872cb",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "752fbb4a"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "ff96935a",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "fc4872cb"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "4b69af31",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "ff96935a"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "ccf11d53",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "4b69af31"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "37e83a10",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "ccf11d53"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "bfe1e1b9b9": {
+    "id": "bfe1e1b9b9",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T16:08:00",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "b6ab664d",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "224c928b",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "b6ab664d"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "68aa8275",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "224c928b"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "2b3d5199",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "68aa8275"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "922b7877",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "2b3d5199"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "cdc0acc3",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "922b7877"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "c9dbd41009": {
+    "id": "c9dbd41009",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T16:08:11",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "8005b31a",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "261895fc",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "8005b31a"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "79f2c889",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "261895fc"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "cb03512f",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "79f2c889"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "744b50f2",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "cb03512f"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "d32a39ed",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "744b50f2"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "b0e5926662": {
+    "id": "b0e5926662",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-06-17T16:09:29",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "5fe00b32",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "766d742b",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "5fe00b32"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "5e004a5b",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "766d742b"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "8beed237",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "5e004a5b"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "50e41774",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "8beed237"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "c31d7189",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "50e41774"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  },
+  "c2a9d49572": {
+    "id": "c2a9d49572",
+    "objective": "Organiza mis documentos",
+    "summary": "organizar documentos con analisis previo, propuesta y cambios confirmables",
+    "status": "draft",
+    "created_at": "2026-08-04T22:07:05",
+    "requires_confirmation": true,
+    "metadata": {
+      "planner": "agent-planner-v2",
+      "complexity": "high",
+      "context_keys": []
+    },
+    "steps": [
+      {
+        "id": "f35a04da",
+        "title": "Analizar carpetas",
+        "description": "Revisar carpetas candidatas y listar archivos sin mover nada.",
+        "tool_hint": "document_organizer_preview",
+        "priority": 10,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "3feb0914",
+        "title": "Detectar categorias",
+        "description": "Inferir categorias por extension, nombre y ubicacion.",
+        "tool_hint": "classify_resources",
+        "priority": 20,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "f35a04da"
+        ],
+        "rollback_hint": "",
+        "payload": {}
+      },
+      {
+        "id": "88c1fb57",
+        "title": "Proponer estructura",
+        "description": "Disenar directorios destino antes de tocar archivos.",
+        "tool_hint": "write_report",
+        "priority": 30,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "3feb0914"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Propuesta de organizacion de documentos"
+        }
+      },
+      {
+        "id": "1668d348",
+        "title": "Crear directorios",
+        "description": "Crear solo directorios aprobados por el usuario.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 40,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "88c1fb57"
+        ],
+        "rollback_hint": "Eliminar directorios creados si quedaron vacios.",
+        "payload": {
+          "operation": "create_dirs"
+        }
+      },
+      {
+        "id": "a5094c00",
+        "title": "Mover archivos",
+        "description": "Mover archivos segun la clasificacion aprobada.",
+        "tool_hint": "document_organizer_apply",
+        "priority": 50,
+        "mutates": true,
+        "requires_confirmation": true,
+        "status": "pending",
+        "dependencies": [
+          "1668d348"
+        ],
+        "rollback_hint": "Usar el informe de movimientos para devolver archivos a su origen.",
+        "payload": {
+          "operation": "move_files"
+        }
+      },
+      {
+        "id": "6d91edf5",
+        "title": "Generar informe",
+        "description": "Guardar un informe de cambios, omitidos y pendientes.",
+        "tool_hint": "write_report",
+        "priority": 60,
+        "mutates": false,
+        "requires_confirmation": false,
+        "status": "pending",
+        "dependencies": [
+          "a5094c00"
+        ],
+        "rollback_hint": "",
+        "payload": {
+          "title": "Informe de organizacion de documentos"
+        }
+      }
+    ]
+  }
+}

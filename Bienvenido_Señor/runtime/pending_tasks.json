@@ -1,0 +1,36 @@
+{
+  "version": "pending-tasks-v1",
+  "updated_at": "2026-08-04T22:39:46",
+  "tasks": [
+    {
+      "id": "52826a2a63",
+      "title": "agarrar comida",
+      "source": "action_plan",
+      "due_date": "2026-05-26",
+      "due_time": "12:00",
+      "priority": "normal",
+      "state": "cancelled",
+      "category": "general",
+      "next_action": "Revisar agarrar comida",
+      "created_at": "2026-05-26T11:08:56",
+      "updated_at": "2026-08-04T22:39:46",
+      "completed_at": "",
+      "cancelled_at": "2026-08-04T22:39:46"
+    },
+    {
+      "id": "455d278545",
+      "title": "limpiar",
+      "source": "action_plan",
+      "due_date": "",
+      "due_time": "",
+      "priority": "normal",
+      "state": "open",
+      "category": "general",
+      "next_action": "Revisar limpiar",
+      "created_at": "2026-05-27T22:02:20",
+      "updated_at": "2026-05-27T22:02:20",
+      "completed_at": "",
+      "cancelled_at": ""
+    }
+  ]
+}

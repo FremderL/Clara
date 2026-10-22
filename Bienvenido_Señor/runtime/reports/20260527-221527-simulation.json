@@ -1,0 +1,13 @@
+{
+  "title": "Simulacion beta",
+  "summary": "Puedo simular el escenario, pero necesito al menos un dato numerico o una condicion concreta.",
+  "assumptions": [],
+  "risks": [],
+  "recommendation": "Ejemplo: que pasaria si estudio 2 horas diarias por 5 dias.",
+  "table": null,
+  "chart": null,
+  "needs_input": [
+    "dato numerico, periodo o condicion a comparar"
+  ],
+  "created_at": "2026-05-27T22:15:27"
+}

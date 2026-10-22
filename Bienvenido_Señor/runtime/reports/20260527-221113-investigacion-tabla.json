@@ -1,0 +1,46 @@
+{
+  "title": "Investigacion estructurada beta",
+  "summary": "Organice resultados para: mis gastos.",
+  "assumptions": [
+    {
+      "key": "fuente",
+      "value": "busqueda web best-effort",
+      "confidence": 0.65
+    },
+    {
+      "key": "exactitud",
+      "value": "solo datos encontrados en el resumen",
+      "confidence": 0.6
+    }
+  ],
+  "risks": [],
+  "recommendation": "Para mejorar la tabla, especifique columnas y datos a investigar.",
+  "table": {
+    "title": "Tabla de investigacion",
+    "columns": [
+      "elemento",
+      "resumen",
+      "fuente"
+    ],
+    "rows": [
+      [
+        "Mis Gastos: Gestor de gastos - Aplicaciones en Google Play: ",
+        "Mis Gastos: Gestor de gastos - Aplicaciones en Google Play: MisGastos es una aplicación que te permite registrar tus gastos , ingresos y presupuesto de forma fácil y segura. Puedes",
+        "resultado 1"
+      ],
+      [
+        "Mis gastos: Aplicación web gratuíta para el control de tus i",
+        "Mis gastos: Aplicación web gratuíta para el control de tus ingresos, gastos y ahorros. Te ofrecemos una forma fácil de conocer exactamente tus gastos , ahorros e ingresos mensuales",
+        "resultado 2"
+      ],
+      [
+        "Mis gastos - myexpenses.mobi: Pueden ocultarse los importes ",
+        "Mis gastos - myexpenses.mobi: Pueden ocultarse los importes de gastos , ingresos y transferencias en las cabeceras de los grupos. Calcular la diferencia entre el saldo actual y un ",
+        "resultado 3"
+      ]
+    ]
+  },
+  "chart": null,
+  "needs_input": [],
+  "created_at": "2026-05-27T22:11:13"
+}

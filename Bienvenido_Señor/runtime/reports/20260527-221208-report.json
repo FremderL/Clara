@@ -1,0 +1,43 @@
+{
+  "title": "Reporte beta del dia",
+  "summary": "Reporte operativo generado para 2026-05-27.",
+  "assumptions": [
+    {
+      "key": "fuente",
+      "value": "agenda, clases y pendientes locales",
+      "confidence": 0.9
+    }
+  ],
+  "risks": [
+    "hay pendientes abiertos"
+  ],
+  "recommendation": "Use este reporte como vista previa; no se cambio ningun dato.",
+  "table": {
+    "title": "Resumen operativo",
+    "columns": [
+      "area",
+      "cantidad",
+      "detalle"
+    ],
+    "rows": [
+      [
+        "agenda",
+        "1",
+        "que eventos hay que limpiar"
+      ],
+      [
+        "clases",
+        "3",
+        "Sistemas Digitales, POO, Desarrollo de Software"
+      ],
+      [
+        "pendientes",
+        "2",
+        "agarrar comida, limpiar"
+      ]
+    ]
+  },
+  "chart": null,
+  "needs_input": [],
+  "created_at": "2026-05-27T22:12:08"
+}

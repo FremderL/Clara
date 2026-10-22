@@ -1,0 +1,54 @@
+# Manual de uso: Auditor de código (code_auditor.py)
+
+## ¿Qué hace?
+- Analiza archivos Python sin ejecutarlos.
+- Calcula complejidad ciclomática.
+- Detecta malas prácticas (eval, exec, import *).
+- Lista funciones definidas.
+
+## Cómo probarlo
+
+1. Abre una terminal en la carpeta del proyecto.
+2. Ejecuta:
+
+    python code_auditor.py
+
+3. Por defecto, audita el archivo `mlp_numpy.py` y muestra un reporte en consola.
+
+4. Para auditar otro archivo, edita la línea final del script:
+
+    resultado = auditor.analyze_file("NOMBRE_DEL_ARCHIVO.py")
+
+5. El resultado es un diccionario con:
+   - file: nombre del archivo
+   - complexity: complejidad ciclomática
+   - bad_practices: lista de malas prácticas
+   - functions: lista de funciones detectadas
+
+## Ejemplo de salida
+
+Reporte de auditoría: {'file': 'mlp_numpy.py', 'complexity': 8, 'bad_practices': [], 'functions': ['__init__', '_relu', '_relu_deriv', '_softmax', 'forward', 'backward', 'update', 'fit', 'predict', 'predict_proba']}
+
+## Seguridad
+- No ejecuta código.
+- No usa eval, exec ni operaciones inseguras.
+- Solo usa el módulo estándar ast.
+
+## Integración
+- Puedes importar CodeAuditor desde otros módulos:
+
+    from code_auditor import CodeAuditor
+    auditor = CodeAuditor()
+    resultado = auditor.analyze_file("viernes_core.py")
+
+---
+
+# Siguiente paso sugerido
+
+Para profesionalizar la arquitectura, se recomienda:
+- Crear subcarpetas: `core/`, `services/`, `ai/`, `utils/`, `storage/`, `security/`, `gui/`, `scripts/`.
+- Mover cada módulo a la carpeta correspondiente.
+- Añadir un README en cada subcarpeta.
+- Mantener backwards compatibility usando imports relativos o wrappers.
+
+¿Deseas que proponga y ejecute una reestructuración profesional de la arquitectura, asegurando compatibilidad y sin romper el sistema?

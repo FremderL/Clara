@@ -1,0 +1,352 @@
+[
+  {
+    "id": "7007ba954999",
+    "kind": "last_user_message",
+    "text": "activar interfaz moderna",
+    "created_at": "2026-06-15T22:40:43",
+    "metadata": {}
+  },
+  {
+    "id": "18d580157b20",
+    "kind": "last_user_message",
+    "text": "estado agentes",
+    "created_at": "2026-06-15T22:41:43",
+    "metadata": {}
+  },
+  {
+    "id": "5d6bc7e6621a",
+    "kind": "last_user_message",
+    "text": "memoria agente",
+    "created_at": "2026-06-15T22:41:47",
+    "metadata": {}
+  },
+  {
+    "id": "46fc863658e4",
+    "kind": "last_user_message",
+    "text": "monitor seguridad",
+    "created_at": "2026-06-15T22:41:50",
+    "metadata": {}
+  },
+  {
+    "id": "1e78aaf7e4b3",
+    "kind": "last_user_message",
+    "text": "herramientas registradas",
+    "created_at": "2026-06-15T22:42:25",
+    "metadata": {}
+  },
+  {
+    "id": "02a4988650a0",
+    "kind": "last_user_message",
+    "text": "herramientas registradas",
+    "created_at": "2026-06-15T22:49:20",
+    "metadata": {}
+  },
+  {
+    "id": "cf53bfeefad0",
+    "kind": "last_user_message",
+    "text": "plugins",
+    "created_at": "2026-06-15T22:49:21",
+    "metadata": {}
+  },
+  {
+    "id": "28680753a8a8",
+    "kind": "last_user_message",
+    "text": "hola",
+    "created_at": "2026-06-15T22:49:28",
+    "metadata": {}
+  },
+  {
+    "id": "8faf3f56c763",
+    "kind": "last_user_message",
+    "text": "como estas",
+    "created_at": "2026-06-15T22:49:41",
+    "metadata": {}
+  },
+  {
+    "id": "28e9f2c3f1c9",
+    "kind": "last_user_message",
+    "text": "activar interfaz clasica",
+    "created_at": "2026-06-15T22:49:56",
+    "metadata": {}
+  },
+  {
+    "id": "1165cf49e5ad",
+    "kind": "last_user_message",
+    "text": "hola",
+    "created_at": "2026-06-15T22:52:18",
+    "metadata": {}
+  },
+  {
+    "id": "39639f970fb1",
+    "kind": "last_user_message",
+    "text": "como estas",
+    "created_at": "2026-06-15T22:52:31",
+    "metadata": {}
+  },
+  {
+    "id": "111592eadf03",
+    "kind": "last_user_message",
+    "text": "como estas",
+    "created_at": "2026-06-15T22:52:38",
+    "metadata": {}
+  },
+  {
+    "id": "d95a12117f16",
+    "kind": "last_user_message",
+    "text": "hola",
+    "created_at": "2026-06-15T23:08:21",
+    "metadata": {}
+  },
+  {
+    "id": "92f83e604ae7",
+    "kind": "last_user_message",
+    "text": "como estas",
+    "created_at": "2026-06-15T23:08:41",
+    "metadata": {}
+  },
+  {
+    "id": "c12a3260786d",
+    "kind": "last_user_message",
+    "text": "que haces",
+    "created_at": "2026-06-15T23:09:01",
+    "metadata": {}
+  },
+  {
+    "id": "cd271e3d4f2b",
+    "kind": "last_user_message",
+    "text": "que haces",
+    "created_at": "2026-06-15T23:09:32",
+    "metadata": {}
+  },
+  {
+    "id": "5252bba285fc",
+    "kind": "last_user_message",
+    "text": "desactivar modo residente",
+    "created_at": "2026-06-15T23:15:20",
+    "metadata": {}
+  },
+  {
+    "id": "00f64f964009",
+    "kind": "last_user_message",
+    "text": "clima de hoy",
+    "created_at": "2026-06-15T23:15:35",
+    "metadata": {}
+  },
+  {
+    "id": "0a8f5d96e2e6",
+    "kind": "last_user_message",
+    "text": "clima de hoy",
+    "created_at": "2026-06-15T23:15:36",
+    "metadata": {}
+  },
+  {
+    "id": "b62206ac1c4d",
+    "kind": "last_user_message",
+    "text": "Probabilidad de lluvia",
+    "created_at": "2026-06-15T23:15:55",
+    "metadata": {}
+  },
+  {
+    "id": "2da7ab1143c2",
+    "kind": "last_user_message",
+    "text": "investiga mis gastos y haz tabla",
+    "created_at": "2026-06-17T16:15:12",
+    "metadata": {}
+  },
+  {
+    "id": "4098f8945649",
+    "kind": "last_user_message",
+    "text": "desactivar modo residente",
+    "created_at": "2026-06-17T16:15:55",
+    "metadata": {}
+  },
+  {
+    "id": "061bf711aa9a",
+    "kind": "last_user_message",
+    "text": "desactivar autoarranque",
+    "created_at": "2026-06-17T16:16:29",
+    "metadata": {}
+  },
+  {
+    "id": "09d92152ad8d",
+    "kind": "last_user_message",
+    "text": "dime mi agenda",
+    "created_at": "2026-07-02T16:19:52",
+    "metadata": {}
+  },
+  {
+    "id": "01b856d09e72",
+    "kind": "last_user_message",
+    "text": "dime mi agenda",
+    "created_at": "2026-07-02T16:20:55",
+    "metadata": {}
+  },
+  {
+    "id": "80bfd83e07d3",
+    "kind": "last_user_message",
+    "text": "Mi agenda",
+    "created_at": "2026-08-04T22:35:46",
+    "metadata": {}
+  },
+  {
+    "id": "0d49938d3fd8",
+    "kind": "last_user_message",
+    "text": "Mi agenda",
+    "created_at": "2026-08-04T22:35:46",
+    "metadata": {}
+  },
+  {
+    "id": "eb73b2a20b85",
+    "kind": "last_user_message",
+    "text": "Noticias",
+    "created_at": "2026-08-04T22:36:43",
+    "metadata": {}
+  },
+  {
+    "id": "ff11897fa3b5",
+    "kind": "last_user_message",
+    "text": "estado de herramientas",
+    "created_at": "2026-08-04T22:36:45",
+    "metadata": {}
+  },
+  {
+    "id": "d9db0217e94d",
+    "kind": "last_user_message",
+    "text": "ver recibo de la ultima accion",
+    "created_at": "2026-08-04T22:36:45",
+    "metadata": {}
+  },
+  {
+    "id": "b3cc4f689562",
+    "kind": "last_user_message",
+    "text": "elimina el pendiente agarrar comida.",
+    "created_at": "2026-08-04T22:39:16",
+    "metadata": {}
+  },
+  {
+    "id": "bc11242a002f",
+    "kind": "last_user_message",
+    "text": "confirmar",
+    "created_at": "2026-08-04T22:39:46",
+    "metadata": {}
+  },
+  {
+    "id": "55c18e376190",
+    "kind": "last_user_message",
+    "text": "Que eventos pasados estan por limpiar.",
+    "created_at": "2026-08-04T22:41:07",
+    "metadata": {}
+  },
+  {
+    "id": "0c470b17a03d",
+    "kind": "last_user_message",
+    "text": "como estas",
+    "created_at": "2026-08-04T22:41:31",
+    "metadata": {}
+  },
+  {
+    "id": "24f4eb0b99d4",
+    "kind": "last_user_message",
+    "text": "cuando es el cumpleaños de carol",
+    "created_at": "2026-08-04T22:42:18",
+    "metadata": {}
+  },
+  {
+    "id": "caf3d07630a4",
+    "kind": "last_user_message",
+    "text": "esta agregado en un recordatorio en mi agenda.",
+    "created_at": "2026-08-04T22:43:21",
+    "metadata": {}
+  },
+  {
+    "id": "ecbe2a746fc0",
+    "kind": "last_user_message",
+    "text": "informe del dia",
+    "created_at": "2026-08-04T22:44:01",
+    "metadata": {}
+  },
+  {
+    "id": "4e7a534bb679",
+    "kind": "last_user_message",
+    "text": "gracias, te puedes cerrar?",
+    "created_at": "2026-08-04T22:45:35",
+    "metadata": {}
+  },
+  {
+    "id": "212629d26193",
+    "kind": "last_user_message",
+    "text": "solo para despedirte, adios.",
+    "created_at": "2026-08-04T22:46:12",
+    "metadata": {}
+  },
+  {
+    "id": "1b1c8b33ecaa",
+    "kind": "last_user_message",
+    "text": "deja en $0 el balance del presupuesto.",
+    "created_at": "2026-08-17T09:05:55",
+    "metadata": {}
+  },
+  {
+    "id": "d32edc4b3210",
+    "kind": "last_user_message",
+    "text": "deja en $0 el balance",
+    "created_at": "2026-08-17T09:06:19",
+    "metadata": {}
+  },
+  {
+    "id": "62d298c38761",
+    "kind": "last_user_message",
+    "text": "ya me bañe",
+    "created_at": "2026-08-20T22:15:37",
+    "metadata": {}
+  },
+  {
+    "id": "be8641fd2073",
+    "kind": "last_user_message",
+    "text": "desactivar modo residente",
+    "created_at": "2026-08-28T12:07:00",
+    "metadata": {}
+  },
+  {
+    "id": "0a1f9d3d11da",
+    "kind": "last_user_message",
+    "text": "desactiva el autoarranque",
+    "created_at": "2026-08-28T12:07:30",
+    "metadata": {}
+  },
+  {
+    "id": "be7b9bcfbebd",
+    "kind": "last_user_message",
+    "text": "desactivar modo residente",
+    "created_at": "2026-08-28T12:08:02",
+    "metadata": {}
+  },
+  {
+    "id": "5638235d5678",
+    "kind": "last_user_message",
+    "text": "inicio de secion inactivo",
+    "created_at": "2026-08-28T12:08:42",
+    "metadata": {}
+  },
+  {
+    "id": "b46c6a7dd28f",
+    "kind": "last_user_message",
+    "text": "plan de hoy",
+    "created_at": "2026-09-01T18:06:07",
+    "metadata": {}
+  },
+  {
+    "id": "524b129477b6",
+    "kind": "last_user_message",
+    "text": "ya me bañe",
+    "created_at": "2026-09-01T19:45:41",
+    "metadata": {}
+  },
+  {
+    "id": "c092e0266222",
+    "kind": "last_user_message",
+    "text": "ya me bañe",
+    "created_at": "2026-09-03T21:54:31",
+    "metadata": {}
+  }
+]

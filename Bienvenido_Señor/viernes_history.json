@@ -1,0 +1,152 @@
+[
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 21:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T08:32:02"
+  },
+  {
+    "role": "assistant",
+    "text": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+    "timestamp": "2026-09-04T08:32:08"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:29"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:29"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:30"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:30"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:32"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:33"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:33"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:34"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:37"
+  },
+  {
+    "role": "assistant",
+    "text": "Entendido. Me detengo y pauso recordatorios por 10 minutos. Estoy listo para su siguiente instruccion.",
+    "timestamp": "2026-09-04T08:32:38"
+  },
+  {
+    "role": "assistant",
+    "text": "Auditoría de assistant.py: sin malas prácticas detectadas.",
+    "timestamp": "2026-09-04T08:33:30"
+  },
+  {
+    "role": "assistant",
+    "text": "Modulos activos: Voz, IA local (Ollama - lenguaje natural activo), Auditor de codigo, Router semantico, NLU local, Contexto local, Planificador de tareas, Memoria persistente, Herramientas con permisos, Plugins (1)",
+    "timestamp": "2026-09-04T08:33:30"
+  },
+  {
+    "role": "assistant",
+    "text": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+    "timestamp": "2026-09-04T08:42:42"
+  },
+  {
+    "role": "assistant",
+    "text": "Si gusta, puedo repasar la preparacion de hoy y lo que debe llevar para regresar.",
+    "timestamp": "2026-09-04T08:43:13"
+  },
+  {
+    "role": "assistant",
+    "text": "Son las 9:00. Recuerde desayunar.",
+    "timestamp": "2026-09-04T09:00:04"
+  },
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 21:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T09:19:12"
+  },
+  {
+    "role": "assistant",
+    "text": "Senor, hoy es viernes. Si quiere, puedo repasar su preparacion y la maleta para regresar.",
+    "timestamp": "2026-09-04T10:13:03"
+  },
+  {
+    "role": "assistant",
+    "text": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+    "timestamp": "2026-09-04T10:42:03"
+  },
+  {
+    "role": "assistant",
+    "text": "Ya tengo armado un calendario operativo para hoy. Diga 'plan de hoy' si quiere revisarlo antes de que se cargue el dia.",
+    "timestamp": "2026-09-04T10:42:35"
+  },
+  {
+    "role": "assistant",
+    "text": "Empiece a prepararse y recuerde preparar la maleta para regresar a casa.",
+    "timestamp": "2026-09-04T11:00:01"
+  },
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 21:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T11:23:39"
+  },
+  {
+    "role": "assistant",
+    "text": "Dato curioso: el primer correo electronico se envio en 1971.",
+    "timestamp": "2026-09-04T11:43:24"
+  },
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 11:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T11:46:57"
+  },
+  {
+    "role": "assistant",
+    "text": "Recuerde la rutina previa a salir.",
+    "timestamp": "2026-09-04T12:00:31"
+  },
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 11:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T12:06:24"
+  },
+  {
+    "role": "assistant",
+    "text": "Detecte un periodo de inactividad. Recomendaciones de habitos: 1. Detecte varios periodos de inactividad. Conviene separar descansos reales de pausas accidentales. 2. Su horario mas activo conmigo es cerca de las 11:00; es buena ventana para planear. 3. Repitio varias veces 'inactividad detectada'. Si es una rutina, puedo convertirlo en acceso rapido o recordatorio.",
+    "timestamp": "2026-09-04T19:42:09"
+  },
+  {
+    "role": "assistant",
+    "text": "Tiene 1 evento(s) pasado(s): 'Cumpleaños de Carol' (2026-07-06). Diga 'limpiar agenda' para eliminarlos, o puede borrarlos desde el editor de Agenda.",
+    "timestamp": "2026-09-05T04:40:50"
+  },
+  {
+    "role": "assistant",
+    "text": "Pendiente abierto sin fecha: limpiar. Diga 'que tengo pendiente' para revisarlo o 'ya hice eso' si ya quedo listo.",
+    "timestamp": "2026-09-05T04:40:50"
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "id": "9b390e5e-47b8-4f38-8dad-5ad68cdad668",
+      "title": "tomar agua",
+      "date": "2026-04-04",
+      "time": "09:00",
+      "category": "recordatorio",
+      "recurring": "daily",
+      "weekday": "",
+      "weekdays": [],
+      "paused": true
+    },
+    {
+      "id": "45c8c841-c952-45f0-b79d-0a9d40560177",
+      "title": "Cumpleaños de Carol",
+      "date": "2026-07-06",
+      "time": "00:00",
+      "category": "evento",
+      "recurring": "",
+      "weekday": "",
+      "weekdays": [],
+      "paused": false
+    }
+  ]
+}
