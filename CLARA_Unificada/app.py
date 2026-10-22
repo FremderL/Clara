@@ -575,6 +575,17 @@ def select_spanish_voice_id(voices: list) -> str | None:
     return str(first_id) if first_id else None
 
 
+def prepare_text_for_speech(text: str) -> str:
+    """Clean bullet symbols and raw URLs for natural Spanish TTS playback while keeping written chat links intact."""
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    cleaned = re.sub(r"(?im)^\s*Enlace:\s*https?://\S+\s*$", "", cleaned)
+    cleaned = re.sub(r"https?://\S+", "enlace en pantalla", cleaned)
+    cleaned = cleaned.replace("•", " ").replace("·", ", ")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def explain_tts_failure(reason: str) -> str:
     """Explain why spoken output failed while reassuring the user that the written reply is preserved."""
     detail = str(reason or "").strip()
@@ -4206,8 +4217,8 @@ class AssistantApp(tk.Tk):
             messagebox.showwarning("Voz de salida no disponible", explanation, parent=self)
 
     def _start_tts(self, text: str, manual: bool = False) -> None:
-        text = str(text).strip()
-        if not text:
+        spoken_text = prepare_text_for_speech(text)
+        if not spoken_text:
             return
         if self.voice_active:
             self.voice_status.configure(text="La voz automática espera a que termine la captura manual del micrófono.")
@@ -4229,6 +4240,7 @@ class AssistantApp(tk.Tk):
 
         def worker() -> None:
             engine = None
+            loop_started = False
             try:
                 import pyttsx3
                 engine = pyttsx3.init()
@@ -4242,8 +4254,9 @@ class AssistantApp(tk.Tk):
                     except Exception:
                         pass
                 self.current_tts_engine = engine
-                engine.say(text)
+                engine.say(spoken_text)
                 engine.startLoop(False)
+                loop_started = True
                 if not cancel_event.is_set():
                     self.ai_results.put(("tts_started", ""))
                 while engine.isBusy() and not cancel_event.is_set():
@@ -4255,10 +4268,16 @@ class AssistantApp(tk.Tk):
                 else:
                     status = "Lectura terminada."
                 engine.endLoop()
+                loop_started = False
                 self.ai_results.put(("tts_status", status))
             except Exception as exc:
-                self.ai_results.put(("tts_error", str(exc)))
+                self.ai_results.put(("tts_error", (str(exc), manual)))
             finally:
+                if loop_started and engine is not None:
+                    try:
+                        engine.endLoop()
+                    except Exception:
+                        pass
                 self.current_tts_engine = None
                 self.tts_active = False
 
@@ -5391,7 +5410,11 @@ class AssistantApp(tk.Tk):
                     self.voice_status.configure(text=payload)
                     self.set_sphere_state("idle")
                 elif kind == "tts_error":
-                    self._report_tts_failure(payload, manual=False)
+                    if isinstance(payload, tuple) and len(payload) == 2:
+                        reason, is_manual = payload
+                    else:
+                        reason, is_manual = str(payload), False
+                    self._report_tts_failure(reason, manual=bool(is_manual))
                 elif kind == "morning_online":
                     self.append_chat("Clima y noticias", payload, speak=False)
                     combined = (self._pending_morning_speech + "\n\n" + payload).strip() if self._pending_morning_speech else payload

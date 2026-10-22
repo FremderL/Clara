@@ -936,6 +936,83 @@ END:VCALENDAR\r
         self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 0)
         self.assertTrue(any(kind == "add_task" for kind, _payload in actions_called))
 
+    def test_etapa3_voice_subsystem_tts_repeat_failure_and_push_to_talk_editable_transcript(self) -> None:
+        # 1. Limpieza de texto para TTS conservando intactos los enlaces escritos
+        raw_summary = "• Avance científico\n  Fuente: BBC Mundo\n  Enlace: https://example.com/noticia-1"
+        spoken_text = app.prepare_text_for_speech(raw_summary)
+        self.assertIn("Avance científico", spoken_text)
+        self.assertIn("Fuente: BBC Mundo", spoken_text)
+        self.assertNotIn("https://example.com/noticia-1", spoken_text)
+
+        # 2. Fallo controlado de TTS: muestra explicación y conserva la respuesta escrita
+        chat_buffer: list[str] = []
+        sphere_states: list[str] = []
+        status_texts: list[str] = []
+
+        class _LogRecorder:
+            def configure(self, **_kw): pass
+            def insert(self, _pos, txt, *_tags): chat_buffer.append(str(txt))
+            def see(self, *_args): pass
+
+        class _EditableEntry:
+            def __init__(self) -> None:
+                self.value = ""
+                self.focused = False
+
+            def delete(self, *_args) -> None:
+                self.value = ""
+
+            def insert(self, _idx, text: str) -> None:
+                self.value = text
+
+            def focus_set(self) -> None:
+                self.focused = True
+
+        entry_box = _EditableEntry()
+        send_chat_called = []
+
+        fake_app = SimpleNamespace(
+            voice_active=False,
+            tts_active=False,
+            last_assistant_response="Resumen escrito que debe conservarse",
+            chat_log=_LogRecorder(),
+            chat_input=entry_box,
+            ai_results=app.queue.Queue(),
+            voice_stop=threading.Event(),
+            tts_cancel_event=threading.Event(),
+            set_sphere_state=lambda st: sphere_states.append(st),
+            voice_status=SimpleNamespace(
+                configure=lambda **kw: status_texts.append(kw.get("text", "")),
+                cget=lambda _k: "Micrófono activo",
+            ),
+            voice_button=SimpleNamespace(configure=lambda **_kw: None),
+            after=lambda *_args: None,
+            process_ai_results=lambda: None,
+            send_chat=lambda: send_chat_called.append(True),
+            append_chat=lambda spk, txt, **_kw: chat_buffer.append(f"{spk}: {txt}\n"),
+        )
+        fake_app._report_tts_failure = lambda reason, manual=False: app.AssistantApp._report_tts_failure(fake_app, reason, manual=False)
+        fake_app._start_tts = lambda txt, manual=False: app.AssistantApp._start_tts(fake_app, txt, manual=manual)
+
+        with mock.patch("importlib.util.find_spec", return_value=None):
+            app.AssistantApp.speak_last_response(fake_app)
+
+        full_log = "".join(chat_buffer)
+        self.assertIn("No pude leer la respuesta en voz alta", full_log)
+        self.assertIn("Tu respuesta escrita se conserva íntegra", full_log)
+        self.assertEqual(sphere_states[-1], "idle")
+
+        # 3. Push-to-Talk coloca transcripción editable en chat_input y NUNCA auto-envía
+        fake_app.voice_active = True
+        fake_app.ai_results.put(("voice_transcript", "agregar tarea de matemáticas para mañana"))
+        fake_app.ai_results.put(("voice_stopped", "Micrófono apagado"))
+        app.AssistantApp.process_ai_results(fake_app)
+
+        self.assertEqual(entry_box.value, "agregar tarea de matemáticas para mañana")
+        self.assertTrue(entry_box.focused)
+        self.assertEqual(send_chat_called, [])  # Nunca se envía sin pulsar Enviar manualmente
+        self.assertFalse(fake_app.voice_active)  # Micrófono vuelve a quedar apagado
+
 
 if __name__ == "__main__":
     unittest.main()
