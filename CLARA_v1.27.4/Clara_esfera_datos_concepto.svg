@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="780" viewBox="0 0 1200 780" role="img" aria-labelledby="title desc">
+<title id="title">Clara · esfera de datos expansiva</title>
+<desc id="desc">Concepto de una esfera de datos original y abstracta. Permanece compacta mientras escucha la entrada manual; los anillos y conexiones se expanden solo cuando Clara responde en voz. El micrófono permanece apagado por defecto.</desc>
+<defs>
+ <radialGradient id="bg" cx="48%" cy="44%" r="80%"><stop stop-color="#132e45"/><stop offset=".65" stop-color="#091728"/><stop offset="1" stop-color="#06101c"/></radialGradient>
+ <radialGradient id="core"><stop stop-color="#e5ffff" stop-opacity=".94"/><stop offset=".12" stop-color="#7ef7ec" stop-opacity=".9"/><stop offset=".45" stop-color="#25a5bd" stop-opacity=".72"/><stop offset="1" stop-color="#0a3754" stop-opacity=".12"/></radialGradient>
+ <radialGradient id="bloom"><stop stop-color="#53eee2" stop-opacity=".58"/><stop offset="1" stop-color="#338eff" stop-opacity="0"/></radialGradient>
+ <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="blur"><feGaussianBlur stdDeviation="22"/></filter>
+</defs>
+<rect width="1200" height="780" rx="30" fill="url(#bg)"/>
+<text x="58" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3" fill="#83b4ca">CLARA · DISEÑO DE INTERACCIÓN</text>
+<text x="58" y="121" font-family="Segoe UI,Arial,sans-serif" font-size="42" font-weight="700" fill="#eefaff">Una esfera que responde</text>
+<text x="58" y="155" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#9fb8ca">Compacta mientras escuchas · se expande solo cuando Clara responde en voz</text>
+<!-- quiet state orbit -->
+<g transform="translate(315 420)">
+ <circle r="217" fill="url(#bloom)" filter="url(#blur)" opacity=".42"/>
+ <ellipse rx="154" ry="67" fill="none" stroke="#68dde0" stroke-opacity=".38" stroke-width="1.3" stroke-dasharray="3 8" transform="rotate(-24)"/>
+ <ellipse rx="139" ry="92" fill="none" stroke="#69b9f7" stroke-opacity=".34" stroke-width="1.2" transform="rotate(45)"/>
+ <ellipse rx="175" ry="118" fill="none" stroke="#f0c77c" stroke-opacity=".25" stroke-width="1" stroke-dasharray="1 8" transform="rotate(18)"/>
+ <circle r="95" fill="url(#core)" stroke="#a6fff3" stroke-opacity=".54" stroke-width="1.5" filter="url(#glow)"/>
+ <g fill="none" stroke="#b3fff7" stroke-opacity=".36" stroke-width="1">
+  <ellipse rx="92" ry="35"/><ellipse rx="71" ry="91"/><path d="M-87 0Q0-76 87 0Q0 76-87 0Z"/>
+  <ellipse rx="51" ry="91" transform="rotate(42)"/><ellipse rx="51" ry="91" transform="rotate(-42)"/>
+ </g>
+ <g fill="#dbfffa" filter="url(#glow)"><circle cx="0" cy="-93" r="4"/><circle cx="81" cy="-48" r="3"/><circle cx="53" cy="74" r="3.5"/><circle cx="-76" cy="54" r="3"/></g>
+ <g fill="#f5d99e"><circle cx="-151" cy="-25" r="3"/><circle cx="137" cy="78" r="2.5"/><circle cx="39" cy="-153" r="2.5"/></g>
+ <text x="0" y="12" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="4" fill="#ecffff">CLARA</text>
+</g>
+<text x="315" y="690" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2" fill="#a6dce2">ESCUCHA MANUAL: COMPACTA → VOZ DE CLARA: EXPANSIÓN</text>
+<!-- state panel -->
+<g font-family="Segoe UI,Arial,sans-serif">
+ <rect x="610" y="220" width="530" height="382" rx="24" fill="#0c1b2c" stroke="#28475d" stroke-width="2"/>
+ <text x="650" y="266" font-size="13" font-weight="700" letter-spacing="2" fill="#79a6bc">ESTADOS CONCRETOS</text>
+ <circle cx="656" cy="316" r="6" fill="#63d8aa"/><text x="676" y="322" font-size="19" font-weight="650" fill="#eaf8ff">En espera</text>
+ <text x="676" y="346" font-size="14" fill="#95acbd">Esfera pequeña; micrófono apagado.</text>
+ <line x1="650" y1="369" x2="1097" y2="369" stroke="#243d52"/>
+ <circle cx="656" cy="405" r="6" fill="#58e5e3"/><text x="676" y="411" font-size="19" font-weight="650" fill="#eaf8ff">Entrada manual (push-to-talk)</text>
+ <text x="676" y="435" font-size="14" fill="#95acbd">La esfera permanece compacta mientras hablas.</text>
+ <line x1="650" y1="458" x2="1097" y2="458" stroke="#243d52"/>
+ <circle cx="656" cy="493" r="6" fill="#e1a74b"/><text x="676" y="499" font-size="19" font-weight="650" fill="#eaf8ff">Clara responde en voz</text>
+ <text x="676" y="523" font-size="14" fill="#95acbd">La trama se expande mientras Clara responde en voz.</text>
+ <rect x="650" y="550" width="447" height="34" rx="9" fill="#a72f39"/>
+ <text x="873" y="572" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">DETENER AHORA · Esc · siempre visible</text>
+</g>
+<rect x="610" y="627" width="530" height="64" rx="15" fill="#14273a" stroke="#314a5f"/>
+<text x="636" y="653" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" fill="#c7e8ee">Dirección visual original</text>
+<text x="636" y="675" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#91aabd">Inspiración holográfica general; no replica interfaz, logotipos ni utilería de la película.</text>
+<text x="58" y="744" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#70889b">Boceto conceptual. El SVG y la demostración HTML no activan micrófono, no graban y no procesan voz.</text>
+</svg>

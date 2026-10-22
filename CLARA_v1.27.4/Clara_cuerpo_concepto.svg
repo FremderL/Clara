@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="760" viewBox="0 0 1120 760" role="img" aria-labelledby="title desc">
+  <title id="title">Concepto del cuerpo del asistente Clara</title>
+  <desc id="desc">Un pequeño robot flotante de geometría suave, rostro sencillo y un núcleo luminoso. Se acompaña de indicadores textuales de estado: listo, micrófono apagado y generación cancelable.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef6ff"/><stop offset="1" stop-color="#f7fbfd"/></linearGradient>
+    <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ee7d8"/><stop offset="1" stop-color="#6ba8ff"/></linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eaf3fb"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#183858" flood-opacity=".16"/></filter>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1120" height="760" rx="34" fill="url(#bg)"/>
+  <text x="58" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="2" fill="#397190">CONCEPTO VISUAL · PROTOTIPO</text>
+  <text x="58" y="122" font-family="Segoe UI,Arial,sans-serif" font-size="42" font-weight="700" fill="#142b45">Clara</text>
+  <text x="58" y="155" font-family="Segoe UI,Arial,sans-serif" font-size="18" fill="#557086">Una presencia amable, discreta y claramente controlable.</text>
+
+  <!-- The assistant body -->
+  <ellipse cx="414" cy="639" rx="186" ry="24" fill="#bfd3e4" opacity=".45"/>
+  <g filter="url(#shadow)">
+    <!-- halo/status ring -->
+    <ellipse cx="414" cy="594" rx="146" ry="31" fill="#d8eafa" stroke="#8bbbd5" stroke-width="3"/>
+    <ellipse cx="414" cy="591" rx="108" ry="17" fill="#f9fdff" stroke="#b6cee0" stroke-width="2"/>
+    <!-- torso -->
+    <path d="M303 422 Q303 388 337 378 Q414 354 491 378 Q525 388 525 422 L525 552 Q525 582 495 591 Q414 618 333 591 Q303 582 303 552 Z" fill="url(#body)" stroke="#c4d7e5" stroke-width="4"/>
+    <!-- shoulder accents -->
+    <rect x="265" y="433" width="66" height="36" rx="18" transform="rotate(-22 265 433)" fill="url(#shell)" stroke="#4e91bd" stroke-width="3"/>
+    <rect x="497" y="433" width="66" height="36" rx="18" transform="rotate(22 497 433)" fill="url(#shell)" stroke="#4e91bd" stroke-width="3"/>
+    <!-- chest core -->
+    <circle cx="414" cy="475" r="42" fill="#d9f7f4"/>
+    <circle cx="414" cy="475" r="27" fill="url(#shell)" filter="url(#glow)"/>
+    <path d="M414 458 C401 458 398 475 414 490 C430 475 427 458 414 458Z" fill="#fff" opacity=".95"/>
+    <text x="414" y="548" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="#7893a8">CLARA</text>
+    <!-- head -->
+    <rect x="303" y="204" width="222" height="180" rx="70" fill="url(#shell)" stroke="#397ca8" stroke-width="4"/>
+    <rect x="325" y="227" width="178" height="132" rx="52" fill="#17334f"/>
+    <circle cx="374" cy="281" r="11" fill="#d8fffb"/>
+    <circle cx="454" cy="281" r="11" fill="#d8fffb"/>
+    <path d="M382 316 Q414 341 446 316" fill="none" stroke="#9ef2e8" stroke-width="7" stroke-linecap="round"/>
+    <!-- tiny antenna / status -->
+    <path d="M414 204 L414 177" stroke="#397ca8" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="414" cy="164" r="14" fill="#18b89a" stroke="#ffffff" stroke-width="5"/>
+  </g>
+
+  <!-- Status card -->
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <rect x="657" y="214" width="398" height="286" rx="24" fill="#ffffff" stroke="#d8e6ef" stroke-width="2"/>
+    <text x="690" y="257" font-size="14" font-weight="700" letter-spacing="1.5" fill="#6d879b">ESTADO VISIBLE</text>
+    <circle cx="699" cy="304" r="7" fill="#15966f"/>
+    <text x="720" y="310" font-size="20" font-weight="700" fill="#17334f">Lista para ayudar</text>
+    <text x="720" y="336" font-size="15" fill="#61798c">Sin acciones en curso</text>
+    <line x1="690" y1="360" x2="1020" y2="360" stroke="#e4edf3" stroke-width="2"/>
+    <circle cx="699" cy="398" r="7" fill="#667085"/>
+    <text x="720" y="404" font-size="18" font-weight="700" fill="#17334f">Micrófono apagado</text>
+    <text x="720" y="429" font-size="15" fill="#61798c">Solo se activa al pulsar el botón</text>
+    <rect x="690" y="452" width="328" height="34" rx="10" fill="#b42318"/>
+    <text x="854" y="475" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">DETENER AHORA · Esc</text>
+  </g>
+
+  <!-- concept notes -->
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <rect x="657" y="536" width="398" height="130" rx="22" fill="#e9f4fa" stroke="#cfe2ed" stroke-width="2"/>
+    <text x="685" y="574" font-size="16" font-weight="700" fill="#17334f">Principios del cuerpo visual</text>
+    <text x="685" y="602" font-size="15" fill="#4e687c">• No imita a una persona ni finge vigilar.</text>
+    <text x="685" y="628" font-size="15" fill="#4e687c">• El rostro expresa estados; el texto los aclara.</text>
+    <text x="685" y="654" font-size="15" fill="#4e687c">• Silueta simple, amable y legible en tamaño pequeño.</text>
+  </g>
+  <text x="58" y="714" font-family="Segoe UI,Arial,sans-serif" font-size="14" fill="#6b8295">Boceto conceptual para validar dirección visual; no es un diseño final ni una promesa de funciones.</text>
+</svg>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clara · concepto de interfaz</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0d1b2d;--panel2:#11243a;--line:#203951;--text:#eef8ff;--muted:#8ca7bb;--cyan:#58e5e3;--blue:#65a9ff;--gold:#f2c77b;--red:#e05252;--green:#64d8ab}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 53% 43%,#112c43 0,#09182a 34%,var(--bg) 76%);color:var(--text);font:14px/1.45 "Segoe UI",Arial,sans-serif;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}.app{min-height:100vh;display:grid;grid-template-rows:70px 1fr 35px;max-width:1600px;margin:auto;padding:0 22px}
+header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #29445a;gap:16px}.brand{display:flex;align-items:center;gap:12px}.brand-mark{height:35px;width:35px;border-radius:12px;background:linear-gradient(145deg,var(--cyan),var(--blue));display:grid;place-items:center;color:#082034;font-weight:900;font-size:18px;box-shadow:0 0 24px #58e5e34c}.brand-name{font-size:18px;font-weight:700;letter-spacing:.02em}.brand-sub{font-size:11px;color:var(--muted)}.top-state{display:flex;align-items:center;gap:9px;color:#b8d7e7}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #64d8ab88}.privacy-chip{padding:7px 11px;border:1px solid #31516a;border-radius:999px;color:#bdd6e5;font-size:12px}
+main{display:grid;grid-template-columns:190px minmax(390px,1fr) 300px;gap:20px;padding:20px 0;min-height:0}.nav,.card{background:linear-gradient(180deg,#102137dd,#0b1929ed);border:1px solid #203951;border-radius:18px}.nav{padding:14px 10px}.nav-title{font-size:10px;letter-spacing:.16em;color:#66849b;padding:8px 11px 12px}.nav-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:11px;color:#a9bfd0;margin:3px 0}.nav-item.active{background:#17364c;color:#e7fbff;box-shadow:inset 2px 0 var(--cyan)}.nav-icon{width:20px;text-align:center;color:var(--cyan);font-size:16px}.nav-foot{margin:22px 10px 0;padding-top:15px;border-top:1px solid var(--line);color:#7892a6;font-size:11px}
+.center{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:550px;overflow:hidden;border:1px solid #203951;border-radius:20px;background:radial-gradient(ellipse at 50% 47%,#143a51a8 0,#0a1b2c50 48%,transparent 74%)}.center:before,.center:after{content:"";position:absolute;border:1px solid #2a5367;border-radius:50%;width:72%;height:66%;opacity:.18;pointer-events:none}.center:after{width:88%;height:82%;opacity:.1}.center-head{position:absolute;top:22px;left:26px;right:26px;display:flex;justify-content:space-between;align-items:flex-start;z-index:2}.eyebrow{color:#80a9bd;font-size:10px;letter-spacing:.17em;text-transform:uppercase}.center-head h1{margin:5px 0 0;font-size:21px;font-weight:550}.tiny-status{display:flex;align-items:center;gap:7px;border:1px solid #29485e;background:#0a1724cc;padding:7px 10px;border-radius:9px;color:#b7cfdd;font-size:11px}.tiny-status .dot{width:6px;height:6px}
+.orb-wrap{position:relative;width:min(66vw,490px);height:min(66vw,490px);min-width:340px;min-height:340px;display:grid;place-items:center;margin-top:10px}.orb-svg{width:100%;height:100%;overflow:visible;z-index:1}.outer-orbit{fill:none;stroke:#57d7e455;stroke-width:1.2;stroke-dasharray:3 8;transform-origin:230px 230px;animation:spin 34s linear infinite}.inner-orbit{fill:none;stroke:#81bfff55;stroke-width:1.2;transform-origin:230px 230px;animation:spin 26s linear infinite reverse}.orbit-gold{fill:none;stroke:#f2c77b55;stroke-width:1;stroke-dasharray:1 7;transform-origin:230px 230px;animation:spin 43s linear infinite}.core-halo{fill:url(#halo);opacity:.45;filter:url(#blur)}.core{fill:url(#coreGrad);stroke:#a4fff3;stroke-opacity:.7;stroke-width:1.4;filter:url(#softglow);transition:r .9s cubic-bezier(.2,.8,.2,1)}.core-inner{fill:url(#innerGrad);opacity:.9}.lat{fill:none;stroke:#9af4ef;stroke-opacity:.35;stroke-width:1}.lat2{fill:none;stroke:#88b8ff;stroke-opacity:.27;stroke-width:1}.node{fill:#b5fff7;filter:url(#softglow)}.node.gold{fill:#ffe1a2}.satellite{opacity:.15;transition:opacity .55s ease}.satellite circle{fill:#6be8e0;filter:url(#softglow)}.data-spoke{stroke:#73dfdb;stroke-opacity:.18;stroke-width:1}.orb-wrap.expanded .outer-orbit{animation-duration:13s;stroke-opacity:.9}.orb-wrap.expanded .inner-orbit{animation-duration:11s;stroke-opacity:.9}.orb-wrap.expanded .orbit-gold{animation-duration:18s;stroke-opacity:.85}.orb-wrap.expanded .satellite{opacity:.9}.orb-wrap.expanded .core{r:111}.orb-wrap.expanded .core-halo{opacity:.72}.orb-label{position:absolute;bottom:28px;text-align:center;z-index:2;pointer-events:none}.orb-label strong{display:block;letter-spacing:.25em;font-size:11px;color:#b9f9f2}.orb-label span{color:#7f9daf;font-size:11px}.center-controls{position:absolute;bottom:22px;display:flex;gap:9px;z-index:3;flex-wrap:wrap;justify-content:center}.btn{border:1px solid #35566d;background:#13263a;padding:9px 13px;border-radius:10px;font-size:12px;transition:.2s}.btn:hover{background:#1b3850;border-color:#68deda}.btn-primary{background:linear-gradient(100deg,#1d8793,#266e9d);border-color:#55d7da;color:white;font-weight:650}.btn-stop{background:#a72f39;border-color:#db6064;color:#fff;font-weight:700}.btn-stop:hover{background:#c83c45}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.right{display:flex;flex-direction:column;gap:12px}.card{padding:15px}.card h2{font-size:13px;margin:0 0 12px;color:#e2f0f8;font-weight:650}.card .sub{font-size:11px;color:var(--muted);margin-top:-7px;margin-bottom:12px}.mic-state{display:flex;gap:10px;align-items:center;padding:11px 12px;background:#111f2e;border:1px solid #2a4053;border-radius:12px}.mic-icon{width:32px;height:32px;border-radius:10px;background:#1b2e42;display:grid;place-items:center;color:#b4c5d2;font-size:16px}.mic-label{font-size:12px;font-weight:600}.mic-detail{font-size:10px;color:#8299aa;margin-top:2px}.mini-event{display:grid;grid-template-columns:43px 1fr;gap:10px;padding:9px 0;border-top:1px solid #20364b}.mini-event:first-of-type{border-top:0}.time{color:var(--cyan);font-size:11px;font-weight:700}.event-title{font-size:11px;color:#d9e9f2}.event-sub{font-size:10px;color:#7f98aa;margin-top:2px}.task-row{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-top:1px solid #20364b;font-size:11px;color:#d3e4ed}.check{width:13px;height:13px;border:1px solid #6295a8;border-radius:4px;margin-top:1px}.demo-note{font-size:10px;line-height:1.4;color:#98aebe;padding:10px 11px;border-left:2px solid var(--gold);background:#182638;border-radius:0 8px 8px 0}.right .card:last-child{margin-top:auto}
+footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #20364b;color:#7792a5;font-size:10px}footer strong{color:#a9c5d5;font-weight:500}.kbd{border:1px solid #426077;border-radius:5px;padding:2px 6px;color:#d3e8f3}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:1000px){main{grid-template-columns:150px minmax(300px,1fr);}.right{grid-column:2;display:grid;grid-template-columns:1fr 1fr}.right .card:last-child{margin-top:0}.nav{grid-row:1/3}.center{min-height:510px}.center-head{left:18px;right:18px}}
+@media(max-width:680px){.app{padding:0 10px}header{height:64px}.top-state .privacy-chip{display:none}main{display:flex;flex-direction:column;padding:12px 0;gap:10px}.nav{display:flex;overflow:auto;padding:6px;gap:4px}.nav-title,.nav-foot{display:none}.nav-item{white-space:nowrap;padding:8px 10px;margin:0}.center{min-height:500px}.orb-wrap{min-width:300px;min-height:300px;width:88vw;height:88vw}.center-head{top:14px}.center-head h1{font-size:17px}.right{display:flex}.center-controls{bottom:12px}.center-head .tiny-status{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="brand-mark">L</div><div><div class="brand-name">Clara</div><div class="brand-sub">ASISTENTE PERSONAL · LOCAL FIRST</div></div></div>
+  <div class="top-state"><span class="dot"></span><span>Disponible</span><span class="privacy-chip">Tareas y agenda en este equipo</span></div>
+</header>
+<main>
+  <nav class="nav" aria-label="Navegación principal">
+    <div class="nav-title">ESPACIO</div>
+    <div class="nav-item active"><span class="nav-icon">◈</span>Inicio</div>
+    <div class="nav-item"><span class="nav-icon">▤</span>Agenda</div>
+    <div class="nav-item"><span class="nav-icon">✓</span>Tareas</div>
+    <div class="nav-item"><span class="nav-icon">◷</span>Rutinas</div>
+    <div class="nav-item"><span class="nav-icon">◇</span>Memoria</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span>Preferencias</div>
+    <div class="nav-foot">Los estados visuales acompañan el control real; no indican vigilancia ni escucha permanente.</div>
+  </nav>
+  <section class="center" aria-label="Vista central de Clara">
+    <div class="center-head"><div><div class="eyebrow">PRESENCIA VISUAL</div><h1>Tu espacio de conversación</h1></div><div class="tiny-status"><span class="dot"></span><span id="stateText">En espera</span></div></div>
+    <div class="orb-wrap" id="orb" aria-label="Esfera de datos conceptual">
+      <svg class="orb-svg" viewBox="0 0 460 460" role="img" aria-label="Esfera holográfica de datos; se expande al simular la voz de salida de Clara">
+        <defs>
+          <radialGradient id="coreGrad"><stop offset="0" stop-color="#e0fffb" stop-opacity=".95"/><stop offset=".18" stop-color="#67ece2" stop-opacity=".9"/><stop offset=".58" stop-color="#1f8eaa" stop-opacity=".7"/><stop offset="1" stop-color="#0b3755" stop-opacity=".25"/></radialGradient>
+          <radialGradient id="innerGrad"><stop offset="0" stop-color="#ffffff" stop-opacity=".85"/><stop offset=".35" stop-color="#9af9ee" stop-opacity=".2"/><stop offset="1" stop-color="#82caff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="halo"><stop offset="0" stop-color="#5ae9df" stop-opacity=".7"/><stop offset="1" stop-color="#258fe4" stop-opacity="0"/></radialGradient>
+          <filter id="blur"><feGaussianBlur stdDeviation="21"/></filter>
+          <filter id="softglow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle class="core-halo" cx="230" cy="230" r="142"/>
+        <g class="outer-orbit"><ellipse cx="230" cy="230" rx="180" ry="78"/><ellipse cx="230" cy="230" rx="78" ry="180" transform="rotate(56 230 230)"/></g>
+        <g class="inner-orbit"><ellipse cx="230" cy="230" rx="145" ry="105" transform="rotate(-32 230 230)"/><ellipse cx="230" cy="230" rx="130" ry="58" transform="rotate(68 230 230)"/></g>
+        <ellipse class="orbit-gold" cx="230" cy="230" rx="194" ry="125" transform="rotate(24 230 230)"/>
+        <g class="satellite"><line class="data-spoke" x1="230" y1="230" x2="75" y2="187"/><circle cx="75" cy="187" r="4"/><circle cx="108" cy="278" r="2.8"/><circle cx="345" cy="110" r="3.4"/><circle cx="372" cy="278" r="3"/><circle cx="184" cy="52" r="2.5"/><circle cx="294" cy="395" r="3.5"/><circle cx="82" cy="345" r="2.6"/><circle cx="390" cy="151" r="2.6"/><circle cx="143" cy="103" r="2.8"/><circle cx="318" cy="332" r="2.8"/><circle cx="230" cy="32" r="3"/><circle cx="230" cy="428" r="3"/><circle cx="51" cy="250" r="2.4"/><circle cx="409" cy="230" r="2.4"/></g>
+        <g class="satellite"><line class="data-spoke" x1="230" y1="230" x2="366" y2="172"/><circle cx="366" cy="172" r="3.5"/><circle cx="153" cy="357" r="2.5"/><circle cx="289" cy="61" r="2.5"/><circle cx="58" cy="136" r="2.6"/><circle cx="398" cy="330" r="3"/></g>
+        <circle class="core" cx="230" cy="230" r="68"/>
+        <circle class="core-inner" cx="230" cy="230" r="65"/>
+        <g class="lat"><ellipse cx="230" cy="230" rx="72" ry="27"/><ellipse cx="230" cy="230" rx="54" ry="69"/><path d="M166 230 Q230 173 294 230 Q230 287 166 230Z"/></g>
+        <g class="lat2"><ellipse cx="230" cy="230" rx="42" ry="68" transform="rotate(45 230 230)"/><ellipse cx="230" cy="230" rx="42" ry="68" transform="rotate(-45 230 230)"/></g>
+        <circle class="node" cx="230" cy="162" r="3.5"/><circle class="node gold" cx="289" cy="198" r="3"/><circle class="node" cx="185" cy="278" r="3"/><circle class="node gold" cx="268" cy="280" r="2.6"/>
+      </svg>
+      <div class="orb-label"><strong id="orbState">CLARA · EN ESPERA</strong><span id="orbSub">Compacta mientras hablas; se expande cuando Clara responde</span></div>
+    </div>
+    <div class="center-controls">
+      <button class="btn btn-primary" id="demoBtn" type="button">◉ Simular voz de Clara</button>
+      <button class="btn" id="idleBtn" type="button">Replegar esfera</button>
+      <button class="btn btn-stop" id="stopBtn" type="button">⛔ DETENER · Esc</button>
+    </div>
+  </section>
+  <aside class="right">
+    <section class="card">
+      <h2>Control de voz</h2><div class="sub">Estado real de privacidad en el concepto</div>
+      <div class="mic-state"><div class="mic-icon">♩</div><div><div class="mic-label">Micrófono apagado</div><div class="mic-detail">La vista previa no solicita acceso al micrófono</div></div></div>
+    </section>
+    <section class="card">
+      <h2>Agenda de hoy</h2><div class="sub">Datos locales · ejemplo conceptual</div>
+      <div class="mini-event"><div class="time">09:00</div><div><div class="event-title">Laboratorio de biología</div><div class="event-sub">Aula 204 · ejemplo</div></div></div>
+      <div class="mini-event"><div class="time">13:30</div><div><div class="event-title">Entregar reporte</div><div class="event-sub">Borrador editable · ejemplo</div></div></div>
+    </section>
+    <section class="card">
+      <h2>Interacción</h2><div class="sub">La expansión simula solo la voz de salida de Clara</div>
+      <div class="demo-note" id="demoNote">Prototipo visual: no escucha, no graba y no envía datos. Pulsa “Simular voz de Clara” para ver la esfera expandirse mientras responde.</div>
+    </section>
+    <section class="card">
+      <h2>Una tarea pendiente</h2>
+      <div class="task-row"><span class="check"></span><span>Revisar y confirmar el borrador de la próxima actividad.</span></div>
+    </section>
+  </aside>
+</main>
+<footer><span>Concepto UI U2 · Inspiración: visualización holográfica original, no réplica de utilería de cine</span><span>Atajo de cancelación <strong class="kbd">Esc</strong></span></footer>
+</div>
+<script>
+(() => {
+  const orb = document.getElementById('orb');
+  const demoBtn = document.getElementById('demoBtn');
+  const idleBtn = document.getElementById('idleBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const stateText = document.getElementById('stateText');
+  const orbState = document.getElementById('orbState');
+  const orbSub = document.getElementById('orbSub');
+  const demoNote = document.getElementById('demoNote');
+  let active = false;
+  function setState(expanded, stopped=false) {
+    active = expanded;
+    orb.classList.toggle('expanded', expanded);
+    stateText.textContent = expanded ? 'Clara responde (simulado)' : (stopped ? 'Detenida' : 'En espera');
+    orbState.textContent = expanded ? 'CLARA · RESPONDIENDO' : (stopped ? 'CLARA · DETENIDA' : 'CLARA · EN ESPERA');
+    orbSub.textContent = expanded ? 'La esfera se expande con la voz de Clara' : (stopped ? 'La animación se replegó; el micrófono sigue apagado' : 'Compacta mientras hablas; se expande cuando Clara responde');
+    demoNote.textContent = expanded ? 'Solo se simula la voz de respuesta de Clara. No hay captura de voz ni procesamiento de audio.' : 'Prototipo visual: no escucha, no graba y no envía datos. Pulsa “Simular voz de Clara” para ver la esfera expandirse mientras responde.';
+  }
+  demoBtn.addEventListener('click', () => setState(!active));
+  idleBtn.addEventListener('click', () => setState(false));
+  stopBtn.addEventListener('click', () => setState(false, true));
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') { setState(false, true); } });
+})();
+</script>
+</body>
+</html>
