@@ -1072,6 +1072,60 @@ END:VCALENDAR\r
         self.assertIn("las tareas ya guardadas no se revierten", msg)
         self.assertIn("llamada bloqueante del sistema de archivos puede tardar", msg)
 
+    def test_etapa5_next_commitment_in_progress_apply_routines_dedupe_and_rss_scheme_filter(self) -> None:
+        db = create_test_db()
+        target_day = date(2026, 10, 22)  # Jueves (weekday = 3)
+        now = datetime(2026, 10, 22, 10, 20)
+
+        # 1. Clase en curso (10:00-11:00) + Bloque próximo (11:30-12:15) + Tarea sin hora
+        db.execute(
+            "INSERT INTO classes(name,weekday,start_time,end_time,location) VALUES(?,?,?,?,?)",
+            ("Física", 3, "10:00", "11:00", "Lab 2"),
+        )
+        db.execute(
+            "INSERT INTO plan_blocks(title,block_date,start_time,end_time,notes,created_at) VALUES(?,?,?,?,?,?)",
+            ("Repaso de Física", target_day.isoformat(), "11:30", "12:15", None, now.isoformat()),
+        )
+        db.execute(
+            "INSERT INTO tasks(title,due_date,priority,done,created_at,subject) VALUES(?,?,?,?,?,?)",
+            ("Leer capítulo 4", target_day.isoformat(), "Alta", 0, now.isoformat(), "Física"),
+        )
+        db.commit()
+
+        summary = app.build_next_commitment_summary(db, now=now)
+        self.assertIn("En curso ahora: Clase · Física (10:00–11:00) (Lab 2).", summary)
+        self.assertIn("Lo que sigue hoy (en 1 h 10 min): Bloque local · Repaso de Física (11:30–12:15).", summary)
+        self.assertIn("Leer capítulo 4 [Física]", summary)
+
+        # 2. apply_routines no duplica si ya existe la tarea manual o si se ejecuta dos veces
+        db.execute(
+            "INSERT INTO routines(title,subject,weekdays,reminder_time,active,created_at) VALUES(?,?,?,?,1,?)",
+            ("Leer capítulo 4", "Física", "3", "07:00", now.isoformat()),
+        )
+        db.execute(
+            "INSERT INTO routines(title,subject,weekdays,reminder_time,active,created_at) VALUES(?,?,?,?,1,?)",
+            ("Practicar problemas", "Matemáticas", "3", "18:00", now.isoformat()),
+        )
+        db.commit()
+
+        fake_app = SimpleNamespace(db=db, refresh_tasks=lambda: None)
+        added_first = app.AssistantApp.apply_routines(fake_app, target_day)
+        added_second = app.AssistantApp.apply_routines(fake_app, target_day)
+        self.assertEqual(added_first, 1)  # Solo "Practicar problemas"; "Leer capítulo 4" ya existía hoy
+        self.assertEqual(added_second, 0)  # Segunda ejecución hoy no duplica nada
+
+        # 3. parse_news_feed filtra esquemas peligrosos en <link> y conserva https://
+        rss_xml = (
+            b"<?xml version='1.0' encoding='UTF-8'?><rss version='2.0'><channel>"
+            b"<item><title>Noticia segura</title><link>https://example.com/ok</link><source>Fuente A</source></item>"
+            b"<item><title>Enlace peligroso</title><link>javascript:alert(1)</link><source>Fuente B</source></item>"
+            b"</channel></rss>"
+        )
+        parsed = app.parse_news_feed(rss_xml, "Google News", 5)
+        self.assertEqual(len(parsed), 2)
+        self.assertEqual(parsed[0]["link"], "https://example.com/ok")
+        self.assertEqual(parsed[1]["link"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

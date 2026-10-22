@@ -467,7 +467,8 @@ def parse_news_feed(xml_data: bytes, source_label: str, limit: int) -> list[dict
         return ""
     for item in items[:max(1, min(10, int(limit)))]:
         title = clean_rss_text(child_value(item, "title"))[:400]
-        link = child_value(item, "link").strip()[:1200]
+        raw_link = child_value(item, "link").strip()[:1200]
+        link = raw_link if raw_link.casefold().startswith(("https://", "http://")) else ""
         source = clean_rss_text(child_value(item, "source"))[:120] or source_label
         if title:
             result.append({"title": title, "source": source, "link": link})
@@ -1979,14 +1980,18 @@ def build_next_commitment_summary(db: sqlite3.Connection, now: datetime | None =
     today = current.date()
     now_hm = current.strftime("%H:%M")
     closure = day_off_for(db, today)
+    in_progress: list[tuple[str, str, str]] = []
     upcoming: list[tuple[str, str, str]] = []
 
     for meeting in classes_for_date(db, today):
         start_str = str(meeting["start_time"] or "")
+        end_val = str(meeting.get("end_time") or "")
+        end_str = f"–{end_val}" if end_val else ""
+        place = f" ({meeting['location']})" if meeting.get("location") else ""
         if start_str and start_str >= now_hm:
-            end_str = f"–{meeting['end_time']}" if meeting.get("end_time") else ""
-            place = f" ({meeting['location']})" if meeting.get("location") else ""
             upcoming.append((start_str, "Clase", f"{meeting['name']} a las {start_str}{end_str}{place}"))
+        elif start_str and end_val and start_str < now_hm < end_val:
+            in_progress.append((start_str, "Clase", f"{meeting['name']} ({start_str}–{end_val}){place}"))
 
     for block in db.execute(
         "SELECT title,start_time,end_time FROM plan_blocks WHERE block_date=? ORDER BY start_time",
@@ -1994,6 +1999,10 @@ def build_next_commitment_summary(db: sqlite3.Connection, now: datetime | None =
     ):
         if block["start_time"] >= now_hm:
             upcoming.append(
+                (block["start_time"], "Bloque local", f"{block['title']} ({block['start_time']}–{block['end_time']})")
+            )
+        elif block["start_time"] < now_hm < block["end_time"]:
+            in_progress.append(
                 (block["start_time"], "Bloque local", f"{block['title']} ({block['start_time']}–{block['end_time']})")
             )
 
@@ -2016,6 +2025,9 @@ def build_next_commitment_summary(db: sqlite3.Connection, now: datetime | None =
     lines: list[str] = []
     if closure:
         lines.append("Hoy figura como día sin clases" + (f" ({closure['note']})." if closure["note"] else "."))
+    if in_progress:
+        for _t, kind, desc in in_progress:
+            lines.append(f"En curso ahora: {kind} · {desc}.")
     if upcoming:
         next_time, next_kind, next_desc = upcoming[0]
         target_dt = datetime.combine(today, datetime.strptime(next_time, "%H:%M").time())
@@ -4441,6 +4453,15 @@ class AssistantApp(tk.Tk):
                         messagebox.showwarning("Formato de hora", "Usa HH:MM, por ejemplo 18:00.", parent=dialog)
                         return
                 values = (title, subject_var.get().strip() or None, ",".join(weekdays), reminder or None, int(active_var.get()))
+                dup_query = (
+                    "SELECT id FROM routines WHERE LOWER(TRIM(title))=LOWER(TRIM(?)) "
+                    "AND COALESCE(LOWER(TRIM(subject)),'')=COALESCE(LOWER(TRIM(?)),'') "
+                    "AND weekdays=? AND COALESCE(reminder_time,'')=COALESCE(?,'') "
+                    "AND (? IS NULL OR id<>?) LIMIT 1"
+                )
+                if self.db.execute(dup_query, (values[0], values[1], values[2], values[3], routine_id, routine_id)).fetchone():
+                    messagebox.showinfo("Rutina ya existente", "Ya existe una rutina idéntica configurada; no se creó un duplicado.", parent=dialog)
+                    return
                 if existing:
                     self.db.execute("UPDATE routines SET title=?, subject=?, weekdays=?, reminder_time=?, active=? WHERE id=?", (*values, routine_id))
                 else:
@@ -4519,7 +4540,10 @@ class AssistantApp(tk.Tk):
         for item in routines:
             if weekday not in item["weekdays"].split(","):
                 continue
-            exists = self.db.execute("SELECT 1 FROM tasks WHERE routine_id=? AND due_date=? LIMIT 1", (item["id"], day.isoformat())).fetchone()
+            exists = self.db.execute(
+                "SELECT 1 FROM tasks WHERE due_date=? AND (routine_id=? OR (LOWER(TRIM(title))=LOWER(TRIM(?)) AND COALESCE(LOWER(TRIM(subject)),'')=COALESCE(LOWER(TRIM(?)),''))) LIMIT 1",
+                (day.isoformat(), item["id"], item["title"], item["subject"]),
+            ).fetchone()
             if exists:
                 continue
             self.db.execute("INSERT INTO tasks(title,due_date,priority,done,created_at,due_time,subject,routine_id) VALUES(?,?,?,?,?,?,?,?)", (item["title"], day.isoformat(), "Normal", 0, datetime.now().isoformat(timespec="seconds"), item["reminder_time"], item["subject"], item["id"]))
