@@ -64,7 +64,7 @@ except ModuleNotFoundError:  # pragma: no cover - entorno Linux headless sin pyt
     messagebox = _TkModuleStub()  # type: ignore[assignment]
     ttk = _TkModuleStub()  # type: ignore[assignment]
 
-APP_NAME = "CLARA · Asistente Personal (Edición Unificada)"
+APP_NAME = "CLARA-V (Clara Viernes) · Asistente Personal Unificada"
 APP_VERSION = "2.0.0"
 APP_BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
 DATA_DIR = Path.home() / "AsistentePersonal"
@@ -1441,7 +1441,7 @@ class ClaraSphere(tk.Canvas):
             x, y = cx + rr * math.cos(theta), cy + rr * .68 * math.sin(theta)
             dot = 3 if active and index % 3 == 0 else 2
             self.create_oval(x-dot, y-dot, x+dot, y+dot, fill="#41bec5" if index % 2 else "#d1a85f", outline="")
-        self.create_text(cx, cy, text="CLARA", fill="#062b38" if active else "#d4f9ff", font=("Segoe UI", 8, "bold"), tags="label")
+        self.create_text(cx, cy, text="CLARA-V", fill="#062b38" if active else "#d4f9ff", font=("Segoe UI", 8, "bold"), tags="label")
 
 
 LOCAL_DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".markdown"}
@@ -2130,7 +2130,7 @@ def build_routines_summary(db: sqlite3.Connection) -> str:
 def build_help_summary() -> str:
     """Explain Clara Unificada's local-first capabilities and safety boundaries."""
     return (
-        "Soy CLARA (Edición Unificada local-first). Esto puedo hacer por ti:\n"
+        "Soy CLARA-V (Clara Viernes · Edición Unificada local-first). Esto puedo hacer por ti:\n"
         "• Agenda y día operativo: pregúntame “¿qué tengo hoy?”, “¿qué tengo mañana?”, “¿qué sigue?”, “agenda semanal”, “mis clases” o “mis rutinas”.\n"
         "• Borradores confirmables: dime “me dejaron una tarea de Biología para mañana a las 16:00”, “reserva de 17:00 a 18:00 hoy para estudiar” o “ayúdame a organizar la tarde”. Nada se guarda sin tu confirmación.\n"
         "• Noticias y clima (requieren internet): dime “noticias”, “noticias de tecnología/ciencia/educación/deportes”, “clima” o pulsa “☀ Rutina de mañana”.\n"
@@ -2340,7 +2340,7 @@ class AssistantApp(tk.Tk):
         self.bind_all("<Escape>", lambda _event: self.emergency_stop())
         self.refresh_tasks()
         self.load_chat_history()
-        self.append_chat("Asistente", "¡Hola! Soy CLARA (Edición Unificada). Puedo organizar tu agenda, clases, tareas y rutinas localmente, decirte qué sigue hoy, leer resúmenes de noticias/agenda en voz alta y conversar con Ollama local cuando esté conectado (sin ejecutar acciones automáticas).", speak=False)
+        self.append_chat("Asistente", "¡Hola! Soy CLARA-V (Clara Viernes). Puedo organizar tu agenda, clases, tareas y rutinas localmente, decirte qué sigue hoy, leer resúmenes de noticias/agenda en voz alta y conversar con Ollama local cuando esté conectado (sin ejecutar acciones automáticas).", speak=False)
         self.after(1500, self.check_reminders)
         self.after(200, self.process_ai_results)
         self.after(600, self.refresh_ollama_models)
@@ -2397,8 +2397,8 @@ class AssistantApp(tk.Tk):
         header.pack(fill="x", pady=(0, 10))
         brand = ttk.Frame(header)
         brand.pack(side="left", fill="x", expand=True)
-        ttk.Label(brand, text="CLARA · tu espacio personal", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(brand, text="Centro Local de Asistencia, Rutinas y Agenda", style="Subtitle.TLabel").pack(anchor="w", pady=(1, 0))
+        ttk.Label(brand, text="CLARA-V · Clara Viernes · tu espacio personal", style="Title.TLabel").pack(anchor="w")
+        ttk.Label(brand, text="Centro Local de Asistencia, Rutinas y Agenda · Edición Viernes", style="Subtitle.TLabel").pack(anchor="w", pady=(1, 0))
         ttk.Label(brand, text=f"{date.today().strftime('%d/%m/%Y')}  ·  Datos guardados localmente en esta computadora", style="Subtitle.TLabel").pack(anchor="w", pady=(1, 0))
         self.stop_button = tk.Button(header, text="⛔ DETENER AHORA  ·  Esc", command=self.emergency_stop, bg="#b42318", fg="white", activebackground="#912018", activeforeground="white", relief="flat", font=("Segoe UI", 10, "bold"), padx=14, pady=8, takefocus=True, highlightthickness=2, highlightbackground="#e05b62", highlightcolor="#ffffff")
         self.stop_button.pack(side="right", anchor="ne", padx=(12, 0), pady=(4, 4))

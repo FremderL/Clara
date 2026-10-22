@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 chcp 65001 >nul
 cd /d "%~dp0"
-title CLARA Unificada - Lanzador de terminal
+title CLARA-V (Clara Viernes) - Lanzador de terminal
 
 echo ==============================================================
-echo  CLARA Unificada v2.0.0 - Asistente Personal Local-First
+echo  CLARA-V (Clara Viernes) v2.0.0 - Asistente Personal Local-First
 echo  Inicio seguro: sin descargas ni instalaciones automaticas
 echo ==============================================================
 echo.
