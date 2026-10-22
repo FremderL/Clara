@@ -860,6 +860,82 @@ END:VCALENDAR\r
             finally:
                 app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH = prev
 
+    def test_etapa2_apply_chat_intent_and_send_chat_local_and_ollama_flows(self) -> None:
+        db = create_test_db()
+        db.execute("INSERT INTO classes(name,weekday,start_time,end_time,location) VALUES(?,?,?,?,?)", ("Química", 3, "18:00", "19:00", "Lab 2"))
+        db.commit()
+
+        chat_messages: list[tuple[str, str]] = []
+        actions_called: list[tuple[str, object]] = []
+
+        class _FakeEntry:
+            def __init__(self, value: str = "") -> None:
+                self.value = value
+
+            def get(self) -> str:
+                return self.value
+
+            def delete(self, *_args) -> None:
+                self.value = ""
+
+        fake_app = SimpleNamespace(
+            db=db,
+            ai_busy=False,
+            settings={"weather_location": "Colima, Colima, México", "auto_speak_responses": "false", "chat_history_enabled": "false"},
+            last_assistant_response="Respuesta previa de prueba",
+            chat_input=_FakeEntry(),
+            model_var=SimpleNamespace(get=lambda: ""),
+            append_chat=lambda speaker, msg, **_kw: chat_messages.append((speaker, msg)),
+            speak_last_response=lambda: actions_called.append(("speak_last_response", None)),
+            open_voice_diagnostics=lambda: actions_called.append(("open_voice_diagnostics", None)),
+            show_morning_briefing=lambda: actions_called.append(("show_morning_briefing", None)),
+            fetch_and_present_news=lambda topic_override=None: actions_called.append(("news", topic_override)),
+            fetch_and_present_weather=lambda: actions_called.append(("weather", None)),
+            open_week_agenda=lambda: actions_called.append(("week_agenda", None)),
+            add_task=lambda preset="", prefill=None: actions_called.append(("add_task", prefill)),
+            open_plan_block_form=lambda _parent, prefill=None: actions_called.append(("open_plan_block_form", prefill)),
+            start_afternoon_plan=lambda: actions_called.append(("start_afternoon_plan", None)),
+            open_local_file_tools=lambda intent=None: actions_called.append(("open_local_file_tools", intent)),
+            day_agenda_summary=lambda d: f"Agenda para {d.isoformat()}",
+            parse_task_proposal=lambda txt: app.AssistantApp.parse_task_proposal(SimpleNamespace(db=db), txt, today=date(2026, 10, 22)),
+            parse_block_request=lambda txt: app.AssistantApp.parse_block_request(SimpleNamespace(db=db), txt),
+        )
+        fake_app.apply_chat_intent = lambda u, i: app.AssistantApp.apply_chat_intent(fake_app, u, i)
+
+        # 1. Validación de classes_query con fecha y sin fecha en validate_chat_intent
+        self.assertEqual(
+            app.validate_chat_intent('{"intent":"classes_query","date":"2026-10-22"}'),
+            {"intent": "classes_query", "date": "2026-10-22"},
+        )
+        self.assertEqual(
+            app.validate_chat_intent('{"intent":"classes_query","date":null}'),
+            {"intent": "classes_query", "date": None},
+        )
+        self.assertIsNone(app.validate_chat_intent('{"intent":"file_search","query":"..","extension":".pdf"}'))
+
+        # 2. Ejecución de apply_chat_intent en modo lectura y modo borrador confirmable
+        res_classes = fake_app.apply_chat_intent("mis clases", {"intent": "classes_query", "date": "2026-10-22"})
+        self.assertIn("Química", res_classes)
+        fake_app.apply_chat_intent("noticias", {"intent": "news_query", "topic": "Ciencia"})
+        self.assertIn(("news", "Ciencia"), actions_called)
+        fake_app.apply_chat_intent("clima", {"intent": "weather_query"})
+        self.assertIn(("weather", None), actions_called)
+        fake_app.apply_chat_intent("repite", {"intent": "repeat_last"})
+        self.assertIn(("speak_last_response", None), actions_called)
+        fake_app.apply_chat_intent("diagnóstico", {"intent": "voice_diagnostics"})
+        self.assertIn(("open_voice_diagnostics", None), actions_called)
+
+        # 3. Flujo completo de send_chat: bloqueo de clave API y borrador de tarea sin autoguardado
+        fake_vt_key = "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0"
+        fake_app.chat_input = _FakeEntry(f"mi clave virustotal es {fake_vt_key}")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("no envíes ni pegues claves API" in msg for _spk, msg in chat_messages))
+
+        fake_app.chat_input = _FakeEntry("me dejaron una tarea de Química entregar práctica mañana a las 16:00")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 0)
+        self.assertTrue(any(kind == "add_task" for kind, _payload in actions_called))
+
 
 if __name__ == "__main__":
     unittest.main()

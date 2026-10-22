@@ -1839,6 +1839,8 @@ def validate_chat_intent(raw: str) -> dict | None:
             return None
         intent = payload.get("intent")
         expected = CHAT_INTENT_FIELDS.get(intent)
+        if intent == "classes_query" and set(payload) in ({"intent"}, {"intent", "date"}):
+            expected = set(payload)
         if expected is None or set(payload) != expected:
             return None
         result = {"intent": intent}
@@ -1868,6 +1870,8 @@ def validate_chat_intent(raw: str) -> dict | None:
                 return None
         elif intent == "agenda_query":
             result["date"] = _chat_iso_date(payload["date"], required=True)
+        elif intent == "classes_query":
+            result["date"] = _chat_iso_date(payload.get("date"), required=False)
         elif intent == "news_query":
             topic = payload.get("topic")
             if topic is not None and topic not in NEWS_TOPICS:
@@ -1879,8 +1883,8 @@ def validate_chat_intent(raw: str) -> dict | None:
             result["recursive"] = payload["recursive"]
         elif intent in ("file_search", "file_open", "file_move"):
             query = _chat_text(payload["query"], required=True, limit=120)
-            # Never accept a filesystem path from the model, even as a purported search term.
-            if any(mark in query for mark in ("/", "\\")) or re.match(r"^[A-Za-z]:", query):
+            # Never accept a filesystem path or traversal token from the model, even as a purported search term.
+            if any(mark in query for mark in ("/", "\\")) or ".." in query or re.match(r"^[A-Za-z]:", query):
                 return None
             extension = payload["extension"]
             if extension not in CHAT_FILE_EXTENSIONS:
@@ -2069,7 +2073,7 @@ def _extract_file_query_and_extension(text: str, action_prefix_pattern: str) -> 
     cleaned = re.sub(action_prefix_pattern, " ", text.strip(), count=1, flags=re.IGNORECASE).strip()
     if not cleaned:
         return None
-    if any(mark in cleaned for mark in ("/", "\\")) or re.search(r"\b[A-Za-z]:", cleaned):
+    if any(mark in cleaned for mark in ("/", "\\")) or ".." in cleaned or re.search(r"\b[A-Za-z]:", cleaned):
         return None
     forbidden_ext = re.search(r"\.(?:exe|bat|cmd|ps1|vbs|js|py|msi|scr|com|sh|dll)\b", cleaned, re.IGNORECASE)
     if forbidden_ext:
@@ -5504,6 +5508,13 @@ Clasifica solo en estas intenciones cerradas. Peticiones informativas o pregunta
 - task_draft: {{"intent":"task_draft","title":"título","subject":null,"due_date":null,"due_time":null,"description":null}}. Usa fecha YYYY-MM-DD y hora HH:MM o null. Es solo borrador para formulario; nunca guardes.
 - block_draft: {{"intent":"block_draft","title":"título","block_date":"YYYY-MM-DD","start_time":"HH:MM","end_time":"HH:MM","notes":null}}. Requiere día y horas claras; si faltan, clarify. Es solo borrador editable.
 - agenda_query: {{"intent":"agenda_query","date":"YYYY-MM-DD"}}. Solo lectura; no inventes eventos.
+- next_commitment: {{"intent":"next_commitment"}}. Consulta el próximo compromiso real de hoy.
+- morning_brief: {{"intent":"morning_brief"}}. Inicia el resumen matutino con clima y noticias.
+- news_query: {{"intent":"news_query","topic":null}}. topic puede ser null, General, Tecnología, Ciencia, Educación o Deportes.
+- weather_query: {{"intent":"weather_query"}}. Consulta el clima actual.
+- classes_query: {{"intent":"classes_query","date":null}}. date puede ser YYYY-MM-DD o null.
+- routines_query: {{"intent":"routines_query"}}. Lista las rutinas manuales configuradas.
+- help: {{"intent":"help"}}. Muestra la ayuda y capacidades locales.
 - afternoon_plan: {{"intent":"afternoon_plan"}}. Solo propuesta local revisable.
 - file_search: {{"intent":"file_search","query":"términos de nombre, no una ruta","extension":".pdf"}}. extension debe ser Todos, .pdf, .docx, .xlsx, .pptx, .txt, .md o .markdown.
 - file_inventory: {{"intent":"file_inventory","recursive":false}}. Siempre se pedirá al usuario escoger la carpeta raíz.
