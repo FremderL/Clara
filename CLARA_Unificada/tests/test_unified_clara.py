@@ -674,6 +674,18 @@ END:VCALENDAR\r
             app.classify_local_natural_intent("Busca mi documento pdf de biología", today),
             {"intent": "file_search", "query": "biología", "extension": ".pdf"},
         )
+        greeting_status = app.classify_local_natural_intent("hola, que haces.", today)
+        self.assertIsNotNone(greeting_status)
+        self.assertEqual(greeting_status["intent"], "general")
+        self.assertIn("local-first", greeting_status["response"])
+        identity = app.classify_local_natural_intent("¿Quién eres?", today)
+        self.assertIsNotNone(identity)
+        self.assertEqual(identity["intent"], "general")
+        self.assertIn("CLARA-V", identity["response"])
+        day_info = app.classify_local_natural_intent("¿Qué día es hoy?", today)
+        self.assertIsNotNone(day_info)
+        self.assertEqual(day_info["intent"], "general")
+        self.assertIn("2026-10-22", day_info["response"])
 
     def test_local_nlu_router_rejects_negations_informational_and_unsafe_commands(self) -> None:
         today = date(2026, 10, 22)
@@ -935,6 +947,24 @@ END:VCALENDAR\r
         app.AssistantApp.send_chat(fake_app)
         self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 0)
         self.assertTrue(any(kind == "add_task" for kind, _payload in actions_called))
+
+        # 4. Si Ollama está ocupado (ai_busy=True), enviar un nuevo mensaje cancela la espera previa y responde de inmediato
+        fake_app.ai_busy = True
+        fake_app.ollama_request_id = 1
+        fake_app.cancel_event = threading.Event()
+        fake_app.response_lock = threading.Lock()
+        fake_app.active_response = None
+        fake_app.ai_results = app.queue.Queue()
+        fake_app.ai_results.put(("answer_chunk", "fragmento obsoleto"))
+        fake_app.ollama_status = SimpleNamespace(configure=lambda **_kw: None)
+        fake_app._cancel_pending_ollama_for_new_message = lambda: app.AssistantApp._cancel_pending_ollama_for_new_message(fake_app)
+        fake_app.chat_input = _FakeEntry("hola, que haces.")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertFalse(fake_app.ai_busy)
+        self.assertTrue(fake_app.cancel_event.is_set())
+        self.assertEqual(fake_app.ollama_request_id, 2)
+        self.assertTrue(fake_app.ai_results.empty())
+        self.assertTrue(any(spk == "Asistente" and "local-first" in msg for spk, msg in chat_messages))
 
     def test_etapa3_voice_subsystem_tts_repeat_failure_and_push_to_talk_editable_transcript(self) -> None:
         # 1. Limpieza de texto para TTS conservando intactos los enlaces escritos
