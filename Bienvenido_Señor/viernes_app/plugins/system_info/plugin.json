@@ -1,0 +1,9 @@
+{
+  "name": "system_info",
+  "version": "1.0.0",
+  "enabled": true,
+  "description": "Herramienta local de ejemplo para reportar estado basico del sistema de plugins.",
+  "trust_level": "local",
+  "required_level": 1,
+  "capabilities": ["plugin_status", "read_runtime_status"]
+}
