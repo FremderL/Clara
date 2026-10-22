@@ -1126,6 +1126,73 @@ END:VCALENDAR\r
         self.assertEqual(parsed[0]["link"], "https://example.com/ok")
         self.assertEqual(parsed[1]["link"], "")
 
+    def test_etapa6_file_app_virustotal_and_download_guardrails_without_executing_side_effects(self) -> None:
+        # 1. validate_selected_folder rechaza rutas vacías, UNC y symlinks sin leer ni modificar la carpeta
+        with tempfile.TemporaryDirectory() as tmp:
+            real_dir = Path(tmp) / "CarpetaSegura"
+            real_dir.mkdir()
+            link_dir = Path(tmp) / "EnlaceCarpeta"
+            link_dir.symlink_to(real_dir, target_is_directory=True)
+            self.assertEqual(app.validate_selected_folder(real_dir), real_dir.resolve())
+            with self.assertRaises(ValueError):
+                app.validate_selected_folder("")
+            with self.assertRaises(ValueError):
+                app.validate_selected_folder(r"\\servidor\compartido")
+            with self.assertRaises(ValueError):
+                app.validate_selected_folder(link_dir)
+
+        # 2. normalize_allowed_applications filtra cmd.exe, powershell.exe, instaladores y scripts inyectados
+        tampered_list = [
+            {"name": "cmd.exe", "path": "/opt/apps/cmd.exe", "size": 100, "mtime_ns": 1, "file_id": [1, 1]},
+            {"name": "powershell.exe", "path": "/opt/apps/powershell.exe", "size": 100, "mtime_ns": 1, "file_id": [1, 2]},
+            {"name": "mi_installer.exe", "path": "/opt/apps/mi_installer.exe", "size": 100, "mtime_ns": 1, "file_id": [1, 3]},
+            {"name": "script.bat", "path": "/opt/apps/script.bat", "size": 100, "mtime_ns": 1, "file_id": [1, 4]},
+            {"name": " MiAppGUI.exe", "path": "/opt/apps/MiAppGUI.exe", "size": 2048, "mtime_ns": 55, "file_id": [2, 9]},
+        ]
+        normalized = json.loads(app.normalize_allowed_applications(json.dumps(tampered_list)))
+        self.assertEqual(len(normalized), 1)
+        self.assertEqual(normalized[0]["name"], "MiAppGUI.exe")
+
+        # 3. virustotal_lookup exige SHA-256 de 64 hex y solo hace GET del hash (sin subir archivo)
+        with self.assertRaises(ValueError):
+            app.virustotal_lookup("documento_secreto.pdf", "api-key")
+
+        valid_sha = "a" * 64
+        captured_requests = []
+
+        class _FakeHTTPResponse:
+            def __enter__(self): return self
+            def __exit__(self, *_a): pass
+            def read(self, _n=-1):
+                return json.dumps({
+                    "data": {
+                        "attributes": {
+                            "last_analysis_stats": {"malicious": 0, "suspicious": 0, "harmless": 60, "undetected": 10},
+                            "last_analysis_results": {},
+                            "last_analysis_date": 1700000000,
+                            "reputation": 0,
+                        }
+                    }
+                }).encode("utf-8")
+
+        class _FakeOpener:
+            def open(self, req, timeout=20):
+                captured_requests.append((req.get_method(), req.full_url, req.data))
+                return _FakeHTTPResponse()
+
+        with mock.patch("urllib.request.build_opener", return_value=_FakeOpener()):
+            vt_res = app.virustotal_lookup(valid_sha, "fake-key")
+        self.assertEqual(vt_res["status"], "ok")
+        self.assertEqual(captured_requests, [("GET", f"https://www.virustotal.com/api/v3/files/{valid_sha}", None)])
+
+        # 4. Descargas automáticas desactivadas y divulgación completa de todos los recursos oficiales
+        self.assertFalse(app.AUTO_DOWNLOADS_ENABLED)
+        for key in app.OFFICIAL_RESOURCES:
+            disclosure = app.format_resource_disclosure(key)
+            self.assertIn("Fuente oficial:", disclosure)
+            self.assertIn("Licencia:", disclosure)
+            self.assertIn("DESACTIVADAS", disclosure)
+
 
 if __name__ == "__main__":
     unittest.main()

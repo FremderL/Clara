@@ -156,6 +156,13 @@ def normalize_allowed_applications(raw_value: str) -> str:
         size, mtime_ns, file_id = item.get("size"), item.get("mtime_ns"), item.get("file_id")
         if not isinstance(path, str) or not Path(path).is_absolute():
             continue
+        candidate_path = Path(path)
+        if candidate_path.suffix.casefold() != ".exe":
+            continue
+        if candidate_path.name.casefold() in BLOCKED_APPLICATION_NAMES or any(
+            token in candidate_path.stem.casefold() for token in ("setup", "installer", "uninstall", "updater", "update", "patch")
+        ):
+            continue
         if not isinstance(size, int) or not isinstance(mtime_ns, int) or not isinstance(file_id, (list, tuple)) or len(file_id) != 2 or not all(isinstance(v, int) for v in file_id):
             continue
         canonical = os.path.normcase(os.path.abspath(path))
@@ -402,9 +409,12 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def virustotal_lookup(sha256: str, api_key: str) -> dict:
+    if not isinstance(sha256, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", sha256.strip()):
+        raise ValueError("La consulta a VirusTotal admite únicamente un hash SHA-256 hexadecimal de 64 caracteres.")
+    clean_hash = sha256.strip().casefold()
     request = urllib.request.Request(
-        f"https://www.virustotal.com/api/v3/files/{sha256}",
-        headers={"x-apikey": api_key, "Accept": "application/json", "User-Agent": "Clara-Personal/1.27.4"},
+        f"https://www.virustotal.com/api/v3/files/{clean_hash}",
+        headers={"x-apikey": api_key, "Accept": "application/json", "User-Agent": "Clara-Personal/2.0.0"},
         method="GET",
     )
     try:
@@ -859,7 +869,17 @@ def linked_event_conflicts(db: sqlite3.Connection, event: dict[str, str | None])
 
 def validate_selected_folder(path: str | Path) -> Path:
     """Resolve only a user-selected existing directory; this helper does not open or modify it."""
-    folder = Path(path).resolve(strict=True)
+    raw = str(path or "").strip()
+    if not raw:
+        raise ValueError("Selecciona una carpeta existente.")
+    if raw.startswith("\\\\"):
+        raise ValueError("Solo se permite abrir carpetas locales existentes, no rutas de red.")
+    candidate = Path(raw).expanduser()
+    if not candidate.exists() or not candidate.is_dir():
+        raise ValueError("La selección ya no es una carpeta existente.")
+    if candidate.is_symlink() or getattr(candidate, "is_junction", lambda: False)():
+        raise ValueError("Por seguridad, no se permite abrir enlaces simbólicos ni junctions.")
+    folder = candidate.resolve(strict=True)
     if not folder.is_dir():
         raise ValueError("La selección ya no es una carpeta existente.")
     return folder
