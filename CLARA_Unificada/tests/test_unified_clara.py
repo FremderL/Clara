@@ -1249,6 +1249,82 @@ END:VCALENDAR\r
             finally:
                 app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH = prev
 
+    def test_etapa8_static_ast_sql_explain_and_repo_integrity_audit(self) -> None:
+        import ast
+
+        base_dir = Path(app.__file__).resolve().parent
+        repo_root = base_dir.parent
+        source_path = base_dir / "app.py"
+        source = source_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(source_path))
+
+        # 1. Cero funciones o métodos duplicados en CLARA_Unificada/app.py
+        top_funcs: set[str] = set()
+        duplicates: list[str] = []
+        app_methods: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef):
+                if node.name in top_funcs:
+                    duplicates.append(node.name)
+                top_funcs.add(node.name)
+            elif isinstance(node, ast.ClassDef):
+                seen_methods: set[str] = set()
+                for item in node.body:
+                    if isinstance(item, ast.FunctionDef):
+                        if item.name in seen_methods:
+                            duplicates.append(f"{node.name}.{item.name}")
+                        seen_methods.add(item.name)
+                if node.name == "AssistantApp":
+                    app_methods = seen_methods
+        self.assertEqual(duplicates, [])
+
+        # 2. Cero llamadas self.<metodo>() huérfanas en AssistantApp
+        tk_base_methods = {
+            "title", "configure", "bind_all", "after", "minsize", "geometry", "destroy",
+            "withdraw", "state", "winfo_screenwidth", "winfo_screenheight", "deiconify",
+            "lift", "focus_force", "protocol", "mainloop",
+        }
+        valid_app_attrs = app_methods | tk_base_methods | set(dir(app.AssistantApp))
+        app_class_node = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "AssistantApp")
+        missing_calls = []
+        for sub in ast.walk(app_class_node):
+            if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute):
+                if isinstance(sub.func.value, ast.Name) and sub.func.value.id == "self":
+                    if sub.func.attr not in valid_app_attrs:
+                        missing_calls.append((sub.lineno, sub.func.attr))
+        self.assertEqual(missing_calls, [])
+
+        # 3. Todas las consultas estáticas SELECT/INSERT/UPDATE/DELETE pasan EXPLAIN contra connect_db()
+        dml_queries = []
+        for sub in ast.walk(tree):
+            if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Attribute) and sub.func.attr == "execute":
+                if sub.args and isinstance(sub.args[0], ast.Constant) and isinstance(sub.args[0].value, str):
+                    sql = sub.args[0].value.strip()
+                    if sql.upper().startswith(("SELECT", "INSERT", "UPDATE", "DELETE")):
+                        dml_queries.append((sub.lineno, sql))
+        self.assertGreaterEqual(len(dml_queries), 120)
+        with tempfile.TemporaryDirectory() as tmp:
+            prev = (app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH)
+            try:
+                app.DATA_DIR = Path(tmp) / "AsistentePersonal"
+                app.DB_PATH = app.DATA_DIR / "asistente.db"
+                app.SETTINGS_PATH = app.DATA_DIR / "settings.json"
+                db = app.connect_db()
+                for lineno, sql in dml_queries:
+                    params = tuple([1] * sql.count("?"))
+                    rows = db.execute("EXPLAIN " + sql, params).fetchall()
+                    self.assertGreater(len(rows), 0, f"Fallo EXPLAIN en línea {lineno}: {sql}")
+                db.close()
+            finally:
+                app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH = prev
+
+        # 4. Proyectos originales intactos y .gitignore protege datos personales, claves y respaldos
+        self.assertTrue((repo_root / "CLARA_v1.27.4" / "app.py").is_file())
+        self.assertTrue((repo_root / "Bienvenido_Señor" / "viernes.py").is_file())
+        gitignore_text = (repo_root / ".gitignore").read_text(encoding="utf-8")
+        for required_rule in ("*.db", "settings.json", "*.dpapi", ".env", "news_cache.json", "backups_before_restore/"):
+            self.assertIn(required_rule, gitignore_text)
+
 
 if __name__ == "__main__":
     unittest.main()

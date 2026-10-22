@@ -1,0 +1,24 @@
+# Datos personales, bases de datos, respaldos y secretos (nunca subir a GitHub)
+*.db
+*.sqlite
+*.sqlite3
+*.dpapi
+*.env
+.env.*
+*secret*
+*token*
+backups_before_restore/
+CLARA_Unificada/dist/
+CLARA_Unificada/build/
+CLARA_Unificada/*.zip
+CLARA_Unificada/settings.json
+CLARA_Unificada/news_cache.json
+CLARA_Unificada/models/
+
+# Cachés de Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
