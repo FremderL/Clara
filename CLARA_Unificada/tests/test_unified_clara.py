@@ -1193,6 +1193,62 @@ END:VCALENDAR\r
             self.assertIn("Licencia:", disclosure)
             self.assertIn("DESACTIVADAS", disclosure)
 
+    def test_etapa7_launchers_backup_roundtrip_and_reversible_migration_preview(self) -> None:
+        base_dir = Path(app.__file__).resolve().parent
+
+        # 1. Lanzadores de inicio sencillo sin instalaciones silenciosas, descargas ni elevación
+        for launcher_name in ("iniciar.bat", "iniciar_clara_terminal.bat"):
+            content = (base_dir / launcher_name).read_text(encoding="utf-8")
+            low = content.casefold()
+            self.assertIn("py -3 app.py", low)
+            for forbidden in ("pip install", "ollama pull", "invoke-webrequest", "curl ", "wget ", "runas"):
+                self.assertNotIn(forbidden, low)
+
+        # Scripts de instalación opcional exigen confirmación manual (choice /c SN) y divulgan licencia/fuente
+        for opt_script in ("instalar_voz.bat", "instalar_opciones_windows.bat", "build_windows.bat"):
+            content = (base_dir / opt_script).read_text(encoding="utf-8")
+            self.assertIn("choice /c SN", content)
+            self.assertIn("Licencia", content)
+
+        # 2. _write_backup e import_backup: bloqueo con operación activa y rechazo de clave API en respaldo
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            prev = (app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH)
+            try:
+                app.DATA_DIR = tmp_path / "AsistentePersonal"
+                app.DB_PATH = app.DATA_DIR / "asistente.db"
+                app.SETTINGS_PATH = app.DATA_DIR / "settings.json"
+                db = app.connect_db()
+                db.execute(
+                    "INSERT INTO tasks(title,due_date,priority,done,created_at) VALUES(?,?,?,?,?)",
+                    ("Tarea respaldada", "2026-10-25", "Alta", 0, "2026-10-22T07:00:00"),
+                )
+                db.commit()
+
+                zip_dest = tmp_path / "respaldo_etapa7.zip"
+                fake_app = SimpleNamespace(
+                    db=db,
+                    settings=dict(app.DEFAULT_SETTINGS),
+                    ai_busy=True,
+                    voice_active=False,
+                    tts_active=False,
+                    local_scan_running=False,
+                    vt_busy=False,
+                )
+                app.AssistantApp._write_backup(fake_app, zip_dest)
+                with zipfile.ZipFile(zip_dest, "r") as zf:
+                    self.assertEqual(set(zf.namelist()), {"asistente.db", "settings.json"})
+
+                # Si hay operación activa (ai_busy=True), import_backup avisa y no cierra la base
+                warned = []
+                with mock.patch.object(app.messagebox, "showwarning", side_effect=lambda t, m, **_kw: warned.append((t, m))):
+                    app.AssistantApp.import_backup(fake_app)
+                self.assertEqual(len(warned), 1)
+                self.assertIn("Operación activa", warned[0][0])
+                db.close()
+            finally:
+                app.DATA_DIR, app.DB_PATH, app.SETTINGS_PATH = prev
+
 
 if __name__ == "__main__":
     unittest.main()

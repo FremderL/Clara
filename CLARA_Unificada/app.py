@@ -51,6 +51,13 @@ except ModuleNotFoundError:  # pragma: no cover - entorno Linux headless sin pyt
         BooleanVar = _TkStubBase
         IntVar = _TkStubBase
         TclError = RuntimeError
+        showinfo = staticmethod(_TkStubBase)
+        showwarning = staticmethod(_TkStubBase)
+        showerror = staticmethod(_TkStubBase)
+        askyesno = staticmethod(_TkStubBase)
+        askopenfilename = staticmethod(_TkStubBase)
+        asksaveasfilename = staticmethod(_TkStubBase)
+        askdirectory = staticmethod(_TkStubBase)
 
     tk = _TkModuleStub()  # type: ignore[assignment]
     filedialog = _TkModuleStub()  # type: ignore[assignment]
@@ -3695,6 +3702,7 @@ class AssistantApp(tk.Tk):
         phrase_entry.focus_set()
 
     def _write_backup(self, destination: Path) -> None:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
         destination.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=DATA_DIR) as temp_dir:
             temp = Path(temp_dir)
@@ -3728,11 +3736,15 @@ class AssistantApp(tk.Tk):
             messagebox.showerror("No se pudo crear", f"Error al crear el respaldo: {exc}", parent=self)
 
     def import_backup(self) -> None:
+        if self.ai_busy or self.voice_active or self.tts_active or self.local_scan_running or self.vt_busy:
+            messagebox.showwarning("Operación activa", "Primero detén la generación, voz o búsqueda activa con DETENER AHORA · Esc antes de restaurar un respaldo.", parent=self)
+            return
         source = filedialog.askopenfilename(parent=self, title="Seleccionar respaldo", filetypes=(("Respaldo ZIP", "*.zip"),))
         if not source:
             return
         temp_dir = None
         try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
             temp_dir = tempfile.TemporaryDirectory(dir=DATA_DIR)
             temp = Path(temp_dir.name)
             imported_db, extracted_settings_path = extract_validated_backup(source, temp)
@@ -3749,10 +3761,9 @@ class AssistantApp(tk.Tk):
                 raw_settings = json.loads(settings_path.read_text(encoding="utf-8"))
                 if not isinstance(raw_settings, dict):
                     raise ValueError("Las preferencias del respaldo no tienen un formato válido.")
-                for key in imported_settings:
-                    value = raw_settings.get(key)
-                    if isinstance(value, str) and value.strip():
-                        imported_settings[key] = value.strip()
+                imported_settings = sanitize_settings_for_storage(
+                    {k: str(v) for k, v in raw_settings.items() if k in DEFAULT_SETTINGS and isinstance(v, str)}
+                )
                 try:
                     datetime.strptime(imported_settings["morning_time"], "%H:%M")
                 except ValueError:
@@ -3763,11 +3774,11 @@ class AssistantApp(tk.Tk):
                     imported_settings["news_source"] = DEFAULT_SETTINGS["news_source"]
                 if imported_settings.get("news_count") not in NEWS_COUNTS:
                     imported_settings["news_count"] = DEFAULT_SETTINGS["news_count"]
-                if imported_settings.get("chat_history_enabled") not in ("true", "false"):
-                    imported_settings["chat_history_enabled"] = "false"
-                for setting in ("native_notifications_enabled", "minimize_to_tray"):
+                for setting in ("chat_history_enabled", "native_notifications_enabled", "minimize_to_tray", "pattern_suggestions"):
                     if imported_settings.get(setting) not in ("true", "false"):
                         imported_settings[setting] = "false"
+                if imported_settings.get("auto_speak_responses") not in ("true", "false"):
+                    imported_settings["auto_speak_responses"] = "true"
                 try:
                     pause_until = datetime.fromisoformat(imported_settings.get("reminders_paused_until", ""))
                     if pause_until.tzinfo is not None: pause_until = pause_until.astimezone().replace(tzinfo=None)
