@@ -2769,30 +2769,51 @@ def parse_class_proposal(text: str) -> dict | None:
         location = loc_match.group(1).strip(" .,;:")
 
     candidate = raw
-    candidate = re.sub(
-        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
-        r"(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er)?|tengo|incluir|incluye|mete(?:r)?)"
-        r"(?:\s+(?:mi|mis|una|un|la|el))?\s+(?:nueva\s+)?(?:clase|clases|materia|curso|asignatura)(?:\s+de|\s+llamada)?\b",
-        " ",
-        candidate,
-        count=1,
-        flags=re.IGNORECASE,
-    )
     if time_span_match:
         candidate = candidate.replace(time_span_match.group(0), " ")
     elif single_time_match:
         candidate = candidate.replace(single_time_match.group(0), " ")
     if loc_match:
         candidate = candidate.replace(loc_match.group(0), " ")
+
+    # Strip any natural conversational intro up to "clase(s)/materia(s)/curso(s)/asignatura(s) de/llamada"
+    if re.search(r"^.*?\b(?:clases?|materias?|cursos?|asignaturas?)\s+(?:de\s+|llamad[ao]\s+)", candidate, flags=re.IGNORECASE):
+        candidate = re.sub(
+            r"^.*?\b(?:clases?|materias?|cursos?|asignaturas?)\s+(?:de\s+|llamad[ao]\s+)",
+            " ",
+            candidate,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    else:
+        candidate = re.sub(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+            r"(?:(?:quiero|puedes)\s+)?(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|tengo|llevo)"
+            r"(?:\s+que)?(?:\s+(?:tengo|llevo|curso|hay))?(?:\s+(?:mi|mis|una|un|la|el|las|los))?(?:\s+nueva)?\s*(?:clases?|materias?|cursos?|asignaturas?)?(?:\s+de|\s+llamad[ao])?\b",
+            " ",
+            candidate,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+
+    # Remove weekday phrases (including preceding articles "los/el/las") without stripping "de/del/las/los" inside subject names like "Bases de Datos"
+    day_token = r"(?:lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[aá]bado|sabado|domingo)"
     candidate = re.sub(
-        r"\b(?:los\s+d[ií]as|el\s+d[ií]a|los|las|el|del|de\s+lunes\s+a\s+viernes|lunes\s+a\s+viernes|lunes\s+a\s+jueves|todos\s+los\s+d[ií]as|diario|lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[aá]bado|sabado|domingo)(?:\s+y\b|\s*,\s*)?",
+        rf"\b(?:(?:los|el|las)\s+)?(?:d[ií]as\s+)?(?:de\s+lunes\s+a\s+viernes|lunes\s+a\s+viernes|lunes\s+a\s+jueves|todos\s+los\s+d[ií]as|diario|(?:{day_token}(?:\s*(?:,|y|e)\s*|\s+(?:los|el)\s+|\s+)+)*{day_token})\b",
         " ",
         candidate,
         flags=re.IGNORECASE,
     )
-    candidate = re.sub(r"\b(?:en\s+horario|con\s+horario|a\s+las|de\s+las|por\s+la\s+ma[nñ]ana|por\s+la\s+tarde)\b", " ", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(
+        r"\b(?:en\s+horario|con\s+horario|a\s+las|de\s+las|por\s+la\s+ma[nñ]ana|por\s+la\s+tarde|por\s+la\s+noche)\b",
+        " ",
+        candidate,
+        flags=re.IGNORECASE,
+    )
+    candidate = re.sub(r"^\s*(?:es|son|de|la|el)\b\s*", "", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(r"\s+\b(?:es|son)\s*$", "", candidate, flags=re.IGNORECASE)
     candidate = re.sub(r"\s+", " ", candidate).strip(" :,-.;")
-    if candidate.casefold() in ("", "clase", "clases", "mis clases", "una clase", "materia", "mi clase"):
+    if candidate.casefold() in ("", "clase", "clases", "mis clases", "una clase", "materia", "mi clase", "materias"):
         candidate = ""
     elif candidate and candidate[0].islower():
         candidate = candidate[0].upper() + candidate[1:]
@@ -2988,17 +3009,30 @@ def parse_routine_proposal(text: str) -> dict | None:
         h_s = t_match.group(1) or t_match.group(3)
         m_s = t_match.group(2)
         reminder_time = _normalize_hour_token(h_s, m_s)
-    candidate = re.sub(
-        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|crea(?:r)?|nueva|configura(?:r)?)\s+(?:una\s+|mi\s+)?rutina(?:\s+para|\s+de)?\b",
-        " ",
-        raw,
-        count=1,
-        flags=re.IGNORECASE,
-    )
+    candidate = raw
     if t_match:
         candidate = candidate.replace(t_match.group(0), " ")
+    if re.search(r"^.*?\brutinas?\s+(?:para\s+|de\s+|llamad[ao]\s+)", candidate, flags=re.IGNORECASE):
+        candidate = re.sub(
+            r"^.*?\brutinas?\s+(?:para\s+|de\s+|llamad[ao]\s+)",
+            " ",
+            candidate,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    else:
+        candidate = re.sub(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+            r"(?:(?:quiero|puedes)\s+)?(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|guarda(?:r)?|nueva|configura(?:r)?|tengo)"
+            r"(?:\s+que)?(?:\s+tengo)?(?:\s+(?:una|mi|la))?\s*rutinas?(?:\s+para|\s+de)?\b",
+            " ",
+            candidate,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    day_token = r"(?:lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[aá]bado|sabado|domingo)"
     candidate = re.sub(
-        r"\b(?:los\s+d[ií]as|todos\s+los\s+d[ií]as|diario|de\s+lunes\s+a\s+viernes|lunes\s+a\s+viernes|los|el|lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[aá]bado|sabado|domingo)(?:\s+y\b|\s*,\s*)?",
+        rf"\b(?:(?:los|el|las)\s+)?(?:d[ií]as\s+)?(?:todos\s+los\s+d[ií]as|diario|de\s+lunes\s+a\s+viernes|lunes\s+a\s+viernes|(?:{day_token}(?:\s*(?:,|y|e)\s*|\s+(?:los|el)\s+|\s+)+)*{day_token})\b",
         " ",
         candidate,
         flags=re.IGNORECASE,
@@ -3030,6 +3064,309 @@ def execute_add_routine_from_chat(db: sqlite3.Connection, proposal: dict) -> tup
     days_label = ", ".join(day_names[int(d)] for d in weekdays.split(",") if d.isdigit() and 0 <= int(d) < 7)
     rem_label = f" a las {reminder_time}" if reminder_time else ""
     return (True, f"¡Listo! Guardé tu rutina «{title}» ({days_label}{rem_label}).")
+
+
+def execute_delete_routine_from_chat(db: sqlite3.Connection, raw_text: str) -> tuple[bool, str]:
+    """Delete a recurring routine when explicitly commanded in chat."""
+    clean = re.sub(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?|desactiva(?:r)?)\s+(?:la\s+|mi\s+)?rutina(?:\s+de|\s+para)?\s*",
+        "",
+        str(raw_text or "").strip(),
+        flags=re.IGNORECASE,
+    ).strip(" .,;:")
+    if not clean:
+        return (False, "Dime el nombre de la rutina que deseas eliminar, por ejemplo: «elimina la rutina de repasar inglés».")
+    row = db.execute(
+        "SELECT id, title FROM routines WHERE LOWER(TRIM(title))=LOWER(TRIM(?)) OR LOWER(title) LIKE ? LIMIT 1",
+        (clean, f"%{clean.casefold()}%"),
+    ).fetchone()
+    if not row:
+        return (False, f"No encontré ninguna rutina que coincida con «{clean}».")
+    db.execute("DELETE FROM routines WHERE id=?", (int(row["id"]),))
+    db.commit()
+    return (True, f"¡Listo! Eliminé la rutina «{row['title']}».")
+
+
+def parse_and_execute_calendar_exception_from_chat(
+    db: sqlite3.Connection,
+    raw_text: str,
+    today: date | None = None,
+) -> tuple[bool, str] | None:
+    """Detect and record a school-calendar exception ('mañana no hay clases', 'cancela mi clase de X hoy') from natural chat."""
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+    today = today or date.today()
+
+    is_no_classes = bool(
+        re.search(
+            r"\b(?:no\s+hay\s+clases|no\s+tengo\s+clases|no\s+tendremos\s+clases|dia\s+sin\s+clases|sin\s+clases|suspension\s+de\s+clases)\b",
+            low,
+        )
+        and not low.startswith(("hay ", "tengo ", "que "))
+    )
+    cancel_class_match = re.search(
+        r"\b(?:cancela(?:r)?|se\s+cancel[oó]|suspende(?:r)?|no\s+habra)\s+(?:la\s+|mi\s+)?(?:clase|materia)\s+de\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]+)",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if not is_no_classes and not cancel_class_match:
+        return None
+
+    target_day = today
+    iso_m = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", raw)
+    if iso_m:
+        try:
+            target_day = date.fromisoformat(iso_m.group(1))
+        except ValueError:
+            target_day = today
+    elif "pasado manana" in low:
+        target_day = today + timedelta(days=2)
+    elif "manana" in low:
+        target_day = today + timedelta(days=1)
+    else:
+        wmap = {"lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3, "viernes": 4, "sabado": 5, "domingo": 6}
+        for wname, widx in wmap.items():
+            if re.search(r"\b" + wname + r"\b", low):
+                delta = (widx - today.weekday()) % 7
+                target_day = today + timedelta(days=delta)
+                break
+
+    if is_no_classes:
+        note_m = re.search(r"\bpor\s+(.+)$", raw, flags=re.IGNORECASE)
+        note = note_m.group(1).strip(" .,;:") if note_m else "Registrado desde el chat"
+        existing = db.execute(
+            "SELECT id FROM class_exceptions WHERE exception_date=? AND action='no_classes' LIMIT 1",
+            (target_day.isoformat(),),
+        ).fetchone()
+        if not existing:
+            db.execute(
+                "INSERT INTO class_exceptions(exception_date, action, note) VALUES(?,?,?)",
+                (target_day.isoformat(), "no_classes", note[:180]),
+            )
+            db.commit()
+        return (True, f"¡Listo! Registré el {target_day.isoformat()} como día sin clases ({note}).")
+
+    cname = cancel_class_match.group(1).strip()
+    cname = re.sub(r"\b(?:hoy|ma[nñ]ana|pasado\s+ma[nñ]ana|el\s+lunes|el\s+martes|el\s+mi[eé]rcoles|el\s+jueves|el\s+viernes)\b.*$", "", cname, flags=re.IGNORECASE).strip(" .,;:")
+    row = db.execute(
+        "SELECT id, name FROM classes WHERE LOWER(TRIM(name))=LOWER(TRIM(?)) OR LOWER(name) LIKE ? LIMIT 1",
+        (cname, f"%{cname.casefold()}%"),
+    ).fetchone()
+    if not row:
+        return (False, f"No encontré la clase «{cname}» en tu horario para cancelarla en esa fecha.")
+    db.execute(
+        "INSERT INTO class_exceptions(exception_date, class_id, action, class_name, note) VALUES(?,?,?,?,?)",
+        (target_day.isoformat(), int(row["id"]), "cancel", str(row["name"]), "Cancelada por un día desde el chat"),
+    )
+    db.commit()
+    return (True, f"¡Listo! Cancelé solo por el {target_day.isoformat()} tu clase de «{row['name']}».")
+
+
+def parse_and_execute_memory_from_chat(db: sqlite3.Connection, raw_text: str) -> tuple[bool, str] | None:
+    """Allow adding, listing, or deleting assistant memories directly via natural chat."""
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+
+    if any(
+        phrase in low
+        for phrase in (
+            "que recuerdos tienes", "cuales son mis recuerdos", "ver mi memoria", "ver memoria",
+            "mostrar recuerdos", "mostrar memoria", "que tienes en tu memoria", "mis recuerdos guardados",
+        )
+    ):
+        rows = active_memories_for(db)
+        if not rows:
+            return (True, "Aún no tienes recuerdos guardados en mi memoria local. Puedes decirme: «recuerda que prefiero estudiar por la tarde» o «guarda en tu memoria que mi profesor de Cálculo es el Dr. Rivera».")
+        lines = ["Recuerdos activos en tu memoria local:"]
+        for r in rows:
+            lines.append(f"• {r['label']} [{r['category']}]: {r['content']}")
+        return (True, "\n".join(lines))
+
+    del_match = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:olvida(?:\s+que)?|borra(?:r)?\s+(?:el\s+)?recuerdo(?:\s+de)?|elimina(?:r)?\s+(?:de\s+tu\s+memoria|el\s+recuerdo(?:\s+de)?))\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if del_match:
+        target = del_match.group(1).strip(" .,;:")
+        row = db.execute(
+            "SELECT id, label FROM memories WHERE LOWER(label) LIKE ? OR LOWER(content) LIKE ? LIMIT 1",
+            (f"%{target.casefold()}%", f"%{target.casefold()}%"),
+        ).fetchone()
+        if not row:
+            return (False, f"No encontré ningún recuerdo que coincida con «{target}».")
+        db.execute("DELETE FROM memories WHERE id=?", (int(row["id"]),))
+        db.commit()
+        return (True, f"¡Listo! Borré de mi memoria el recuerdo «{row['label']}».")
+
+    add_match = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:guarda(?:r)?\s+en\s+(?:tu\s+|mi\s+)?memoria(?:\s+que)?|agrega(?:r)?\s+(?:un\s+)?recuerdo(?:\s*[:,-]|\s+de\s+que|\s+que)?|memoriza(?:\s+que)?|recuerda\s+que)\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if add_match:
+        content = add_match.group(1).strip(" .,;:")
+        if not content:
+            return None
+        words = content.split()
+        label = " ".join(words[:5]).capitalize()[:60]
+        existing = db.execute("SELECT id FROM memories WHERE LOWER(TRIM(content))=LOWER(TRIM(?)) LIMIT 1", (content,)).fetchone()
+        if not existing:
+            db.execute(
+                "INSERT INTO memories(label, content, category, created_at, source, expires_on) VALUES(?,?,?,?,?,NULL)",
+                (label, content[:1500], "Preferencia", datetime.now().isoformat(timespec="seconds"), "Guardado desde el chat"),
+            )
+            db.commit()
+        return (True, f"¡Listo! Guardé ese recuerdo en mi memoria local: «{content}».")
+    return None
+
+
+def parse_and_execute_settings_from_chat(settings: dict[str, str], raw_text: str) -> tuple[bool, str] | None:
+    """Allow updating assistant preferences (weather city, morning routine hour, news topic, voice toggle) via natural chat."""
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+
+    weather_m = re.search(
+        r"\b(?:cambia(?:r)?|pon(?:er)?|configura(?:r)?|actualiza(?:r)?)\s+(?:la\s+|mi\s+)?(?:ubicaci[oó]n|ciudad|lugar)\s+del\s+clima\s+(?:a|en)\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if weather_m:
+        loc = weather_m.group(1).strip(" .,;:")[:100]
+        if loc and not contains_potential_api_key(loc):
+            settings["weather_location"] = loc
+            save_settings(settings)
+            return (True, f"¡Listo! Actualicé la ubicación del clima en tus preferencias a «{loc}».")
+
+    morning_m = re.search(
+        r"\b(?:cambia(?:r)?|pon(?:er)?|configura(?:r)?)\s+(?:la\s+hora\s+de\s+)?(?:la\s+|mi\s+)?rutina\s+(?:matutina|de\s+ma[nñ]ana)\s+a\s+las\s+(\d{1,2})(?::(\d{2}))?\b",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if morning_m:
+        hm = _normalize_hour_token(morning_m.group(1), morning_m.group(2))
+        if hm:
+            settings["morning_time"] = hm
+            save_settings(settings)
+            return (True, f"¡Listo! Cambié la hora de tu rutina matutina a las {hm} en Preferencias.")
+
+    if any(p in low for p in ("desactiva la voz automatica", "silencia la voz automatica", "apaga la voz automatica")):
+        settings["auto_speak_responses"] = "false"
+        save_settings(settings)
+        return (True, "¡Listo! Desactivé la lectura automática en voz alta en tus preferencias.")
+    if any(p in low for p in ("activa la voz automatica", "enciende la voz automatica")):
+        settings["auto_speak_responses"] = "true"
+        save_settings(settings)
+        return (True, "¡Listo! Activé la lectura automática en voz alta en tus preferencias.")
+
+    return None
+
+
+def is_class_delete_command(low_text: str) -> bool:
+    """Return True if the normalized text is a request to remove a class/subject from the weekly schedule."""
+    return bool(
+        re.search(r"\b(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?|suprime|suprimir)\b", low_text)
+        and re.search(r"\b(?:clase|clases|materia|materias|asignatura|curso)\b", low_text)
+    )
+
+
+def is_class_add_command(low_text: str) -> bool:
+    """Return True for any natural Spanish phrasing requesting to add/register/schedule a class or subject."""
+    if not low_text or is_class_delete_command(low_text):
+        return False
+    if re.search(r"\b(?:no\s+hay\s+clases|sin\s+clases|no\s+tengo\s+clases|cancela(?:r)?\s+(?:la\s+|mi\s+)?clase|se\s+cancelo\s+la\s+clase)\b", low_text):
+        return False
+    if not re.search(r"\b(?:clase|clases|materia|materias|asignatura|curso)\b", low_text):
+        return False
+    # Exclude pure read queries ("¿qué clases tengo hoy?", "mis clases", "ver mis clases", "horario de clases")
+    if re.match(r"^(?:que|cuales|cual|como|cuando|donde|a\s+que\s+hora|ver|mostrar|muestrame|dime|consulta(?:r)?|revisa(?:r)?|mis|mi\s+horario)\b", low_text):
+        return False
+    has_add_verb = bool(
+        re.search(
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|edita(?:r)?|programa(?:r)?)\b",
+            low_text,
+        )
+    )
+    has_day_or_time = bool(
+        re.search(r"\b(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|diario|\d{1,2}:\d{2}|de\s+\d{1,2}\s+a\s+\d{1,2})\b", low_text)
+    )
+    has_have_verb = bool(re.search(r"\b(?:tengo|llevo|curso|mi\s+clase|mis\s+clases|nueva\s+clase|nueva\s+materia)\b", low_text))
+    return has_add_verb or (has_have_verb and has_day_or_time)
+
+
+def is_task_complete_command(low_text: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(?:marca(?:r)?\s+como\s+(?:hecha|completada|lista|terminada)|completa(?:r)?\s+(?:la\s+|mi\s+)?tarea|termina(?:r)?\s+(?:la\s+|mi\s+)?tarea|ya\s+hice\s+(?:la\s+|mi\s+)?tarea|ya\s+termine\s+(?:la\s+|mi\s+)?tarea|ya\s+entregue)\b",
+            low_text,
+        )
+    )
+
+
+def is_task_delete_command(low_text: str) -> bool:
+    return bool(
+        re.search(r"\b(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?)\b", low_text)
+        and re.search(r"\b(?:tarea|pendiente|entrega|encargo)\b", low_text)
+    )
+
+
+def is_task_add_command(low_text: str) -> bool:
+    if not low_text or is_task_complete_command(low_text) or is_task_delete_command(low_text) or is_class_add_command(low_text):
+        return False
+    if re.match(r"^(?:que|cuales|cual|ver|mostrar|muestrame|dime|mis\s+tareas)\b", low_text):
+        return False
+    if re.search(
+        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?)\b.*\b(?:tarea|tareas|pendiente|entrega|trabajo|encargo|actividad)\b",
+        low_text,
+    ):
+        return True
+    if re.search(
+        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?)\s+que\s+(?:tengo\s+que|debo|hay\s+que|me\s+dejaron)\b",
+        low_text,
+    ):
+        return True
+    return bool(
+        re.match(
+            r"^(?:recuerdame|me\s+dejaron|nos\s+dejaron|me\s+acaban\s+de\s+dejar|me\s+encargaron|tengo\s+que\s+entregar|debo\s+entregar|tengo\s+pendiente|tengo\s+una\s+tarea|nueva\s+tarea|tarea\s+de|trabajo\s+de)\b",
+            low_text,
+        )
+    )
+
+
+def is_routine_delete_command(low_text: str) -> bool:
+    return bool(
+        re.search(r"\b(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?|desactiva(?:r)?)\b", low_text)
+        and re.search(r"\brutinas?\b", low_text)
+    )
+
+
+def is_routine_add_command(low_text: str) -> bool:
+    if not low_text or is_routine_delete_command(low_text):
+        return False
+    if re.match(r"^(?:que|cuales|ver|mostrar|mis\s+rutinas|rutina\s+matutina|rutina\s+de\s+manana)\b", low_text):
+        return False
+    if re.search(r"\brutina\s+(?:matutina|de\s+manana)\b", low_text):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|guarda(?:r)?|configura(?:r)?|anota(?:r)?|nueva|tengo)\b.*\brutinas?\b",
+            low_text,
+        )
+    )
+
+
+def is_block_add_command(low_text: str) -> bool:
+    if not low_text or is_class_add_command(low_text):
+        return False
+    if re.match(r"^(?:reserva(?:r)?|bloquea(?:r)?|aparta(?:r)?)\b", low_text):
+        return True
+    return bool(
+        re.search(
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|agenda(?:r)?|programa(?:r)?|reserva(?:r)?)\b.*\b(?:bloque|tiempo\s+de\s+estudio|espacio\s+de\s+estudio)\b",
+            low_text,
+        )
+    )
+
 
 
 def _extract_file_query_and_extension(text: str, action_prefix_pattern: str) -> tuple[str, str] | None:
@@ -3118,13 +3455,23 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
     if any(phrase in low_words for phrase in ("que sigue", "siguiente pendiente", "proximo compromiso", "proxima clase", "siguiente clase", "que toca ahora", "que tengo ahora")):
         return {"intent": "next_commitment"}
 
-    if any(phrase in low_words for phrase in ("rutina de manana", "rutina matutina", "resumen matutino", "arranca mi dia", "buenos dias clara", "buen dia clara")) or low_words == "buenos dias":
+    is_mutation_verb = bool(
+        re.search(
+            r"\b(?:agrega|agregar|anade|anadir|crea|crear|edita|editar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|nueva|nuevo|configura|configurar|modificar|modifica|cambiar|cambia|pon|poner|ponme|guarda|guardar|anota|anotar|apunta|apuntar|recuerda|memoriza|olvida|autoriza|autorizar)\b",
+            low_words,
+        )
+    )
+
+    if not is_mutation_verb and (
+        any(phrase in low_words for phrase in ("rutina de manana", "rutina matutina", "resumen matutino", "arranca mi dia", "buenos dias clara", "buen dia clara"))
+        or low_words == "buenos dias"
+    ):
         return {"intent": "morning_brief"}
 
     if any(phrase in low_words for phrase in ("organiza la tarde", "organizar la tarde", "organiza mi tarde", "organizar mi tarde", "planifica la tarde", "planificar la tarde", "ayudame a organizar la tarde", "ayudame a planear la tarde")):
         return {"intent": "afternoon_plan"}
 
-    if any(word in low_words for word in ("noticias", "titulares", "que hay de nuevo en las noticias", "ultimas noticias")):
+    if not is_mutation_verb and any(word in low_words for word in ("noticias", "titulares", "que hay de nuevo en las noticias", "ultimas noticias")):
         topic = None
         topic_keywords = {
             "Tecnología": ("tecnologia", "tech", "informatica", "computacion", "ia"),
@@ -3139,15 +3486,8 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
                 break
         return {"intent": "news_query", "topic": topic}
 
-    if any(phrase in low_words for phrase in ("clima", "como esta el tiempo", "como esta el clima", "temperatura", "va a llover", "pronostico del tiempo")):
+    if not is_mutation_verb and any(phrase in low_words for phrase in ("clima", "como esta el tiempo", "como esta el clima", "temperatura", "va a llover", "pronostico del tiempo")):
         return {"intent": "weather_query"}
-
-    is_mutation_verb = bool(
-        re.search(
-            r"\b(?:agrega|agregar|anade|anadir|crea|crear|edita|editar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|nueva|nuevo|configura|configurar|modificar|modifica|cambiar|cambia)\b",
-            low_words,
-        )
-    )
 
     if not is_mutation_verb and any(phrase in low_words for phrase in ("mis rutinas", "rutinas activas", "que rutinas tengo", "ver rutinas")):
         return {"intent": "routines_query"}
@@ -4259,8 +4599,8 @@ class AssistantApp(tk.Tk):
         """Summarize permissions, retention and local activity without exposing saved paths."""
         window = tk.Toplevel(self)
         window.title("Privacidad, permisos y actividad")
-        window.geometry("900x610")
-        window.minsize(760, 500)
+        window.geometry("920x610")
+        window.minsize(760, 480)
         window.transient(self)
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
@@ -4268,11 +4608,15 @@ class AssistantApp(tk.Tk):
         ttk.Label(
             outer,
             text="Resumen de controles de Clara. Las rutas de aplicaciones autorizadas y el vínculo iCalendar se guardan en preferencias locales; no se muestran aquí. La búsqueda no guarda la carpeta elegida. El historial de actividad omite nombres y rutas.",
-            wraplength=840,
-        ).pack(anchor="w", pady=(5, 10))
+            wraplength=860,
+        ).pack(anchor="w", pady=(5, 8))
+        actions = ttk.Frame(outer)
+        actions.pack(side="top", fill="x", pady=(0, 8))
+        version_var = tk.StringVar(value=f"Clara Unificada {APP_VERSION} · descargas y actualizaciones automáticas desactivadas")
+        ttk.Label(outer, textvariable=version_var, wraplength=860).pack(side="bottom", anchor="w", pady=(8, 0))
         tree_frame = ttk.Frame(outer)
         tree_frame.pack(fill="both", expand=True)
-        tree = ttk.Treeview(tree_frame, columns=("control", "state"), show="headings", selectmode="browse")
+        tree = ttk.Treeview(tree_frame, columns=("control", "state"), show="headings", selectmode="browse", height=7)
         tree.heading("control", text="Control")
         tree.heading("state", text="Estado actual")
         tree.column("control", width=205, anchor="w", stretch=False)
@@ -4281,16 +4625,13 @@ class AssistantApp(tk.Tk):
         tree.configure(yscrollcommand=scrollbar.set)
         tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        version_var = tk.StringVar(value=f"Clara Unificada {APP_VERSION} · descargas y actualizaciones automáticas desactivadas")
-        ttk.Label(outer, textvariable=version_var, wraplength=840).pack(anchor="w", pady=(8, 6))
-        actions = ttk.Frame(outer)
-        actions.pack(fill="x", pady=(4, 0))
-        ttk.Button(actions, text="Aplicaciones autorizadas…", command=self.open_application_manager).pack(side="left", padx=(0, 7))
-        ttk.Button(actions, text="Preferencias…", command=self.open_settings).pack(side="left", padx=(0, 7))
-        ttk.Button(actions, text="Seguridad / VirusTotal…", command=self.open_security).pack(side="left", padx=(0, 7))
+        ttk.Button(actions, text="🚀 Aplicaciones autorizadas…", style="Accent.TButton", command=self.open_application_manager).pack(side="left", padx=(0, 7))
+        ttk.Button(actions, text="⚙ Preferencias…", command=self.open_settings).pack(side="left", padx=(0, 7))
+        ttk.Button(actions, text="🔐 Niveles y Bóveda…", command=self.open_security_levels_vault).pack(side="left", padx=(0, 7))
+        ttk.Button(actions, text="🛡 Seguridad / VirusTotal…", command=self.open_security).pack(side="left", padx=(0, 7))
         ttk.Button(actions, text="Historial de actividad…", command=lambda: self.show_action_history(window)).pack(side="left", padx=(0, 7))
         ttk.Button(actions, text="Respaldos / datos…", command=self.open_backup_tools).pack(side="left", padx=(0, 7))
-        ttk.Button(actions, text="Actualizar resumen", command=lambda: refresh()).pack(side="right")
+        ttk.Button(actions, text="Actualizar", command=lambda: refresh()).pack(side="right")
 
         def refresh() -> None:
             tree.delete(*tree.get_children())
@@ -4323,50 +4664,49 @@ class AssistantApp(tk.Tk):
 
         refresh()
 
-    def open_application_manager(self) -> None:
+    def open_application_manager(self, auto_prompt_add: bool = False) -> None:
         """Manage a small persistent GUI-app allowlist; every launch is reconfirmed."""
+        if not AssistantApp.require_permission(self, "manage_apps", pending_callable=lambda: self.open_application_manager(auto_prompt_add=auto_prompt_add)):
+            return
         if sys.platform != "win32":
             messagebox.showinfo("Solo Windows", "El inicio de aplicaciones está disponible únicamente en Windows.", parent=self)
             return
         window = tk.Toplevel(self)
-        window.title("Aplicaciones autorizadas")
-        window.geometry("900x520")
-        window.minsize(760, 430)
+        window.title("Aplicaciones autorizadas · agregar e iniciar")
+        window.geometry("920x560")
+        window.minsize(740, 420)
         window.transient(self)
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
-        ttk.Label(outer, text="Aplicaciones autorizadas", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(outer, text="Aplicaciones autorizadas (máximo 10)", style="CardTitle.TLabel").pack(anchor="w")
         ttk.Label(
             outer,
-            text="Añade directamente un .exe gráfico instalado en Program Files o LocalAppData\\Programs. Clara no usa comandos, argumentos ni elevación. Cada inicio requiere confirmación; la app podría modificar archivos o conectarse a internet.",
-            wraplength=830,
-        ).pack(anchor="w", pady=(5, 8))
-        ttk.Label(
-            outer,
-            text="Máximo 10 rutas. La lista se guarda en preferencias locales y puede entrar en ZIP de respaldo no cifrado. No se comprueba la firma del editor; elimina permisos que ya no uses.",
-            wraplength=830,
-        ).pack(anchor="w", pady=(0, 10))
+            text="Usa el botón «+ Añadir .exe autorizado…» o «🔍 Elegir de apps instaladas…» aquí arriba para autorizar programas gráficos de Program Files o LocalAppData\\Programs. También puedes pedirle a Clara en el chat: «abre la aplicación <nombre>».",
+            wraplength=860,
+        ).pack(anchor="w", pady=(4, 8))
+        actions = ttk.Frame(outer)
+        actions.pack(side="top", fill="x", pady=(0, 8))
+        add_button = ttk.Button(actions, text="➕ Añadir .exe autorizado…", style="Accent.TButton")
+        scan_button = ttk.Button(actions, text="🔍 Elegir de apps instaladas…")
+        launch_button = ttk.Button(actions, text="▶ Iniciar seleccionada…", state="disabled")
+        remove_button = ttk.Button(actions, text="🗑 Retirar autorización", state="disabled")
+        add_button.pack(side="left", padx=(0, 8))
+        scan_button.pack(side="left", padx=(0, 8))
+        launch_button.pack(side="left", padx=(0, 8))
+        remove_button.pack(side="left")
+        status_var = tk.StringVar(value="No se inicia ninguna aplicación al añadirla.")
+        ttk.Label(outer, textvariable=status_var, wraplength=860, foreground="#60e2df").pack(side="top", anchor="w", pady=(0, 6))
         tree_frame = ttk.Frame(outer)
         tree_frame.pack(fill="both", expand=True)
-        tree = ttk.Treeview(tree_frame, columns=("name", "path"), show="headings", selectmode="browse")
+        tree = ttk.Treeview(tree_frame, columns=("name", "path"), show="headings", selectmode="browse", height=6)
         tree.heading("name", text="Aplicación")
         tree.heading("path", text="Ruta autorizada")
         tree.column("name", width=220, anchor="w", stretch=False)
-        tree.column("path", width=600, anchor="w", stretch=True)
+        tree.column("path", width=620, anchor="w", stretch=True)
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
         tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        status_var = tk.StringVar(value="No se inicia ninguna aplicación al añadirla.")
-        ttk.Label(outer, textvariable=status_var, wraplength=830).pack(anchor="w", pady=(8, 6))
-        actions = ttk.Frame(outer)
-        actions.pack(fill="x")
-        add_button = ttk.Button(actions, text="Añadir .exe autorizado…", style="Accent.TButton")
-        launch_button = ttk.Button(actions, text="Iniciar…", state="disabled")
-        remove_button = ttk.Button(actions, text="Retirar autorización", state="disabled")
-        add_button.pack(side="left", padx=(0, 8))
-        launch_button.pack(side="left", padx=(0, 8))
-        remove_button.pack(side="left")
         records_by_id: dict[str, dict] = {}
 
         def current_records() -> list[dict]:
@@ -4394,17 +4734,7 @@ class AssistantApp(tk.Tk):
             remove_button.configure(state="disabled")
             status_var.set(f"{len(records_by_id)} de {MAX_ALLOWED_APPLICATIONS} aplicaciones autorizadas. Ninguna se inicia automáticamente.")
 
-        def add_application() -> None:
-            if len(current_records()) >= MAX_ALLOWED_APPLICATIONS:
-                messagebox.showinfo("Límite alcanzado", f"La lista admite hasta {MAX_ALLOWED_APPLICATIONS} aplicaciones.", parent=window)
-                return
-            initial_dir = os.environ.get("ProgramFiles") or os.environ.get("LOCALAPPDATA") or str(Path.home())
-            chosen = filedialog.askopenfilename(
-                parent=window, title="Selecciona el .exe de una aplicación instalada", initialdir=initial_dir,
-                filetypes=(("Aplicaciones Windows (*.exe)", "*.exe"),),
-            )
-            if not chosen:
-                return
+        def _authorize_candidate_path(chosen: str) -> None:
             try:
                 record = validate_local_application(chosen)
             except (OSError, ValueError) as exc:
@@ -4416,9 +4746,9 @@ class AssistantApp(tk.Tk):
                 messagebox.showinfo("Ya autorizada", "Esa ruta ya aparece en la lista.", parent=window)
                 return
             prompt = (
-                f"Autorizar esta aplicación para que aparezca en tu lista?\n\n{record['name']}\n{record['path']}\n\n"
-                "Esto guarda la ruta y su identidad básica en preferencias locales (que pueden incluirse en respaldos ZIP no cifrados). "
-                "No la inicia ahora. Cada inicio futuro te volverá a pedir confirmación. La aplicación puede modificar datos o conectarse a internet.\n\n¿Autorizar esta ruta exacta?"
+                f"¿Autorizar esta aplicación para que aparezca en tu lista?\n\n{record['name']}\n{record['path']}\n\n"
+                "Esto guarda la ruta y su identidad básica en preferencias locales. "
+                "No la inicia ahora. Cada inicio futuro te volverá a pedir confirmación.\n\n¿Autorizar esta ruta exacta?"
             )
             if not messagebox.askyesno("Autorizar aplicación", prompt, icon="warning", parent=window):
                 return
@@ -4426,7 +4756,86 @@ class AssistantApp(tk.Tk):
             if persist_records(records):
                 logged = self._record_private_action_event("Autorizar aplicación", "Permiso agregado; ruta omitida")
                 refresh_list()
-                status_var.set(f"Autorizada: {record['name']}. No se inició; usa Iniciar… para una confirmación independiente." + (" No se pudo guardar el evento de actividad." if not logged else ""))
+                status_var.set(f"Autorizada: {record['name']}. Usa «▶ Iniciar seleccionada…» o pídele a Clara «abre la aplicación {record['name']}»." + (" No se pudo guardar el evento de actividad." if not logged else ""))
+
+        def add_application() -> None:
+            if len(current_records()) >= MAX_ALLOWED_APPLICATIONS:
+                messagebox.showinfo("Límite alcanzado", f"La lista admite hasta {MAX_ALLOWED_APPLICATIONS} aplicaciones.", parent=window)
+                return
+            initial_dir = os.environ.get("ProgramFiles") or os.environ.get("LOCALAPPDATA") or str(Path.home())
+            chosen = filedialog.askopenfilename(
+                parent=window, title="Selecciona el .exe de una aplicación instalada", initialdir=initial_dir,
+                filetypes=(("Aplicaciones Windows (*.exe)", "*.exe"),),
+            )
+            if not chosen:
+                return
+            _authorize_candidate_path(chosen)
+
+        def pick_from_installed_apps() -> None:
+            if len(current_records()) >= MAX_ALLOWED_APPLICATIONS:
+                messagebox.showinfo("Límite alcanzado", f"La lista admite hasta {MAX_ALLOWED_APPLICATIONS} aplicaciones.", parent=window)
+                return
+            roots = []
+            for env_k in ("ProgramFiles", "ProgramFiles(x86)"):
+                val = os.environ.get(env_k)
+                if val and Path(val).is_dir():
+                    roots.append(Path(val))
+            local_app = os.environ.get("LOCALAPPDATA")
+            if local_app and (Path(local_app) / "Programs").is_dir():
+                roots.append(Path(local_app) / "Programs")
+            found: list[tuple[str, str]] = []
+            seen_paths: set[str] = set()
+            for r in roots:
+                try:
+                    for sub in r.iterdir():
+                        if not sub.is_dir():
+                            continue
+                        for exe in sub.glob("*.exe"):
+                            low_n = exe.name.casefold()
+                            if low_n in BLOCKED_APPLICATION_NAMES or any(tok in exe.stem.casefold() for tok in ("unins", "setup", "install", "update", "crash", "helper")):
+                                continue
+                            norm_p = os.path.normcase(str(exe))
+                            if norm_p not in seen_paths and is_windows_gui_executable(exe):
+                                seen_paths.add(norm_p)
+                                found.append((exe.name, str(exe)))
+                        if len(found) >= 120:
+                            break
+                except OSError:
+                    continue
+            found.sort(key=lambda item: item[0].casefold())
+            if not found:
+                messagebox.showinfo("Sin resultados automáticos", "Usa «➕ Añadir .exe autorizado…» para buscar manualmente el ejecutable.", parent=window)
+                return
+            picker = tk.Toplevel(window)
+            picker.title("Elegir aplicación instalada detectada")
+            picker.geometry("760x420")
+            picker.transient(window)
+            picker.grab_set()
+            p_frame = ttk.Frame(picker, padding=14)
+            p_frame.pack(fill="both", expand=True)
+            ttk.Label(p_frame, text="Selecciona una aplicación detectada en Program Files / LocalAppData\\Programs:", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
+            p_btns = ttk.Frame(p_frame)
+            p_btns.pack(side="top", fill="x", pady=(0, 8))
+            p_tree = ttk.Treeview(p_frame, columns=("name", "path"), show="headings", selectmode="browse", height=7)
+            p_tree.heading("name", text="Aplicación")
+            p_tree.heading("path", text="Ruta")
+            p_tree.column("name", width=190, anchor="w")
+            p_tree.column("path", width=520, anchor="w")
+            p_tree.pack(fill="both", expand=True)
+            for idx, (n_str, p_str) in enumerate(found):
+                p_tree.insert("", "end", iid=str(idx), values=(n_str, p_str))
+
+            def confirm_pick() -> None:
+                sel = p_tree.selection()
+                if not sel:
+                    messagebox.showinfo("Selecciona una aplicación", "Elige una fila de la lista primero.", parent=picker)
+                    return
+                chosen_path = found[int(sel[0])][1]
+                picker.destroy()
+                _authorize_candidate_path(chosen_path)
+
+            ttk.Button(p_btns, text="✅ Autorizar aplicación seleccionada", style="Accent.TButton", command=confirm_pick).pack(side="left", padx=(0, 8))
+            ttk.Button(p_btns, text="Cancelar", command=picker.destroy).pack(side="left")
 
         def launch_application() -> None:
             selection = tree.selection()
@@ -4474,15 +4883,19 @@ class AssistantApp(tk.Tk):
             remove_button.configure(state="normal" if selected else "disabled")
 
         add_button.configure(command=add_application)
+        scan_button.configure(command=pick_from_installed_apps)
         launch_button.configure(command=launch_application)
         remove_button.configure(command=remove_application)
         tree.bind("<<TreeviewSelect>>", update_selection)
         refresh_list()
+        if auto_prompt_add:
+            window.after(200, add_application)
 
     def open_week_agenda(self) -> None:
         window = tk.Toplevel(self)
         window.title("Agenda semanal")
         window.geometry("1040x580")
+        window.minsize(820, 440)
         window.transient(self)
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
@@ -4491,8 +4904,10 @@ class AssistantApp(tk.Tk):
         ttk.Label(outer, text=f"Agenda · {start_day.strftime('%d/%m/%Y')} a {end_day.strftime('%d/%m/%Y')}", style="CardTitle.TLabel").pack(anchor="w")
         ttk.Label(outer, text="Vista local de tareas, clases y bloques; los archivos .ics vinculados son solo lectura y no se sincronizan.").pack(anchor="w", pady=(4, 5))
         linked_status = ttk.Label(outer, text="")
-        linked_status.pack(anchor="w", pady=(0, 8))
-        tree = ttk.Treeview(outer, columns=("date", "time", "kind", "title", "subject"), show="headings")
+        linked_status.pack(anchor="w", pady=(0, 6))
+        actions = ttk.Frame(outer)
+        actions.pack(side="top", fill="x", pady=(0, 8))
+        tree = ttk.Treeview(outer, columns=("date", "time", "kind", "title", "subject"), show="headings", height=7)
         for col, label, width in (("date", "Fecha", 105), ("time", "Hora", 75), ("kind", "Tipo", 95), ("title", "Actividad", 390), ("subject", "Materia / lugar", 180)):
             tree.heading(col, text=label)
             tree.column(col, width=width, anchor="w" if col in ("title", "subject") else "center")
@@ -4554,16 +4969,14 @@ class AssistantApp(tk.Tk):
                 save_settings(self.settings)
                 refresh()
 
-        actions = ttk.Frame(outer)
-        actions.pack(fill="x", pady=(10, 0))
         ttk.Button(actions, text="Actualizar", command=refresh).pack(side="left")
-        ttk.Button(actions, text="+ Bloque local", command=lambda: self.open_plan_block_form(window, on_saved=refresh)).pack(side="left", padx=6)
+        ttk.Button(actions, text="+ Bloque local", style="Accent.TButton", command=lambda: self.open_plan_block_form(window, on_saved=refresh)).pack(side="left", padx=6)
         ttk.Button(actions, text="Editar bloque", command=lambda: self.edit_plan_block_from_agenda(tree, refresh)).pack(side="left", padx=6)
         ttk.Button(actions, text="Eliminar bloque", command=lambda: self.delete_plan_block_from_agenda(tree, refresh)).pack(side="left")
         ttk.Button(actions, text="Vincular .ics local…", command=link_local_ics).pack(side="left", padx=(10,0))
         ttk.Button(actions, text="Quitar vínculo", command=unlink_local_ics).pack(side="left", padx=6)
         ttk.Button(actions, text="Importar .ics…", command=self.import_ical).pack(side="right", padx=8)
-        ttk.Button(actions, text="Exportar .ics…", style="Accent.TButton", command=self.export_ical).pack(side="right")
+        ttk.Button(actions, text="Exportar .ics…", command=self.export_ical).pack(side="right")
         refresh()
 
     def _block_conflicts(self, block_date: date, start_time: str, end_time: str, exclude_id: int | None = None) -> list[str]:
@@ -4682,8 +5095,9 @@ class AssistantApp(tk.Tk):
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="Borrador de planificación · aún no guardado", style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(outer, text="Duración base sugerida: 45 min; pausa propuesta: 15 min. Puedes editar o quitar cada bloque. Se respetaron clases y bloques ya guardados; no se modifican tareas.", wraplength=730).pack(anchor="w", pady=(4, 10))
-        tree = ttk.Treeview(outer, columns=("date","start","end","title"), show="headings", selectmode="browse")
+        ttk.Label(outer, text="Duración base sugerida: 45 min; pausa propuesta: 15 min. Puedes editar o quitar cada bloque. Se respetaron clases y bloques ya guardados; no se modifican tareas.", wraplength=730).pack(anchor="w", pady=(4, 8))
+        actions=ttk.Frame(outer);actions.pack(side="top",fill="x",pady=(0,8))
+        tree = ttk.Treeview(outer, columns=("date","start","end","title"), show="headings", selectmode="browse", height=5)
         for key,label,width in (("date","Fecha",105),("start","Inicio",80),("end","Fin",80),("title","Tarea / actividad",450)):
             tree.heading(key,text=label); tree.column(key,width=width,anchor="w")
         tree.pack(fill="both",expand=True)
@@ -4752,11 +5166,10 @@ class AssistantApp(tk.Tk):
             count=len(drafts); window.destroy()
             self.append_chat("Asistente",f"Guardé {count} bloque(s) en la agenda local. Puedes revisarlos, editarlos o borrarlos en Agenda semanal.")
 
-        actions=ttk.Frame(outer);actions.pack(fill="x",pady=(10,0))
-        ttk.Button(actions,text="Editar seleccionado…",command=edit_selected).pack(side="left")
-        ttk.Button(actions,text="Quitar del borrador",command=remove_selected).pack(side="left",padx=8)
-        ttk.Button(actions,text="Cancelar",command=window.destroy).pack(side="right",padx=8)
-        ttk.Button(actions,text="Confirmar y guardar…",style="Accent.TButton",command=confirm_save).pack(side="right")
+        ttk.Button(actions,text="Confirmar y guardar…",style="Accent.TButton",command=confirm_save).pack(side="left")
+        ttk.Button(actions,text="Editar seleccionado…",command=edit_selected).pack(side="left",padx=8)
+        ttk.Button(actions,text="Quitar del borrador",command=remove_selected).pack(side="left")
+        ttk.Button(actions,text="Cancelar",command=window.destroy).pack(side="right")
 
     def import_ical(self) -> None:
         source = filedialog.askopenfilename(parent=self, title="Importar eventos iCalendar", filetypes=(("iCalendar", "*.ics"),))
@@ -4888,16 +5301,18 @@ class AssistantApp(tk.Tk):
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="Revisión guiada de componentes", style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(outer, text="Comprueba la configuración local. No escanea archivos, no enciende el micrófono ni envía tareas/clases a internet.", wraplength=760).pack(anchor="w", pady=(4, 10))
-        tree = ttk.Treeview(outer, columns=("state", "item", "detail"), show="headings")
+        ttk.Label(outer, text="Comprueba la configuración local. No escanea archivos, no enciende el micrófono ni envía tareas/clases a internet.", wraplength=760).pack(anchor="w", pady=(4, 8))
+        top_bar = ttk.Frame(outer)
+        top_bar.pack(side="top", fill="x", pady=(0, 8))
+        run_button = ttk.Button(top_bar, text="🔄 Revisar ahora", style="Accent.TButton")
+        run_button.pack(side="left", padx=(0, 10))
+        status = ttk.Label(top_bar, text="Pulsa para iniciar los chequeos.")
+        status.pack(side="left")
+        tree = ttk.Treeview(outer, columns=("state", "item", "detail"), show="headings", height=7)
         for col, label, width in (("state", "Estado", 105), ("item", "Componente", 190), ("detail", "Detalle / siguiente paso", 470)):
             tree.heading(col, text=label)
             tree.column(col, width=width, anchor="w")
         tree.pack(fill="both", expand=True)
-        status = ttk.Label(outer, text="Pulsa para iniciar los chequeos.")
-        status.pack(anchor="w", pady=(8, 0))
-        run_button = ttk.Button(outer, text="Revisar ahora", style="Accent.TButton")
-        run_button.pack(anchor="e", pady=(8, 0))
         self.diagnostic_tree = tree
         self.diagnostic_status = status
         self.diagnostic_run_button = run_button
@@ -5236,10 +5651,46 @@ class AssistantApp(tk.Tk):
     def open_settings(self) -> None:
         window = tk.Toplevel(self)
         window.title("Preferencias del asistente")
+        window.geometry("700x580")
+        window.minsize(560, 420)
         window.transient(self)
-        window.resizable(False, False)
-        form = ttk.Frame(window, padding=22)
-        form.pack(fill="both", expand=True)
+        window.resizable(True, True)
+        outer = ttk.Frame(window, padding=14)
+        outer.pack(fill="both", expand=True)
+
+        top_bar = ttk.Frame(outer)
+        top_bar.pack(side="top", fill="x", pady=(0, 8))
+        ttk.Label(top_bar, text="Preferencias · usa la rueda del ratón o la barra lateral para bajar", style="CardTitle.TLabel").pack(side="left")
+
+        scroll_container = ttk.Frame(outer)
+        scroll_container.pack(fill="both", expand=True)
+        canvas = tk.Canvas(scroll_container, bg="#07111f", highlightthickness=0)
+        v_scroll = ttk.Scrollbar(scroll_container, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=v_scroll.set)
+        v_scroll.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        form = ttk.Frame(canvas, padding=18)
+        canvas_window = canvas.create_window((0, 0), window=form, anchor="nw")
+
+        def _on_form_configure(_event=None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event) -> None:
+            try:
+                canvas.itemconfigure(canvas_window, width=event.width)
+            except Exception:
+                pass
+
+        def _on_mousewheel(event) -> None:
+            delta = getattr(event, "delta", 0)
+            if delta:
+                canvas.yview_scroll(int(-1 * (delta / 120)), "units")
+
+        form.bind("<Configure>", _on_form_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+        window.bind("<MouseWheel>", _on_mousewheel)
+
         ttk.Label(form, text="Rutina, noticias y privacidad", style="CardTitle.TLabel").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 12))
         ttk.Label(form, text="Hora de la rutina (24 horas, HH:MM)").grid(row=1, column=0, sticky="w")
         time_var = tk.StringVar(value=self.settings["morning_time"])
@@ -5258,10 +5709,10 @@ class AssistantApp(tk.Tk):
         ttk.Combobox(form, textvariable=count_var, values=NEWS_COUNTS, state="readonly", width=10).grid(row=10, column=0, sticky="w", pady=(4, 10))
         auto_speak_var = tk.BooleanVar(value=self.settings.get("auto_speak_responses", "true") == "true")
         ttk.Checkbutton(form, text="Leer automáticamente en voz alta las respuestas y resúmenes de noticias/agenda", variable=auto_speak_var).grid(row=11, column=0, sticky="w", pady=(3, 2))
-        ttk.Label(form, text="Requiere pyttsx3 y una voz disponible en Windows. Si la voz falla, Clara muestra una explicación y conserva la respuesta escrita. El micrófono sigue apagado hasta que pulses para hablar; DETENER AHORA o Esc interrumpe la lectura.", wraplength=500, foreground="#91aabd").grid(row=12, column=0, sticky="w", pady=(0, 7))
+        ttk.Label(form, text="Requiere pyttsx3 y una voz disponible en Windows. Si la voz falla, Clara muestra una explicación y conserva la respuesta escrita. El micrófono sigue apagado hasta que pulses para hablar; DETENER AHORA o Esc interrumpe la lectura.", wraplength=540, foreground="#91aabd").grid(row=12, column=0, sticky="w", pady=(0, 7))
         history_var = tk.BooleanVar(value=self.settings.get("chat_history_enabled", "false") == "true")
         ttk.Checkbutton(form, text="Guardar opcionalmente los turnos de conversación", variable=history_var).grid(row=13, column=0, sticky="w", pady=(3, 2))
-        ttk.Label(form, text="Desactivado por defecto. Si lo activas, se guardan solo tus mensajes y los de Clara (máximo 1000; se muestran los últimos 200 al iniciar). Puede incluir datos personales que escribas; los respaldos ZIP no están cifrados.", wraplength=500, foreground="#f2c77b").grid(row=14, column=0, sticky="w", pady=(0, 7))
+        ttk.Label(form, text="Desactivado por defecto. Si lo activas, se guardan solo tus mensajes y los de Clara (máximo 1000; se muestran los últimos 200 al iniciar). Puede incluir datos personales que escribas; los respaldos ZIP no están cifrados.", wraplength=540, foreground="#f2c77b").grid(row=14, column=0, sticky="w", pady=(0, 7))
         history_buttons = ttk.Frame(form)
         history_buttons.grid(row=15, column=0, sticky="w", pady=(0, 10))
         ttk.Button(history_buttons, text="Ver / exportar / borrar historial…", command=self.open_chat_history_tools).pack(side="left")
@@ -5269,9 +5720,9 @@ class AssistantApp(tk.Tk):
         ttk.Checkbutton(form, text="Avisos nativos de Windows al estar minimizada (opcional)", variable=native_var).grid(row=16, column=0, sticky="w", pady=(2, 2))
         tray_var = tk.BooleanVar(value=self.settings.get("minimize_to_tray", "false") == "true")
         ttk.Checkbutton(form, text="Al cerrar con la X, minimizar a la bandeja (opcional)", variable=tray_var).grid(row=17, column=0, sticky="w", pady=(2, 2))
-        ttk.Label(form, text="Requiere paquetes opcionales y Windows. Los avisos dependen de la sesión y de la configuración del Centro de notificaciones; los toasts ocultan el título del pendiente.", wraplength=500, foreground="#f2c77b").grid(row=18, column=0, sticky="w", pady=(0, 8))
-        ttk.Label(form, text="Los feeds se descargan al pedir la rutina matutina. Google News usa el tema elegido; BBC Mundo y DW Español muestran su selección general. Se envían al servicio solo la petición de noticias y la ubicación del clima, no tareas ni clases.", wraplength=500, foreground="#91aabd").grid(row=19, column=0, sticky="w", pady=(0, 10))
-        ttk.Label(form, text="La rutina se programa de lunes a viernes. Cambiar la hora aquí no actualiza Windows automáticamente; vuelve a ejecutar programar_rutina.bat.", wraplength=500, foreground="#91aabd").grid(row=20, column=0, sticky="w", pady=(0, 12))
+        ttk.Label(form, text="Requiere paquetes opcionales y Windows. Los avisos dependen de la sesión y de la configuración del Centro de notificaciones; los toasts ocultan el título del pendiente.", wraplength=540, foreground="#f2c77b").grid(row=18, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(form, text="Los feeds se descargan al pedir la rutina matutina. Google News usa el tema elegido; BBC Mundo y DW Español muestran su selección general. Se envían al servicio solo la petición de noticias y la ubicación del clima, no tareas ni clases.", wraplength=540, foreground="#91aabd").grid(row=19, column=0, sticky="w", pady=(0, 10))
+        ttk.Label(form, text="La rutina se programa de lunes a viernes. Cambiar la hora aquí no actualiza Windows automáticamente; vuelve a ejecutar programar_rutina.bat.", wraplength=540, foreground="#91aabd").grid(row=20, column=0, sticky="w", pady=(0, 12))
 
         def save() -> None:
             time_value = time_var.get().strip()
@@ -5300,6 +5751,9 @@ class AssistantApp(tk.Tk):
             window.destroy()
             messagebox.showinfo("Preferencias guardadas", "La voz automática se aplicará a las próximas respuestas si pyttsx3 está instalado. Para noticias y ubicación, el cambio aplica al próximo resumen. Cambiar la hora programada requiere volver a ejecutar programar_rutina.bat.", parent=self)
 
+        ttk.Button(top_bar, text="💾 Guardar preferencias", style="Accent.TButton", command=save).pack(side="right")
+        ttk.Button(top_bar, text="Cancelar", command=window.destroy).pack(side="right", padx=6)
+
         buttons = ttk.Frame(form)
         buttons.grid(row=21, column=0, sticky="e")
         ttk.Button(buttons, text="Cancelar", command=window.destroy).pack(side="left", padx=6)
@@ -5308,35 +5762,40 @@ class AssistantApp(tk.Tk):
     def open_security(self) -> None:
         window = tk.Toplevel(self)
         window.title("Seguridad y alertas")
-        window.geometry("850x720")
+        window.geometry("860x680")
+        window.minsize(740, 520)
         window.transient(self)
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
         ttk.Label(outer, text="Centro de seguridad (informativo)", style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(outer, text="Este asistente no es un antivirus y no escanea archivos. No diagnostica infecciones ni cambia la configuración de seguridad.", wraplength=740, foreground="#f2c77b").pack(anchor="w", pady=(5, 10))
-        ttk.Button(outer, text="Consultar estado de Microsoft Defender (solo lectura)", command=self.check_defender_status).pack(anchor="w", pady=(0, 10))
-        action_box = ttk.LabelFrame(outer, text="Etapa 7 · piloto de acción local acotada", padding=10)
-        action_box.pack(fill="x", pady=(0, 10))
+        ttk.Label(outer, text="Este asistente no es un antivirus y no escanea archivos. No diagnostica infecciones ni cambia la configuración de seguridad.", wraplength=740, foreground="#f2c77b").pack(anchor="w", pady=(4, 8))
+        ttk.Button(outer, text="Consultar estado de Microsoft Defender (solo lectura)", command=self.check_defender_status).pack(anchor="w", pady=(0, 8))
+        action_box = ttk.LabelFrame(outer, text="Etapa 7 · piloto de acción local acotada", padding=8)
+        action_box.pack(fill="x", pady=(0, 8))
         ttk.Label(action_box, text="Única acción piloto: abrir en el Explorador una carpeta existente que tú selecciones. No lee su contenido mediante Clara ni modifica archivos. Se pide confirmación en cada intento.", wraplength=720).pack(anchor="w")
         action_buttons = ttk.Frame(action_box); action_buttons.pack(fill="x", pady=(6, 0))
         ttk.Button(action_buttons, text="Elegir y abrir carpeta…", command=lambda: self.open_selected_folder(window)).pack(side="left")
         ttk.Button(action_buttons, text="Ver historial de acciones…", command=lambda: self.show_action_history(window)).pack(side="left", padx=8)
-        vt_box = ttk.LabelFrame(outer, text="Consulta manual VirusTotal · solo hash", padding=10)
-        vt_box.pack(fill="x", pady=(0, 10))
+        vt_box = ttk.LabelFrame(outer, text="Consulta manual VirusTotal · solo hash", padding=8)
+        vt_box.pack(fill="x", pady=(0, 8))
         ttk.Label(vt_box, text="Calcula SHA-256 localmente y, tras tu confirmación por consulta, envía hash + API key por HTTPS. Nunca envía archivo, nombre o ruta; no automatiza consultas ni actúa sobre veredictos.", wraplength=720).pack(anchor="w")
         vt_key_status = ttk.Label(vt_box, text="Clave: protegida localmente" if VT_KEY_PATH.is_file() else "Clave: no configurada")
-        vt_key_status.pack(anchor="w", pady=(4, 6))
+        vt_key_status.pack(anchor="w", pady=(4, 4))
         vt_actions = ttk.Frame(vt_box)
         vt_actions.pack(anchor="w")
         ttk.Button(vt_actions, text="Configurar / reemplazar clave…", command=lambda: self.configure_vt_key(vt_key_status, window)).pack(side="left")
         ttk.Button(vt_actions, text="Eliminar clave", command=lambda: self.remove_vt_key(vt_key_status, window)).pack(side="left", padx=6)
         ttk.Button(vt_actions, text="Consultar archivo por hash…", style="Accent.TButton", command=lambda: self.query_vt_file(window)).pack(side="left", padx=6)
-        guide = tk.Text(outer, height=9, wrap="word", relief="flat", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff", padx=10, pady=10)
-        guide.pack(fill="x", pady=(0, 10))
+        guide = tk.Text(outer, height=5, wrap="word", relief="flat", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff", padx=8, pady=6)
+        guide.pack(fill="x", pady=(0, 8))
         guide.insert("1.0", "Si algo parece extraño:\n1. No abras el archivo ni compartas contraseñas.\n2. Revisa la notificación en Seguridad de Windows; confirma qué producto la emitió y el nombre exacto de la detección.\n3. Sigue las instrucciones del propio antivirus para poner en cuarentena o analizar; no borres archivos del sistema manualmente.\n4. Si una alerta solicita pago o credenciales, no uses el enlace de esa alerta: abre Seguridad de Windows desde el menú Inicio.\n5. Si se trata de un equipo administrado por escuela/trabajo o hay posible robo de cuentas, contacta soporte técnico de confianza.")
         guide.configure(state="disabled")
-        ttk.Label(outer, text="Tus reportes manuales (se guardan solo en esta computadora):", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 6))
-        tree = ttk.Treeview(outer, columns=("date", "source", "summary"), show="headings", selectmode="browse")
+        obs_header = ttk.Frame(outer)
+        obs_header.pack(side="top", fill="x", pady=(0, 6))
+        ttk.Label(obs_header, text="Tus reportes manuales (se guardan solo en esta computadora):", style="CardTitle.TLabel").pack(side="left")
+        actions = ttk.Frame(obs_header)
+        actions.pack(side="right")
+        tree = ttk.Treeview(outer, columns=("date", "source", "summary"), show="headings", selectmode="browse", height=5)
         for col, label, width in (("date", "Fecha", 145), ("source", "Fuente", 150), ("summary", "Observación", 440)):
             tree.heading(col, text=label)
             tree.column(col, width=width, anchor="w")
@@ -5386,9 +5845,7 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
 
-        actions = ttk.Frame(outer)
-        actions.pack(fill="x", pady=(10, 0))
-        ttk.Button(actions, text="+ Registrar observación", command=report).pack(side="left")
+        ttk.Button(actions, text="+ Registrar observación", style="Accent.TButton", command=report).pack(side="left")
         ttk.Button(actions, text="Eliminar seleccionada", command=delete_report).pack(side="left", padx=8)
         refresh()
 
@@ -5456,7 +5913,8 @@ class AssistantApp(tk.Tk):
         window.transient(parent)
         frame = ttk.Frame(window, padding=14); frame.pack(fill="both", expand=True)
         ttk.Label(frame, text="Registro local · no almacena las rutas de las carpetas", style="CardTitle.TLabel").pack(anchor="w", pady=(0, 8))
-        tree = ttk.Treeview(frame, columns=("when", "action", "outcome"), show="headings", selectmode="browse")
+        controls = ttk.Frame(frame); controls.pack(side="top", fill="x", pady=(0, 8))
+        tree = ttk.Treeview(frame, columns=("when", "action", "outcome"), show="headings", selectmode="browse", height=6)
         for col, label, width in (("when", "Fecha", 155), ("action", "Acción", 255), ("outcome", "Resultado", 250)):
             tree.heading(col, text=label); tree.column(col, width=width, anchor="w")
         tree.pack(fill="both", expand=True)
@@ -5490,7 +5948,6 @@ class AssistantApp(tk.Tk):
                 messagebox.showinfo("Historial vacío", "No hay eventos para borrar.", parent=window); return
             if messagebox.askyesno("Borrar todo el historial", f"Se borrarán {count} eventos locales de acción. Esto no borra tareas ni notas de seguridad y no se puede deshacer desde Clara. Puedes exportarlos antes. ¿Continuar?", icon="warning", parent=window):
                 self.db.execute("DELETE FROM action_events"); self.db.commit(); refresh()
-        controls = ttk.Frame(frame); controls.pack(fill="x", pady=(8, 0))
         ttk.Button(controls, text="Exportar CSV…", command=export_history).pack(side="left")
         ttk.Button(controls, text="Borrar todo…", command=delete_all).pack(side="left", padx=8)
         ttk.Button(controls, text="Eliminar seleccionado", command=delete_selected).pack(side="right")
@@ -6003,8 +6460,9 @@ class AssistantApp(tk.Tk):
         window=tk.Toplevel(parent);window.title("Sugerencias de rutina · revisión manual");window.geometry("760x390");window.transient(parent)
         outer=ttk.Frame(window,padding=18);outer.pack(fill="both",expand=True)
         ttk.Label(outer,text="Patrones observados · no guardados",style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(outer,text="Son coincidencias exactas en tareas completadas, no inferencias sobre tu vida. Elige una y confirma por separado para crear la rutina.",wraplength=700).pack(anchor="w",pady=(4,10))
-        tree=ttk.Treeview(outer,columns=("title","subject","day","time","count","last"),show="headings",selectmode="browse")
+        ttk.Label(outer,text="Son coincidencias exactas en tareas completadas, no inferencias sobre tu vida. Elige una y confirma por separado para crear la rutina.",wraplength=700).pack(anchor="w",pady=(4,8))
+        top_actions=ttk.Frame(outer);top_actions.pack(side="top",fill="x",pady=(0,8))
+        tree=ttk.Treeview(outer,columns=("title","subject","day","time","count","last"),show="headings",selectmode="browse",height=5)
         day_names=("Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo")
         for key,label,width in (("title","Tarea repetida",180),("subject","Materia",110),("day","Día",90),("time","Hora",75),("count","Veces",65),("last","Última fecha",100)):
             tree.heading(key,text=label);tree.column(key,width=width,anchor="w")
@@ -6025,7 +6483,7 @@ class AssistantApp(tk.Tk):
                 messagebox.showerror("No se creó la rutina",str(exc),parent=window);return
             refresh();window.destroy()
             messagebox.showinfo("Rutina creada","La rutina quedó guardada. Puedes editarla o eliminarla desde Rutinas.",parent=parent)
-        ttk.Button(outer,text="Crear rutina seleccionada…",style="Accent.TButton",command=save_selected).pack(anchor="e",pady=(10,0))
+        ttk.Button(top_actions,text="+ Crear rutina seleccionada…",style="Accent.TButton",command=save_selected).pack(side="left")
 
     def apply_routines(self, day: date) -> int:
         weekday = str(day.weekday())
@@ -6610,28 +7068,30 @@ class AssistantApp(tk.Tk):
         dialog.title("Editar tarea" if existing else "Agregar tarea")
         dialog.transient(self)
         dialog.grab_set()
-        dialog.resizable(False, False)
-        box = ttk.Frame(dialog, padding=20)
+        dialog.resizable(True, True)
+        box = ttk.Frame(dialog, padding=18)
         box.pack(fill="both", expand=True)
-        ttk.Label(box, text="¿Qué necesitas hacer?").grid(row=0, column=0, sticky="w", pady=(0, 5))
+        top_controls = ttk.Frame(box)
+        top_controls.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        ttk.Label(top_controls, text="¿Qué necesitas hacer?", style="CardTitle.TLabel").pack(side="left")
         title_var = tk.StringVar(value=existing["title"] if existing else str(prefill.get("title") or preset))
         title_entry = ttk.Entry(box, textvariable=title_var, width=44)
-        title_entry.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 12))
-        ttk.Label(box, text="Fecha (AAAA-MM-DD, opcional)").grid(row=2, column=0, sticky="w", pady=(0, 5))
+        title_entry.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        ttk.Label(box, text="Fecha (AAAA-MM-DD, opcional)").grid(row=2, column=0, sticky="w", pady=(0, 4))
         due_var = tk.StringVar(value=existing["due_date"] or "" if existing else str(prefill.get("due_date") or ""))
-        ttk.Entry(box, textvariable=due_var, width=20).grid(row=3, column=0, sticky="w", pady=(0, 10))
-        ttk.Label(box, text="Hora del recordatorio (HH:MM, opcional)").grid(row=4, column=0, sticky="w", pady=(0, 5))
+        ttk.Entry(box, textvariable=due_var, width=20).grid(row=3, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(box, text="Hora del recordatorio (HH:MM, opcional)").grid(row=4, column=0, sticky="w", pady=(0, 4))
         time_var = tk.StringVar(value=(existing["due_time"] or "") if existing else str(prefill.get("due_time") or ""))
-        ttk.Entry(box, textvariable=time_var, width=12).grid(row=5, column=0, sticky="w", pady=(0, 10))
-        ttk.Label(box, text="Prioridad").grid(row=6, column=0, sticky="w", pady=(0, 5))
+        ttk.Entry(box, textvariable=time_var, width=12).grid(row=5, column=0, sticky="w", pady=(0, 8))
+        ttk.Label(box, text="Prioridad").grid(row=6, column=0, sticky="w", pady=(0, 4))
         priority_var = tk.StringVar(value=existing["priority"] if existing else "Normal")
-        ttk.Combobox(box, textvariable=priority_var, values=("Baja", "Normal", "Alta"), state="readonly", width=16).grid(row=7, column=0, sticky="w", pady=(0, 10))
+        ttk.Combobox(box, textvariable=priority_var, values=("Baja", "Normal", "Alta"), state="readonly", width=16).grid(row=7, column=0, sticky="w", pady=(0, 8))
         ttk.Label(box, text="Materia (opcional)").grid(row=8, column=0, sticky="w", pady=(0, 4))
         subject_var = tk.StringVar(value=(existing["subject"] or "") if existing else str(prefill.get("subject") or ""))
-        ttk.Entry(box, textvariable=subject_var, width=30).grid(row=9, column=0, sticky="w", pady=(0, 9))
+        ttk.Entry(box, textvariable=subject_var, width=30).grid(row=9, column=0, sticky="w", pady=(0, 8))
         ttk.Label(box, text="Descripción o notas (opcional)").grid(row=10, column=0, sticky="w", pady=(0, 4))
         description_text = tk.Text(box, width=44, height=3, wrap="word", relief="solid", borderwidth=1, bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff")
-        description_text.grid(row=11, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        description_text.grid(row=11, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         initial_description = (existing["description"] or "") if existing else str(prefill.get("description") or "")
         if initial_description:
             description_text.insert("1.0", initial_description)
@@ -6641,7 +7101,7 @@ class AssistantApp(tk.Tk):
         initial_rule = (existing["repeat_rule"] or "none") if existing else "none"
         repeat_display = tk.StringVar(value=repeat_labels.get(initial_rule, "No repetir"))
         repeat_combo = ttk.Combobox(box, textvariable=repeat_display, values=tuple(repeat_labels.values()), state="readonly", width=16)
-        repeat_combo.grid(row=13, column=0, sticky="w", pady=(0, 10))
+        repeat_combo.grid(row=13, column=0, sticky="w", pady=(0, 8))
 
         def save() -> None:
             title, due, due_time = title_var.get().strip(), due_var.get().strip(), time_var.get().strip()
@@ -6681,6 +7141,8 @@ class AssistantApp(tk.Tk):
             action = "actualizada" if existing else "guardada"
             self.append_chat("Asistente", f"Tarea {action} localmente." + (f" El aviso está programado para las {due_time} del {due}." if due_time else ""))
 
+        ttk.Button(top_controls, text="💾 Guardar", style="Accent.TButton", command=save).pack(side="right")
+        ttk.Button(top_controls, text="Cancelar", command=dialog.destroy).pack(side="right", padx=6)
         controls = ttk.Frame(box)
         controls.grid(row=14, column=0, columnspan=2, sticky="e")
         ttk.Button(controls, text="Cancelar", command=dialog.destroy).pack(side="left", padx=6)
@@ -6877,8 +7339,9 @@ class AssistantApp(tk.Tk):
         window.transient(self)
         frame = ttk.Frame(window, padding=16); frame.pack(fill="both", expand=True)
         ttk.Label(frame, text="Turnos de conversación guardados en este equipo", style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(frame, text="Solo tus mensajes y las respuestas de Clara. Estado del sistema, acciones y reportes de seguridad quedan fuera. Se guardan hasta 1000 turnos; la exportación es texto sin cifrar.", wraplength=800, foreground="#f2c77b").pack(anchor="w", pady=(4, 10))
-        tree = ttk.Treeview(frame, columns=("time", "speaker", "excerpt"), show="headings", selectmode="browse")
+        ttk.Label(frame, text="Solo tus mensajes y las respuestas de Clara. Estado del sistema, acciones y reportes de seguridad quedan fuera. Se guardan hasta 1000 turnos; la exportación es texto sin cifrar.", wraplength=800, foreground="#f2c77b").pack(anchor="w", pady=(4, 8))
+        controls = ttk.Frame(frame); controls.pack(side="top", fill="x", pady=(0, 8))
+        tree = ttk.Treeview(frame, columns=("time", "speaker", "excerpt"), show="headings", selectmode="browse", height=6)
         for col, label, width in (("time", "Fecha/hora", 160), ("speaker", "Autor", 90), ("excerpt", "Vista previa", 560)):
             tree.heading(col, text=label); tree.column(col, width=width, anchor="w")
         tree.pack(fill="both", expand=True)
@@ -6900,7 +7363,6 @@ class AssistantApp(tk.Tk):
             preview.insert("1.0", (display_chat_speaker(row["speaker"])) + " · " + row["created_at"] + "\n\n" + row["content"])
             preview.configure(state="disabled")
         tree.bind("<<TreeviewSelect>>", show_selected)
-        controls = ttk.Frame(frame); controls.pack(fill="x", pady=(8, 0))
         def export_history() -> None:
             all_rows = self.db.execute("SELECT speaker,content,created_at FROM chat_history ORDER BY id").fetchall()
             if not all_rows:
@@ -7294,16 +7756,19 @@ class AssistantApp(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def parse_task_proposal(self, text: str, today: date | None = None) -> dict[str, str | None]:
-        """Heuristic Spanish task parser; output is only a draft and never auto-saved."""
+        """Heuristic Spanish task parser; supports flexible natural phrasing."""
         today = today or date.today()
         candidate = text.strip()
-        lower = candidate.casefold()
-        prefixes = ("agrega tarea", "agregar tarea", "añade tarea", "añadir tarea", "recuérdame", "me dejaron una tarea", "me dejaron tarea", "me dejaron", "nos dejaron", "me acaban de dejar", "tengo que entregar", "debo entregar", "anotar tarea", "nueva tarea")
-        for prefix in prefixes:
-            if lower.startswith(prefix):
-                candidate = candidate[len(prefix):].strip(" :,-")
-                lower = candidate.casefold()
-                break
+        candidate = re.sub(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+            r"(?:(?:quiero|puedes)\s+)?(?:(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?)"
+            r"(?:\s+que)?(?:\s+(?:tengo(?:\s+que)?|debo|hay\s+que|me\s+dejaron|nos\s+dejaron))?(?:\s+(?:una|un|la|el|mi))?(?:\s+nueva)?(?:\s+(?:tarea|pendiente|entrega|actividad|trabajo|encargo))?(?:\s+de|\s+para|\s+que)?"
+            r"|recu[eé]rdame(?:\s+que)?|me\s+dejaron(?:\s+una)?(?:\s+tarea)?|nos\s+dejaron(?:\s+una)?(?:\s+tarea)?|me\s+acaban\s+de\s+dejar|me\s+encargaron|tengo\s+que\s+entregar|debo\s+entregar|tengo\s+pendiente|tengo\s+una\s+tarea(?:\s+de)?|nueva\s+tarea(?:\s+de)?|tarea\s+de|trabajo\s+de)\b\s*",
+            "",
+            candidate,
+            count=1,
+            flags=re.IGNORECASE,
+        ).strip(" :,-")
 
         due_date = None
         date_match = re.search(r"\b20\d{2}-\d{1,2}-\d{1,2}\b", candidate)
@@ -7388,7 +7853,7 @@ class AssistantApp(tk.Tk):
         if subject:
             candidate = re.sub(r"\b(?:de|para|en)\s+" + re.escape(subject) + r"\b", " ", candidate, count=1, flags=re.IGNORECASE)
             candidate = re.sub(re.escape(subject), " ", candidate, count=1, flags=re.IGNORECASE)
-        candidate = re.sub(r"^\s*(?:(?:una?|el|la)\s+)?(?:tarea|actividad|trabajo|encargo|asignación)\b\s*", "", candidate, flags=re.IGNORECASE)
+        candidate = re.sub(r"^\s*(?:(?:una?|el|la)\s+)?(?:tarea|actividad|trabajo|encargo|asignación|pendiente)\b\s*", "", candidate, flags=re.IGNORECASE)
         candidate = re.sub(r"^\s*(?:de|para|el|la|un|una|que|entregar|hacer)\b\s*", "", candidate, flags=re.IGNORECASE)
         candidate = re.sub(r"^\s*(?:de|para|el|la|un|una)\b\s*", "", candidate, flags=re.IGNORECASE)
         candidate = re.sub(r"\s+", " ", candidate).strip(" :,-.;")
@@ -7399,7 +7864,11 @@ class AssistantApp(tk.Tk):
         return {"title": title[:200], "subject": subject, "due_date": due_date.isoformat() if due_date else None, "due_time": due_time}
 
     def parse_block_request(self, text: str) -> dict[str, str] | None:
-        range_match = re.search(r"\b([01]\d|2[0-3]):([0-5]\d)\s*(?:a|hasta|[-–])\s*([01]\d|2[0-3]):([0-5]\d)\b", text, re.IGNORECASE)
+        range_match = re.search(
+            r"\b(?:de\s+(?:las\s+)?)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:a(?:\s+las)?|hasta(?:\s+las)?|[-–])\s*([01]?\d|2[0-3])(?::([0-5]\d))?\b",
+            text,
+            re.IGNORECASE,
+        )
         target_day = None
         iso_match = re.search(r"\b20\d{2}-\d{2}-\d{2}\b", text)
         if iso_match:
@@ -7419,11 +7888,12 @@ class AssistantApp(tk.Tk):
                 target_day=date.today()+timedelta(days=delta or 7)
         if not range_match or not target_day:
             return None
-        start=f"{int(range_match.group(1)):02d}:{range_match.group(2)}";end=f"{int(range_match.group(3)):02d}:{range_match.group(4)}"
-        if end<=start:
+        start = _normalize_hour_token(range_match.group(1), range_match.group(2))
+        end = _normalize_hour_token(range_match.group(3), range_match.group(4))
+        if not start or not end or end <= start:
             return None
         title=text[:range_match.start()]+" "+text[range_match.end():]
-        title=re.sub(r"^\s*(?:reserva|reservar|bloquea|agenda|programa|crea)\s+(?:(?:un|una)\s+)?(?:bloque|tiempo|espacio)?\s*", "", title, flags=re.IGNORECASE)
+        title=re.sub(r"^\s*(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|pon(?:er|me)?|reserva|reservar|bloquea|bloquear|aparta(?:r)?|agenda(?:r)?|programa(?:r)?|crea(?:r)?)\s+(?:(?:un|una|mi|el)\s+)?(?:bloque(?:\s+local|\s+de\s+estudio)?|tiempo|espacio)?\s*", "", title, flags=re.IGNORECASE)
         if iso_match:
             title=title.replace(iso_match.group()," ")
         title=re.sub(r"\b(?:pasado\s+mañana|mañana|hoy|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b", " ", title, flags=re.IGNORECASE)
@@ -7431,7 +7901,94 @@ class AssistantApp(tk.Tk):
         title=re.sub(r"\s+", " ", title).strip(" ,.;:-")
         if not title:
             return None
-        return {"title":title,"block_date":target_day.isoformat(),"start_time":start,"end_time":end,"notes":"Propuesta desde chat; revisa y confirma antes de guardar."}
+        return {"title":title,"block_date":target_day.isoformat(),"start_time":start,"end_time":end,"notes":"Guardado desde chat."}
+
+    def handle_app_command_from_chat(self, raw_text: str) -> bool:
+        """Allow listing, authorizing, or launching authorized GUI applications directly from natural chat."""
+        raw = str(raw_text or "").strip()
+        low = normalize_intent_text(raw)
+        if any(
+            p in low
+            for p in (
+                "mis aplicaciones autorizadas", "que aplicaciones tienes autorizadas",
+                "lista de aplicaciones autorizadas", "que aplicaciones puedes abrir",
+                "ver aplicaciones autorizadas",
+            )
+        ):
+            apps = load_allowed_applications(self.settings)
+            if not apps:
+                self.append_chat(
+                    "Asistente",
+                    "Aún no tienes aplicaciones autorizadas en tu lista (0 de 10). Puedes decirme «agregar aplicación autorizada» o pulsar «🚀 Aplicaciones autorizadas» y luego el botón superior «➕ Añadir .exe autorizado…».",
+                )
+            else:
+                lines = [f"Tienes {len(apps)} de {MAX_ALLOWED_APPLICATIONS} aplicaciones autorizadas:"]
+                for item in apps:
+                    lines.append(f"• {item['name']} ({item['path']})")
+                lines.append("Puedes decirme «abre la aplicación <nombre>» para iniciarla con confirmación.")
+                self.append_chat("Asistente", "\n".join(lines))
+            return True
+
+        if any(
+            p in low
+            for p in (
+                "agregar aplicacion autorizada", "agrega aplicacion autorizada", "agrega una aplicacion autorizada",
+                "anadir aplicacion autorizada", "autorizar aplicacion", "autoriza una aplicacion",
+                "autorizar una aplicacion", "autorizar programa", "agregar programa autorizado",
+                "abrir aplicaciones autorizadas",
+            )
+        ):
+            self.append_chat(
+                "Asistente",
+                "Abro el gestor de Aplicaciones autorizadas y el selector para que elijas el archivo .exe (o uses «🔍 Elegir de apps instaladas…» en la parte superior).",
+            )
+            self.open_application_manager(auto_prompt_add=True)
+            return True
+
+        launch_m = re.match(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:abre|abrir|inicia|iniciar|ejecuta|ejecutar|lanza|lanzar)\s+(?:la\s+|mi\s+|el\s+)?(?:aplicaci[oó]n|programa|app)\s+(.+)$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if launch_m:
+            app_query = launch_m.group(1).strip(" .,;:")
+            if not AssistantApp.require_permission(self, "manage_apps", pending_callable=lambda: self.handle_app_command_from_chat(raw_text)):
+                return True
+            apps = load_allowed_applications(self.settings)
+            match = next(
+                (
+                    item for item in apps
+                    if app_query.casefold() in item["name"].casefold()
+                    or item["name"].casefold().replace(".exe", "") in app_query.casefold()
+                ),
+                None,
+            )
+            if not match:
+                self.append_chat(
+                    "Asistente",
+                    f"No encontré «{app_query}» en tu lista de aplicaciones autorizadas. Te abro la ventana de Aplicaciones autorizadas para que la añadas con el botón «➕ Añadir .exe autorizado…» o «🔍 Elegir de apps instaladas…».",
+                )
+                self.open_application_manager(auto_prompt_add=False)
+                return True
+            if sys.platform != "win32":
+                self.append_chat("Asistente", f"Encontrada en tu lista: «{match['name']}». El inicio de ejecutables .exe solo está disponible en Windows.")
+                return True
+            if messagebox.askyesno(
+                "Confirmar inicio de aplicación autorizada",
+                f"¿Iniciar ahora la aplicación autorizada?\n\n{match['name']}\n{match['path']}",
+                icon="warning",
+                parent=self,
+            ):
+                try:
+                    launch_allowed_application(match)
+                    self._record_private_action_event("Iniciar aplicación autorizada", "Inicio confirmado desde el chat")
+                    self.append_chat("Asistente", f"¡Listo! Windows recibió la orden de iniciar «{match['name']}».")
+                except Exception as exc:
+                    self.append_chat("Asistente", f"No pude iniciar «{match['name']}»: {exc}")
+            else:
+                self.append_chat("Asistente", f"Cancelé el inicio de «{match['name']}».")
+            return True
+        return False
 
     def day_agenda_summary(self, target: date) -> str:
         today=date.today()
@@ -7623,48 +8180,32 @@ class AssistantApp(tk.Tk):
             flags=re.IGNORECASE,
         ).strip() or text
 
-        class_add_prefixes = (
-            "agrega clase", "agregar clase", "agrega mi clase", "agregar mi clase",
-            "agrega mis clases", "agregar mis clases", "agrega una clase", "agregar una clase",
-            "anade clase", "anadir clase", "anade mi clase", "anadir mi clase",
-            "registra clase", "registrar clase", "registra mi clase", "registrar mi clase",
-            "crea clase", "crear clase", "nueva clase", "tengo clase de", "tengo clases de",
-            "agrega materia", "agregar materia", "anade materia", "anadir materia",
-            "quiero agregar mis clases", "quiero agregar una clase", "quiero agregar clase",
-            "edita mis clases", "editar mis clases",
-        )
-        class_del_prefixes = (
-            "elimina la clase", "eliminar la clase", "elimina clase", "eliminar clase",
-            "elimina mi clase", "eliminar mi clase", "borra la clase", "borrar la clase",
-            "borra clase", "borrar clase", "quita la clase", "quitar la clase", "quita clase", "quitar clase",
-        )
-        task_complete_prefixes = (
-            "marca como hecha", "marcar como hecha", "marca como completada", "marcar como completada",
-            "completa la tarea", "completar la tarea", "completa tarea", "completar tarea",
-            "termina la tarea", "terminar la tarea", "termina tarea", "terminar tarea",
-            "ya hice la tarea", "ya termine la tarea",
-        )
-        task_delete_prefixes = (
-            "elimina la tarea", "eliminar la tarea", "elimina tarea", "eliminar tarea",
-            "borra la tarea", "borrar la tarea", "borra tarea", "borrar tarea",
-            "quita la tarea", "quitar la tarea",
-        )
-        routine_add_prefixes = (
-            "agrega rutina", "agregar rutina", "agrega una rutina", "agregar una rutina",
-            "anade rutina", "anadir rutina", "crea rutina", "crear rutina", "nueva rutina",
-            "configura rutina", "configurar rutina",
-        )
-        task_prefixes = ("agrega tarea", "agregar tarea", "anade tarea", "anadir tarea", "recuerdame", "me dejaron una tarea", "me dejaron tarea", "me dejaron", "nos dejaron", "me acaban de dejar", "tengo que entregar", "debo entregar", "anotar tarea", "nueva tarea", "tarea de", "trabajo de", "crea tarea", "crear tarea")
-        block_prefixes = ("reserva", "reservar", "bloquea", "bloquear", "crea bloque", "crear bloque", "agenda bloque", "programa bloque")
+        if hasattr(self, "handle_app_command_from_chat") and self.handle_app_command_from_chat(text_action):
+            return
 
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in class_del_prefixes):
+        settings_res = parse_and_execute_settings_from_chat(self.settings, text_action)
+        if settings_res is not None:
+            self.append_chat("Asistente", settings_res[1])
+            return
+
+        cal_exc_res = parse_and_execute_calendar_exception_from_chat(self.db, text_action)
+        if cal_exc_res is not None:
+            def _do_cal_exc() -> None:
+                res = parse_and_execute_calendar_exception_from_chat(self.db, text_action)
+                if res is not None:
+                    self.append_chat("Asistente", res[1])
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_cal_exc):
+                self.append_chat("Asistente", cal_exc_res[1])
+            return
+
+        if is_class_delete_command(low_action):
             def _do_del_class() -> None:
                 _ok, msg = execute_delete_class_from_chat(self.db, text_action)
                 self.append_chat("Asistente", msg)
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_del_class):
                 _do_del_class()
             return
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in class_add_prefixes):
+        if is_class_add_command(low_action):
             def _do_add_class() -> None:
                 class_prop = parse_class_proposal(text_action) or {}
                 saved, msg = execute_add_class_from_chat(self.db, class_prop)
@@ -7674,7 +8215,7 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_class):
                 _do_add_class()
             return
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in task_complete_prefixes):
+        if is_task_complete_command(low_action):
             def _do_complete_task() -> None:
                 ok, msg = execute_complete_or_delete_task_from_chat(self.db, text_action, delete=False)
                 if ok and hasattr(self, "refresh_tasks"):
@@ -7683,7 +8224,7 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_complete_task):
                 _do_complete_task()
             return
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in task_delete_prefixes):
+        if is_task_delete_command(low_action):
             def _do_delete_task() -> None:
                 ok, msg = execute_complete_or_delete_task_from_chat(self.db, text_action, delete=True)
                 if ok and hasattr(self, "refresh_tasks"):
@@ -7692,7 +8233,14 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_delete_task):
                 _do_delete_task()
             return
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in routine_add_prefixes):
+        if is_routine_delete_command(low_action):
+            def _do_del_routine() -> None:
+                _ok, msg = execute_delete_routine_from_chat(self.db, text_action)
+                self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_del_routine):
+                _do_del_routine()
+            return
+        if is_routine_add_command(low_action):
             def _do_add_routine() -> None:
                 routine_prop = parse_routine_proposal(text_action) or {}
                 saved, msg = execute_add_routine_from_chat(self.db, routine_prop)
@@ -7704,9 +8252,9 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_routine):
                 _do_add_routine()
             return
-        if any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in task_prefixes):
+        if is_task_add_command(low_action):
             def _do_add_task() -> None:
-                proposal = self.parse_task_proposal(text_action if any(low_action.startswith(prefix) for prefix in task_prefixes) else text)
+                proposal = self.parse_task_proposal(text_action)
                 if proposal["title"] == "Tarea nueva":
                     self.append_chat("Asistente", "Dime el nombre de la tarea (por ejemplo: «agrega tarea de Química entregar práctica mañana a las 16:00») o escríbela en el formulario que acabo de abrir.")
                     self.add_task()
@@ -7720,9 +8268,10 @@ class AssistantApp(tk.Tk):
                     self.add_task(preset=str(proposal["title"] or ""), prefill=proposal)
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_task):
                 _do_add_task()
-        elif any(low.startswith(prefix) or low_action.startswith(prefix) for prefix in block_prefixes):
+            return
+        if is_block_add_command(low_action):
             def _do_add_block() -> None:
-                block = self.parse_block_request(text_action if any(low_action.startswith(prefix) for prefix in block_prefixes) else text)
+                block = self.parse_block_request(text_action)
                 if block:
                     saved, summary = execute_add_block_from_chat(self.db, block)
                     if saved:
@@ -7733,7 +8282,20 @@ class AssistantApp(tk.Tk):
                     self.append_chat("Asistente","Para agendar un bloque dime el título, la fecha y las horas de inicio y fin. Ejemplo: “reserva de 15:00 a 16:00 mañana para estudiar Física”.")
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_block):
                 _do_add_block()
-        elif "agenda" in low or "horario" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low:
+            return
+
+        mem_res = parse_and_execute_memory_from_chat(self.db, text_action)
+        if mem_res is not None:
+            self.append_chat("Asistente", mem_res[1])
+            return
+
+        starts_with_mutation = bool(
+            re.match(
+                r"^(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|elimina(?:r)?|borra(?:r)?|quita(?:r)?|cambia(?:r)?|configura(?:r)?|autoriza(?:r)?)\b",
+                low_action,
+            )
+        )
+        if not starts_with_mutation and ("agenda" in low or "horario" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low):
             target=None
             if "manana" in low: target=date.today()+timedelta(days=1)
             elif "hoy" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low: target=date.today()

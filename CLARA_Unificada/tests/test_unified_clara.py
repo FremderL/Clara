@@ -1497,7 +1497,106 @@ END:VCALENDAR\r
             )
         )
 
+    def test_flexible_natural_phrasing_across_all_modules_and_scrollable_dialogs(self) -> None:
+        db = create_test_db()
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS memories ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, content TEXT NOT NULL, "
+            "category TEXT NOT NULL, created_at TEXT NOT NULL, source TEXT, expires_on TEXT)"
+        )
+        db.commit()
+        chat_messages: list[tuple[str, str]] = []
+        opened_app_manager: list[bool] = []
+
+        class _FakeEntry:
+            def __init__(self, text: str) -> None:
+                self._text = text
+
+            def get(self) -> str:
+                return self._text
+
+            def delete(self, _a: int, _b: str) -> None:
+                self._text = ""
+
+        fake_app = SimpleNamespace(
+            db=db,
+            settings=dict(app.DEFAULT_SETTINGS),
+            ai_busy=False,
+            model_var=SimpleNamespace(get=lambda: ""),
+            current_auth_user=None,
+            current_auth_level=0,
+            _active_vault_passphrase="",
+            _pending_protected_action=None,
+            append_chat=lambda spk, txt, **_kw: chat_messages.append((spk, txt)),
+            refresh_tasks=lambda: None,
+            apply_routines=lambda d: app.AssistantApp.apply_routines(SimpleNamespace(db=db, refresh_tasks=lambda: None), d),
+            parse_task_proposal=lambda t, today=None: app.AssistantApp.parse_task_proposal(SimpleNamespace(db=db), t, today=today),
+            parse_block_request=lambda t: app.AssistantApp.parse_block_request(SimpleNamespace(db=db), t),
+            day_agenda_summary=lambda d: app.AssistantApp.day_agenda_summary(SimpleNamespace(db=db, settings=dict(app.DEFAULT_SETTINGS)), d),
+            open_classes=lambda: None,
+            open_routines=lambda: None,
+            add_task=lambda **_kw: None,
+            open_plan_block_form=lambda *_a, **_kw: None,
+            open_week_agenda=lambda: None,
+            open_application_manager=lambda auto_prompt_add=False: opened_app_manager.append(auto_prompt_add),
+        )
+        fake_app.handle_app_command_from_chat = lambda raw: app.AssistantApp.handle_app_command_from_chat(fake_app, raw)
+
+        # 1. Caso exacto reportado por el usuario: "Agrega que tengo clases de Bases de Datos los Martes y Jueves de 13:00 a 15:00."
+        fake_app.chat_input = _FakeEntry("Agrega que tengo clases de Bases de Datos los Martes y Jueves de 13:00 a 15:00.")
+        app.AssistantApp.send_chat(fake_app)
+        bd_rows = db.execute("SELECT name, weekday, start_time, end_time FROM classes WHERE name='Bases de Datos' ORDER BY weekday").fetchall()
+        self.assertEqual(len(bd_rows), 2)
+        self.assertEqual([(r["weekday"], r["start_time"], r["end_time"]) for r in bd_rows], [(1, "13:00", "15:00"), (3, "13:00", "15:00")])
+        self.assertTrue(any(spk == "Asistente" and "Guardé tu clase «Bases de Datos»" in msg for spk, msg in chat_messages))
+        self.assertFalse(any("No hay clases, tareas con fecha ni bloques locales para hoy" in msg for _spk, msg in chat_messages))
+
+        # 2. Otras formas naturales de agregar clase ("Tengo clases de...", "Ponme la materia de...")
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Ponme la materia de Ingeniería de Software los lunes y miércoles de 09:00 a 11:00 en Aula 5")
+        app.AssistantApp.send_chat(fake_app)
+        is_rows = db.execute("SELECT name, weekday, location FROM classes WHERE name='Ingeniería de Software' ORDER BY weekday").fetchall()
+        self.assertEqual(len(is_rows), 2)
+        self.assertEqual(is_rows[0]["location"], "Aula 5")
+
+        # 3. Formas naturales de agregar tarea con "que tengo que..."
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Agrega que tengo que entregar el proyecto de Bases de Datos mañana a las 16:00")
+        app.AssistantApp.send_chat(fake_app)
+        t_row = db.execute("SELECT title, subject, due_time FROM tasks ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertIsNotNone(t_row)
+        self.assertEqual(t_row["subject"], "Bases de Datos")
+        self.assertEqual(t_row["due_time"], "16:00")
+
+        # 4. Excepción de calendario escolar desde el chat ("mañana no hay clases por día festivo")
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Mañana no hay clases por día festivo")
+        app.AssistantApp.send_chat(fake_app)
+        exc_row = db.execute("SELECT action, note FROM class_exceptions ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertIsNotNone(exc_row)
+        self.assertEqual(exc_row["action"], "no_classes")
+        self.assertIn("día festivo", exc_row["note"])
+
+        # 5. Memoria del asistente desde el chat ("recuerda que...", "ver mi memoria", "olvida que...")
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Recuerda que prefiero estudiar después de las 17:00")
+        app.AssistantApp.send_chat(fake_app)
+        mem_row = db.execute("SELECT content FROM memories ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertIsNotNone(mem_row)
+        self.assertIn("prefiero estudiar después de las 17:00", mem_row["content"])
+
+        # 6. Aplicaciones autorizadas desde el chat ("mis aplicaciones autorizadas", "agregar aplicación autorizada")
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("mis aplicaciones autorizadas")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("0 de 10" in msg for _spk, msg in chat_messages))
+
+        fake_app.chat_input = _FakeEntry("agregar aplicación autorizada")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(opened_app_manager, [True])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
