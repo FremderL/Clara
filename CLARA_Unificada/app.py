@@ -493,7 +493,96 @@ def clean_rss_text(raw: str) -> str:
     return re.sub(r"\s+", " ", without_tags).strip()
 
 
-def parse_news_feed(xml_data: bytes, source_label: str, limit: int) -> list[dict[str, str]]:
+def extract_news_item_summary(raw_description: str, main_title: str, source_name: str = "") -> str:
+    """Extract an informative, readable summary from RSS <description> (handling both article abstracts and Google News HTML lists)."""
+    if not raw_description:
+        return ""
+    unescaped = html.unescape(str(raw_description))
+    # Remove any raw URLs embedded in the description text
+    unescaped = re.sub(r"https?://\S+", " ", unescaped)
+    clean_main = re.sub(r"\s+-\s+[^-]+$", "", main_title or "").strip().casefold()
+
+    # Google News RSS often encodes multiple related coverage angles inside <li>...</li>
+    li_matches = re.findall(r"<li[^>]*>(.*?)</li>", unescaped, flags=re.IGNORECASE | re.DOTALL)
+    if li_matches:
+        angles: list[str] = []
+        for li_html in li_matches:
+            txt = clean_rss_text(li_html)
+            txt = re.sub(r"\s*https?://\S+", "", txt).strip(" -·.,;:")
+            if not txt:
+                continue
+            txt_core = re.sub(r"\s+-\s+[^-]+$", "", txt).strip().casefold()
+            if clean_main and (txt_core == clean_main or clean_main in txt_core and len(txt_core) < len(clean_main) + 18):
+                continue
+            if txt not in angles:
+                angles.append(txt)
+        if angles:
+            return " · ".join(angles[:3])[:460]
+
+    text = clean_rss_text(unescaped)
+    text = re.sub(r"\s*https?://\S+", "", text).strip(" -·")
+    if not text:
+        return ""
+    # Avoid repeating the exact headline if the RSS feed merely copied <title> into <description>
+    text_core = re.sub(r"\s+-\s+[^-]+$", "", text).strip().casefold()
+    if clean_main and (text_core == clean_main or text.casefold() == (main_title or "").strip().casefold()):
+        return ""
+    if source_name and text.endswith(source_name):
+        text = text[: -len(source_name)].rstrip(" -·")
+    return text[:460]
+
+
+def format_rich_news_digest(
+    items: list[dict[str, str]],
+    source_name: str,
+    topic: str = "General",
+    *,
+    is_google: bool = True,
+    cached_stamp: str | None = None,
+) -> str:
+    """Format news items with rich context/summaries and zero invasive URLs."""
+    topic_note = f" · sección {topic}" if is_google and topic else ""
+    if cached_stamp:
+        header = f"📰 Resumen de noticias guardado localmente ({cached_stamp} · {source_name}{topic_note}):"
+    else:
+        header = f"📰 Resumen informativo de noticias · {source_name}{topic_note}:"
+    if not items:
+        return f"{header}\nNo se encontraron noticias disponibles en este momento."
+
+    blocks: list[str] = [header]
+    for idx, item in enumerate(items, start=1):
+        raw_title = str(item.get("title") or "").strip()
+        source = str(item.get("source") or source_name).strip()
+        # Strip redundant ' - Medio' suffix from Google News titles when source is already displayed
+        clean_title = raw_title
+        if source and clean_title.endswith(f" - {source}"):
+            clean_title = clean_title[: -len(f" - {source}")].strip()
+        elif " - " in clean_title:
+            parts = clean_title.rsplit(" - ", 1)
+            if len(parts[1]) <= 35 and (not source or source == source_name):
+                clean_title, source = parts[0].strip(), parts[1].strip()
+
+        summary = str(item.get("summary") or "").strip()
+        published = str(item.get("published") or "").strip()
+        meta_line = f"   🏛️ Fuente: {source}" + (f" · 🕒 {published}" if published else "")
+        if summary:
+            detail_line = f"   📝 Resumen: {summary}"
+        else:
+            detail_line = (
+                f"   📝 Contexto: Nota destacada publicada por {source} sobre «{clean_title}». "
+                "Puedes decirme «investiga en internet sobre este tema» si quieres que profundice en los antecedentes."
+            )
+        blocks.append(f"{idx}. {clean_title}\n{meta_line}\n{detail_line}")
+    return "\n\n".join(blocks)
+
+
+def parse_news_feed(
+    xml_data: bytes,
+    source_label: str,
+    limit: int,
+    *,
+    include_details: bool = False,
+) -> list[dict[str, str]]:
     if len(xml_data) > 2 * 1024 * 1024:
         raise ValueError("El feed RSS supera el límite de 2 MB.")
     upper = xml_data.upper()
@@ -517,7 +606,20 @@ def parse_news_feed(xml_data: bytes, source_label: str, limit: int) -> list[dict
         link = raw_link if raw_link.casefold().startswith(("https://", "http://")) else ""
         source = clean_rss_text(child_value(item, "source"))[:120] or source_label
         if title:
-            result.append({"title": title, "source": source, "link": link})
+            entry: dict[str, str] = {"title": title, "source": source, "link": link}
+            if include_details:
+                raw_desc = (
+                    child_value(item, "description")
+                    or child_value(item, "encoded")
+                    or child_value(item, "summary")
+                )
+                summary = extract_news_item_summary(raw_desc, title, source)
+                if summary:
+                    entry["summary"] = summary
+                raw_pub = clean_rss_text(child_value(item, "pubdate") or child_value(item, "date"))[:40]
+                if raw_pub:
+                    entry["published"] = raw_pub[:22]
+            result.append(entry)
     return result
 
 
@@ -543,6 +645,11 @@ def save_news_cache(
                 "title": str(item.get("title", ""))[:400],
                 "source": str(item.get("source", ""))[:120],
                 "link": str(item.get("link", ""))[:1200],
+                **(
+                    {"summary": str(item.get("summary", ""))[:460]}
+                    if item.get("summary")
+                    else {}
+                ),
             }
             for item in items[:10]
             if item.get("title")
@@ -6264,25 +6371,46 @@ class AssistantApp(tk.Tk):
         self.stop_button = tk.Button(header, text="⛔ DETENER AHORA  ·  Esc", command=self.emergency_stop, bg="#b42318", fg="white", activebackground="#912018", activeforeground="white", relief="flat", font=("Segoe UI", 10, "bold"), padx=14, pady=8, takefocus=True, highlightthickness=2, highlightbackground="#e05b62", highlightcolor="#ffffff")
         self.stop_button.pack(side="right", anchor="ne", padx=(12, 0), pady=(4, 4))
         toolbar = ttk.Frame(root)
-        toolbar.pack(fill="x", pady=(0, 12))
+        toolbar.pack(fill="x", pady=(0, 10))
         toolbar_actions = (
+            # Fila 1: Agenda, Estudio y Utilidades Diarias
             ("☀ Rutina de mañana", self.show_morning_briefing, "Accent.TButton"),
             ("⏭ ¿Qué sigue?", self.show_next_commitment, "TButton"),
-            ("Agenda semanal", self.open_week_agenda, "TButton"),
+            ("📅 Agenda semanal", self.open_week_agenda, "TButton"),
             ("🗓 Cuadrícula semanal", self.open_weekly_grid_schedule, "TButton"),
             ("⏱ Pomodoro", self.open_pomodoro_dialog, "TButton"),
             ("📓 Apuntes", self.open_subject_notebook, "TButton"),
             ("🧮 Calculadora / 🌐 Web", self.open_math_and_web_tools, "TButton"),
+            # Fila 2: Seguridad, Sistema y Configuración
             ("🔐 Niveles y Bóveda", self.open_security_levels_vault, "TButton"),
             ("🔒 Bloquear sesión", self.lock_security_session, "TButton"),
-            ("Historial de avisos", self.open_reminder_history, "TButton"),
-            ("Diagnóstico", self.open_diagnostics, "TButton"),
-            ("Seguridad", self.open_security, "TButton"),
-            ("Preferencias", self.open_settings, "TButton"),
-            ("Copias de seguridad", self.open_backup_tools, "TButton"),
+            ("🔔 Historial de avisos", self.open_reminder_history, "TButton"),
+            ("🩺 Diagnóstico", self.open_diagnostics, "TButton"),
+            ("🛡 Seguridad", self.open_security, "TButton"),
+            ("⚙ Preferencias", self.open_settings, "TButton"),
+            ("💾 Copias de seguridad", self.open_backup_tools, "TButton"),
         )
+        toolbar_buttons: list[ttk.Button] = []
         for label, command, style_name in toolbar_actions:
-            ttk.Button(toolbar, text=label, command=command, style=style_name).pack(side="left", padx=(0, 7), pady=2)
+            btn = ttk.Button(toolbar, text=label, command=command, style=style_name)
+            toolbar_buttons.append(btn)
+
+        self._toolbar_cols = 0
+
+        def _reflow_toolbar(event=None) -> None:
+            avail_w = int(getattr(event, "width", 0) or toolbar.winfo_width() or 1220)
+            cols = max(3, min(7, avail_w // 168))
+            if cols == getattr(self, "_toolbar_cols", 0):
+                return
+            self._toolbar_cols = cols
+            for c_idx in range(8):
+                toolbar.grid_columnconfigure(c_idx, weight=1 if c_idx < cols else 0)
+            for idx, btn_widget in enumerate(toolbar_buttons):
+                r_idx, c_idx = divmod(idx, cols)
+                btn_widget.grid(row=r_idx, column=c_idx, sticky="ew", padx=3, pady=3)
+
+        _reflow_toolbar()
+        toolbar.bind("<Configure>", _reflow_toolbar)
 
         footer = ttk.Frame(root)
         footer.pack(side="bottom", fill="x", pady=(8, 0))
@@ -6299,10 +6427,13 @@ class AssistantApp(tk.Tk):
         left_heading.pack(fill="x")
         ttk.Label(left_heading, text="Mis tareas", style="CardTitle.TLabel").pack(side="left", anchor="w")
         ttk.Button(left_heading, text="📚 Mis clases · agregar / editar", command=self.open_classes).pack(side="right", padx=(8, 0))
-        ttk.Label(left, text="Organiza pendientes y fechas importantes.", background="#0d1b2d", foreground="#91aabd").pack(anchor="w", pady=(4, 8))
-        ttk.Button(left, text="Buscar documentos / ver carpeta", command=self.open_local_file_tools).pack(anchor="w", pady=(0, 4))
-        ttk.Button(left, text="Aplicaciones autorizadas", command=self.open_application_manager).pack(anchor="w", pady=(0, 4))
-        ttk.Button(left, text="Privacidad y permisos", command=self.open_privacy_center).pack(anchor="w", pady=(0, 8))
+        ttk.Label(left, text="Organiza pendientes y fechas importantes.", background="#0d1b2d", foreground="#91aabd").pack(anchor="w", pady=(4, 6))
+        local_tools_row = ttk.Frame(left, style="Card.TFrame")
+        local_tools_row.pack(fill="x", pady=(0, 8))
+        local_tools_row.grid_columnconfigure((0, 1, 2), weight=1)
+        ttk.Button(local_tools_row, text="📂 Documentos / carpeta", command=self.open_local_file_tools).grid(row=0, column=0, sticky="ew", padx=(0, 4))
+        ttk.Button(local_tools_row, text="🚀 Apps autorizadas", command=self.open_application_manager).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(local_tools_row, text="🛡 Privacidad y permisos", command=self.open_privacy_center).grid(row=0, column=2, sticky="ew", padx=(4, 0))
         self.task_tree = ttk.Treeview(left, columns=("task", "due", "priority", "status"), show="headings", selectmode="browse")
         for key, label, width, anchor in (("task", "Tarea", 220, "w"), ("due", "Fecha / hora", 130, "center"), ("priority", "Prioridad", 85, "center"), ("status", "Estado", 80, "center")):
             self.task_tree.heading(key, text=label)
@@ -10237,31 +10368,38 @@ class AssistantApp(tk.Tk):
                 feed_url = "https://news.google.com/rss?" + urllib.parse.urlencode(news_params)
             else:
                 feed_url = source_spec
-            request = urllib.request.Request(feed_url, headers={"User-Agent": "Clara-Personal/2.0.0", "Accept": "application/rss+xml, application/xml, text/xml"})
+            request = urllib.request.Request(
+                feed_url,
+                headers={"User-Agent": "Clara-Personal/2.0.0", "Accept": "application/rss+xml, application/xml, text/xml"},
+            )
             with urllib.request.urlopen(request, timeout=12) as response:
                 feed_bytes = response.read(2 * 1024 * 1024 + 1)
-            items = parse_news_feed(feed_bytes, source_name, news_count)
+            items = parse_news_feed(feed_bytes, source_name, news_count, include_details=True)
+            # Enrich items that lack an article summary (e.g. single-item Google News RSS entries)
+            enriched_count = 0
+            for item in items:
+                if not item.get("summary") and enriched_count < 3:
+                    raw_t = re.sub(r"\s+-\s+[^-]+$", "", str(item.get("title") or "")).strip()
+                    if raw_t:
+                        snippets = _duckduckgo_instant_and_html(raw_t)
+                        if snippets:
+                            item["summary"] = snippets[0][:420]
+                            enriched_count += 1
             if items:
                 try:
                     save_news_cache(items, source_name, topic)
                 except OSError:
                     pass
-            headlines = []
-            for item in items:
-                # Never auto-open a link. It is displayed for the user to inspect/copy.
-                headlines.append(f"• {item['title']}\n  Fuente: {item['source']}" + (f"\n  Enlace: {item['link']}" if item["link"] else ""))
-            topic_note = f" · tema {topic}" if source_spec == "google" else " · titulares generales del feed"
-            return f"Titulares · {source_name}{topic_note} (abre los enlaces manualmente):\n" + ("\n".join(headlines) if headlines else "No se encontraron titulares.")
+            return format_rich_news_digest(items, source_name, topic, is_google=(source_spec == "google"))
         except Exception:
             cached = load_news_cache()
             if cached and cached.get("items"):
-                headlines = [
-                    f"• {item['title']}\n  Fuente: {item['source']}" + (f"\n  Enlace: {item['link']}" if item["link"] else "")
-                    for item in cached["items"][:news_count]
-                ]
-                return (
-                    f"No pude conectar con {source_name} ahora; mostrando últimos titulares guardados localmente ({cached['saved_at']} · {cached['source']}):\n"
-                    + "\n".join(headlines)
+                return format_rich_news_digest(
+                    cached["items"][:news_count],
+                    str(cached.get("source") or source_name),
+                    topic,
+                    is_google=(source_spec == "google"),
+                    cached_stamp=str(cached.get("saved_at") or ""),
                 )
             return f"No pude descargar titulares de {source_name} en este momento y no hay caché local reciente."
 

@@ -2242,6 +2242,31 @@ END:VCALENDAR\r
         self.assertIn("Algoritmo de Dijkstra", r_web)
         self.assertIn("camino más corto", r_web)
 
+        # --- Formato informativo de noticias sin URLs invasivas y barra superior responsiva en filas ---
+        rss_rich = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel>
+        <item>
+            <title>Avance en baterias de estado solido - Ciencia Hoy</title>
+            <link>https://news.google.com/rss/articles/CBMipgFBVV95cUxNveryLongTrackingUrl1234567890</link>
+            <source>Ciencia Hoy</source>
+            <description>&lt;p&gt;Investigadores lograron duplicar la densidad energetica y reducir el tiempo de carga a 10 minutos en pruebas de laboratorio.&lt;/p&gt;</description>
+        </item>
+        </channel></rss>"""
+        rich_items = app.parse_news_feed(rss_rich, "Google News México", 5, include_details=True)
+        self.assertEqual(len(rich_items), 1)
+        self.assertIn("duplicar la densidad energetica", rich_items[0].get("summary", ""))
+        digest = app.format_rich_news_digest(rich_items, "Google News México", "Tecnología")
+        self.assertIn("Avance en baterias de estado solido", digest)
+        self.assertIn("🏛️ Fuente: Ciencia Hoy", digest)
+        self.assertIn("📝 Resumen: Investigadores lograron duplicar la densidad energetica", digest)
+        self.assertNotIn("https://", digest)
+        self.assertNotIn("Enlace:", digest)
+
+        import inspect
+        ui_src = inspect.getsource(app.AssistantApp._build_ui)
+        self.assertIn("_reflow_toolbar", ui_src)
+        self.assertIn("divmod(idx, cols)", ui_src)
+
 
 if __name__ == "__main__":
     unittest.main()
