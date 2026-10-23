@@ -33,6 +33,8 @@ if errorlevel 1 (
 )
 
 echo [2/4] Comprobando o iniciando servidor local de Ollama ^(opcional^)...
+set "GODEBUG=http2client=0"
+set "OLLAMA_NOPRUNE=1"
 powershell -NoProfile -Command "try { $null = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2; exit 0 } catch { exit 1 }" >nul 2>nul
 if errorlevel 1 (
   where ollama >nul 2>nul

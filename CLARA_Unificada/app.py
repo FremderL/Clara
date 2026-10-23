@@ -1855,86 +1855,163 @@ def stream_ollama_chat_direct(
             pass
 
 
+def _is_transient_ollama_pull_error(err_text: str) -> bool:
+    low = str(err_text or "").casefold()
+    return any(
+        token in low
+        for token in (
+            "tls handshake timeout",
+            "max retries exceeded",
+            "i/o timeout",
+            "connection reset",
+            "unexpected eof",
+            "eof",
+            "temporary failure",
+            "cloudflarestorage",
+            "timed out",
+        )
+    )
+
+
 def pull_ollama_model_direct(
     model_name: str,
     *,
     progress_callback=None,
     host: str = "http://127.0.0.1:11434",
+    max_attempts: int = 8,
+    retry_delay: float = 2.0,
 ) -> tuple[bool, str]:
-    """Download/pull a local Ollama model (such as 'llama3.2') with live progress reporting after explicit user confirmation."""
+    """Download/pull a local Ollama model (such as 'llama3.2') with automatic resume on Cloudflare R2 TLS timeouts."""
     clean_model = re.sub(r"[^A-Za-z0-9_.:/-]", "", str(model_name or "").strip())
     if not clean_model:
         return (False, "Indica un nombre de modelo válido (por ejemplo: llama3.2).")
     ensure_local_ollama_running()
+
+    # Check if the requested model is already downloaded locally in Ollama (e.g. from Viernes)
+    try:
+        installed = list_local_ollama_models(host=host)
+        already_match = next(
+            (
+                m for m in installed
+                if m.casefold() == clean_model.casefold()
+                or m.casefold() == f"{clean_model.casefold()}:latest"
+            ),
+            None,
+        )
+        if already_match:
+            if callable(progress_callback):
+                progress_callback(f"Modelo «{already_match}» ya detectado localmente en este equipo.")
+            return (
+                True,
+                f"✅ El modelo «{already_match}» ya se encontraba instalado en tu Ollama local (de Viernes) y quedó activo de inmediato.",
+            )
+    except Exception:
+        pass
+
     if callable(progress_callback):
         progress_callback(f"Iniciando descarga del modelo «{clean_model}» en Ollama local…")
 
-    # 1. Primary path: Python 'ollama' module (ollama.Client.pull)
-    if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
-        try:
-            client = ollama_sdk.Client(host=host)
-            for part in client.pull(model=clean_model, stream=True):
-                status = getattr(part, "status", None) or (part.get("status") if isinstance(part, dict) else "") or "descargando"
-                completed = getattr(part, "completed", None) or (part.get("completed") if isinstance(part, dict) else 0) or 0
-                total = getattr(part, "total", None) or (part.get("total") if isinstance(part, dict) else 0) or 0
-                if callable(progress_callback):
-                    if total and completed:
-                        pct = min(100, int((int(completed) * 100) / max(1, int(total))))
-                        progress_callback(f"Descargando «{clean_model}» con módulo ollama: {status} ({pct}%)")
-                    else:
-                        progress_callback(f"Descargando «{clean_model}» con módulo ollama: {status}")
-            return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
-        except Exception:
-            pass
+    last_error = ""
+    total_attempts = max(1, int(max_attempts))
 
-    # 2. Fallback path: Local Ollama HTTP API (/api/pull)
-    try:
-        body = json.dumps({"name": clean_model, "stream": True}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{host.rstrip('/')}/api/pull",
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=600) as resp:
-            for raw_line in resp:
-                if not raw_line.strip():
-                    continue
-                data = json.loads(raw_line.decode("utf-8"))
-                if data.get("error"):
-                    return (False, f"Ollama reportó un error al descargar «{clean_model}»: {data['error']}")
-                status = str(data.get("status") or "descargando")
-                completed = int(data.get("completed") or 0)
-                total = int(data.get("total") or 0)
-                if callable(progress_callback):
-                    if total > 0 and completed >= 0:
-                        pct = min(100, int((completed * 100) / total))
-                        progress_callback(f"Descargando «{clean_model}» en Ollama local: {status} ({pct}%)")
-                    else:
-                        progress_callback(f"Descargando «{clean_model}» en Ollama local: {status}")
-        return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
-    except Exception as http_exc:
-        # 3. Secondary fallback: local 'ollama pull <model>' CLI binary if installed
-        exe = find_installed_ollama_executable()
-        if exe is not None:
+    for attempt in range(1, total_attempts + 1):
+        attempt_error = ""
+
+        # 1. Primary path: Python 'ollama' module (ollama.Client.pull)
+        if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
             try:
+                client = ollama_sdk.Client(host=host)
+                for part in client.pull(model=clean_model, stream=True):
+                    err_val = getattr(part, "error", None) or (part.get("error") if isinstance(part, dict) else None)
+                    if err_val:
+                        raise RuntimeError(str(err_val))
+                    status = getattr(part, "status", None) or (part.get("status") if isinstance(part, dict) else "") or "descargando"
+                    completed = getattr(part, "completed", None) or (part.get("completed") if isinstance(part, dict) else 0) or 0
+                    total = getattr(part, "total", None) or (part.get("total") if isinstance(part, dict) else 0) or 0
+                    if callable(progress_callback):
+                        if total and completed:
+                            pct = min(100, int((int(completed) * 100) / max(1, int(total))))
+                            progress_callback(f"Descargando «{clean_model}» (intento {attempt}/{total_attempts}): {status} ({pct}%)")
+                        else:
+                            progress_callback(f"Descargando «{clean_model}» (intento {attempt}/{total_attempts}): {status}")
+                return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
+            except Exception as sdk_exc:
+                attempt_error = str(sdk_exc)
+
+        # 2. Fallback path: Local Ollama HTTP API (/api/pull)
+        if not attempt_error:
+            try:
+                body = json.dumps({"name": clean_model, "stream": True}).encode("utf-8")
+                req = urllib.request.Request(
+                    f"{host.rstrip('/')}/api/pull",
+                    data=body,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=600) as resp:
+                    for raw_line in resp:
+                        if not raw_line.strip():
+                            continue
+                        data = json.loads(raw_line.decode("utf-8"))
+                        if data.get("error"):
+                            raise RuntimeError(str(data["error"]))
+                        status = str(data.get("status") or "descargando")
+                        completed = int(data.get("completed") or 0)
+                        total = int(data.get("total") or 0)
+                        if callable(progress_callback):
+                            if total > 0 and completed >= 0:
+                                pct = min(100, int((completed * 100) / total))
+                                progress_callback(f"Descargando «{clean_model}» (intento {attempt}/{total_attempts}): {status} ({pct}%)")
+                            else:
+                                progress_callback(f"Descargando «{clean_model}» (intento {attempt}/{total_attempts}): {status}")
+                return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
+            except Exception as http_exc:
+                attempt_error = str(http_exc)
+
+        last_error = attempt_error
+
+        # 3. If Cloudflare R2 had a TLS handshake timeout, also try local CLI with GODEBUG=http2client=0
+        exe = find_installed_ollama_executable()
+        if exe is not None and _is_transient_ollama_pull_error(attempt_error):
+            try:
+                if callable(progress_callback):
+                    progress_callback(
+                        f"Reintentando «{clean_model}» en modo HTTP/1.1 anti-timeout TLS ({attempt}/{total_attempts})…"
+                    )
+                cli_env = dict(os.environ)
+                cli_env["GODEBUG"] = "http2client=0"
+                cli_env["OLLAMA_NOPRUNE"] = "1"
                 proc = subprocess.run(
                     [str(exe), "pull", clean_model],
                     capture_output=True,
                     text=True,
                     timeout=600,
                     shell=False,
+                    env=cli_env,
                 )
                 if proc.returncode == 0:
-                    return (True, f"✅ Modelo «{clean_model}» descargado mediante CLI local de Ollama.")
-                return (False, f"No se pudo completar 'ollama pull {clean_model}': {proc.stderr.strip() or proc.stdout.strip()}")
+                    return (True, f"✅ Modelo «{clean_model}» descargado y reanudado con éxito en Ollama local.")
+                last_error = (proc.stderr or proc.stdout or attempt_error).strip()
             except Exception as cli_exc:
-                return (False, f"No pude descargar el modelo «{clean_model}»: {cli_exc}")
-        return (
-            False,
-            f"No pude conectar con Ollama local para descargar «{clean_model}» ({http_exc}). "
-            "Verifica que Ollama esté instalado en Windows o ejecuta `ollama pull llama3.2`.",
-        )
+                last_error = str(cli_exc)
+
+        if attempt < total_attempts and _is_transient_ollama_pull_error(last_error):
+            if callable(progress_callback):
+                progress_callback(
+                    f"Corte TLS temporal de Cloudflare R2; reanudando descarga parcial de «{clean_model}» ({attempt + 1}/{total_attempts})…"
+                )
+            if retry_delay > 0:
+                time.sleep(retry_delay)
+            continue
+        break
+
+    return (
+        False,
+        f"Ollama reportó un corte de red/TLS con Cloudflare R2 al descargar «{clean_model}»: {last_error}\n"
+        "💡 El avance descargado NO se pierde (Ollama guarda los bloques parciales). "
+        "Ejecuta `descargar_llama3.2.bat` (que fuerza modo HTTP/1.1 `GODEBUG=http2client=0` y reanuda en bucle hasta terminar) "
+        "o vuelve a pulsar «⬇ Descargar llama3.2…» para continuar desde donde se quedó.",
+    )
 
 
 
@@ -8996,12 +9073,16 @@ def ensure_local_ollama_running(platform_name: str | None = None, popen=None) ->
     if exe is None:
         return False
     start_proc = popen or subprocess.Popen
+    proc_env = dict(os.environ)
+    proc_env.setdefault("GODEBUG", "http2client=0")
+    proc_env.setdefault("OLLAMA_NOPRUNE", "1")
     kwargs: dict = {
         "shell": False,
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "close_fds": True,
+        "env": proc_env,
     }
     if (platform_name or sys.platform) == "win32":
         kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)

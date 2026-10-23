@@ -1714,6 +1714,45 @@ END:VCALENDAR\r
             chunks = list(app.stream_ollama_chat_direct("llama3.2", [{"role": "user", "content": "hola"}]))
             self.assertEqual(chunks, [("Hola desde ", False), ("llama3.2", True)])
 
+        # 6. Reanudación automática ante corte "net/http: TLS handshake timeout" de Cloudflare R2 al descargar llama3.2
+        pull_calls = {"count": 0}
+        progress_notes: list[str] = []
+
+        class _FlakyR2SdkClient:
+            def __init__(self, host: str = "") -> None:
+                self.host = host
+
+            def list(self):
+                return {"models": []}
+
+            def pull(self, model: str, stream: bool = True):
+                pull_calls["count"] += 1
+                if pull_calls["count"] == 1:
+                    yield {"status": "pulling dde5aa3fc5ff", "completed": 500_000_000, "total": 2_000_000_000}
+                    raise RuntimeError(
+                        'max retries exceeded: Get "https://dd20bb891979d25aebc8bec07b2b3bbc.r2.cloudflarestorage.com/...": net/http: TLS handshake timeout'
+                    )
+                yield {"status": "pulling dde5aa3fc5ff", "completed": 2_000_000_000, "total": 2_000_000_000}
+                yield {"status": "success"}
+
+        flaky_sdk = SimpleNamespace(Client=_FlakyR2SdkClient)
+        with (
+            mock.patch.object(app, "OLLAMA_PYTHON_MODULE_AVAILABLE", True),
+            mock.patch.object(app, "ollama_sdk", flaky_sdk),
+            mock.patch.object(app, "ensure_local_ollama_running", return_value=False),
+            mock.patch.object(app, "find_installed_ollama_executable", return_value=None),
+        ):
+            ok_pull, msg_pull = app.pull_ollama_model_direct(
+                "llama3.2",
+                progress_callback=progress_notes.append,
+                max_attempts=3,
+                retry_delay=0.0,
+            )
+        self.assertTrue(ok_pull)
+        self.assertEqual(pull_calls["count"], 2)
+        self.assertIn("llama3.2", msg_pull)
+        self.assertTrue(any("Corte TLS temporal de Cloudflare R2; reanudando" in p for p in progress_notes))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,8 @@ if errorlevel 1 (
 )
 rem Inicio sencillo y directo: no realiza descargas, instalaciones silenciosas ni elevacion.
 rem Si Ollama esta instalado localmente y aun no esta activo, lo inicia en segundo plano.
+set "GODEBUG=http2client=0"
+set "OLLAMA_NOPRUNE=1"
 py -3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:11434/api/tags', timeout=1)" >nul 2>nul
 if errorlevel 1 (
   where ollama >nul 2>nul
