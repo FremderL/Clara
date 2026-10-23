@@ -1072,6 +1072,7 @@ def connect_db() -> sqlite3.Connection:
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_plan_blocks_date_time ON plan_blocks(block_date,start_time)")
     ensure_security_tables(conn)
+    repair_legacy_class_locations(conn)
     conn.commit()
     return conn
 
@@ -3145,6 +3146,56 @@ def _normalize_hour_token(hour_str: str, minute_str: str | None = None) -> str |
         return None
 
 
+_CLASS_LOCATION_NOUN_PATTERN = (
+    r"(?:aula|sal[oó]n|salon|laboratorio|lab|auditorio|taller|edificio|cub[ií]culo|sala|"
+    r"centro(?:\s+de\s+c[oó]mputo)?|cancha|gimnasio|biblioteca|anfiteatro|foro|campus|"
+    r"zoom|teams|meet|l[ií]nea|linea|virtual)"
+)
+
+
+def repair_legacy_class_locations(db: sqlite3.Connection) -> int:
+    """Split any class name that accidentally absorbed trailing 'en <Lugar>' (e.g. 'en Auditorio 2') into name + location."""
+    try:
+        rows = db.execute(
+            "SELECT id, name, weekday, start_time, end_time, location FROM classes WHERE location IS NULL OR TRIM(location)=''"
+        ).fetchall()
+    except sqlite3.Error:
+        return 0
+    repaired = 0
+    tail_re = re.compile(
+        rf"^(?P<cname>.+?)\s+(?:en\s+el\s+|en\s+la\s+|en\s+)(?P<loc>{_CLASS_LOCATION_NOUN_PATTERN}(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ._-]+){{0,3}})\s*$",
+        flags=re.IGNORECASE,
+    )
+    for row in rows:
+        raw_name = str(row["name"] or "").strip()
+        m = tail_re.match(raw_name)
+        if not m:
+            continue
+        clean_name = m.group("cname").strip(" ,.;:-")
+        extracted_loc = m.group("loc").strip(" ,.;:-")
+        if not clean_name or not extracted_loc:
+            continue
+        dup = db.execute(
+            "SELECT id FROM classes WHERE id<>? AND LOWER(TRIM(name))=LOWER(TRIM(?)) AND weekday=? AND start_time=? LIMIT 1",
+            (int(row["id"]), clean_name, int(row["weekday"]), str(row["start_time"])),
+        ).fetchone()
+        if dup:
+            db.execute(
+                "UPDATE classes SET location=COALESCE(NULLIF(TRIM(location),''), ?), end_time=COALESCE(end_time, ?) WHERE id=?",
+                (extracted_loc, row["end_time"], int(dup["id"])),
+            )
+            db.execute("DELETE FROM classes WHERE id=?", (int(row["id"]),))
+        else:
+            db.execute(
+                "UPDATE classes SET name=?, location=? WHERE id=?",
+                (clean_name, extracted_loc, int(row["id"])),
+            )
+        repaired += 1
+    if repaired:
+        db.commit()
+    return repaired
+
+
 def parse_class_proposal(text: str) -> dict | None:
     """Extract class name, weekday(s), start_time, optional end_time, and optional location from natural Spanish."""
     raw = str(text or "").strip()
@@ -3172,6 +3223,7 @@ def parse_class_proposal(text: str) -> dict | None:
 
     start_time: str | None = None
     end_time: str | None = None
+    single_time_match = None
     time_span_match = re.search(
         r"\b(?:de\s+(?:las\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(?:a(?:\s+las)?|-|–|hasta(?:\s+las)?)\s*(\d{1,2})(?::(\d{2}))?\b",
         raw,
@@ -3197,20 +3249,36 @@ def parse_class_proposal(text: str) -> dict | None:
 
     location: str | None = None
     loc_match = re.search(
-        r"\b(?:en\s+el\s+|en\s+la\s+|en\s+)?((?:aula|sal[oó]n|salon|laboratorio|lab|edificio|cub[ií]culo|sala)\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ._-]+(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ._-]+)?)",
+        rf"\b(?:en\s+el\s+|en\s+la\s+|en\s+)?({_CLASS_LOCATION_NOUN_PATTERN}(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ._-]+){{0,3}})",
         raw,
         re.IGNORECASE,
     )
     if loc_match:
         location = loc_match.group(1).strip(" .,;:")
+    else:
+        # Also detect any trailing "en <Lugar>" placed after the time expression (e.g. "... de 13:00 a 15:00 en C-104")
+        active_time_match = time_span_match or single_time_match
+        if active_time_match is not None:
+            after_time = raw[active_time_match.end():]
+            trailing_loc = re.search(
+                r"^\s*(?:en\s+el\s+|en\s+la\s+|en\s+)([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ][A-Za-z0-9ÁÉÍÓÚáéíóúñÑ\s._-]{0,40}?)\s*[.,;:]*$",
+                after_time,
+                re.IGNORECASE,
+            )
+            if trailing_loc:
+                location = trailing_loc.group(1).strip(" .,;:")
 
     candidate = raw
+    if loc_match:
+        candidate = candidate[:loc_match.start()] + " " + candidate[loc_match.end():]
+    elif location and (time_span_match or single_time_match):
+        active_time_match = time_span_match or single_time_match
+        if active_time_match is not None:
+            candidate = candidate[:active_time_match.end()]
     if time_span_match:
         candidate = candidate.replace(time_span_match.group(0), " ")
     elif single_time_match:
         candidate = candidate.replace(single_time_match.group(0), " ")
-    if loc_match:
-        candidate = candidate.replace(loc_match.group(0), " ")
 
     # Strip any natural conversational intro up to "clase(s)/materia(s)/curso(s)/asignatura(s) de/llamada"
     if re.search(r"^.*?\b(?:clases?|materias?|cursos?|asignaturas?)\s+(?:de\s+|llamad[ao]\s+)", candidate, flags=re.IGNORECASE):
@@ -3247,7 +3315,7 @@ def parse_class_proposal(text: str) -> dict | None:
         flags=re.IGNORECASE,
     )
     candidate = re.sub(r"^\s*(?:es|son|de|la|el)\b\s*", "", candidate, flags=re.IGNORECASE)
-    candidate = re.sub(r"\s+\b(?:es|son)\s*$", "", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(r"\s+\b(?:es|son|en|en\s+el|en\s+la)\s*$", "", candidate, flags=re.IGNORECASE)
     candidate = re.sub(r"\s+", " ", candidate).strip(" :,-.;")
     if candidate.casefold() in ("", "clase", "clases", "mis clases", "una clase", "materia", "mi clase", "materias"):
         candidate = ""
@@ -3264,6 +3332,7 @@ def parse_class_proposal(text: str) -> dict | None:
 
 def execute_add_class_from_chat(db: sqlite3.Connection, proposal: dict) -> tuple[bool, str]:
     """Save a class directly into SQLite (avoiding duplicates) when name, weekday(s), and start_time are provided."""
+    repair_legacy_class_locations(db)
     days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
     name = str(proposal.get("name") or "").strip()
     weekdays = proposal.get("weekdays")

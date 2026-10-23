@@ -1551,13 +1551,28 @@ END:VCALENDAR\r
         self.assertTrue(any(spk == "Asistente" and "Guardé tu clase «Bases de Datos»" in msg for spk, msg in chat_messages))
         self.assertFalse(any("No hay clases, tareas con fecha ni bloques locales para hoy" in msg for _spk, msg in chat_messages))
 
-        # 2. Otras formas naturales de agregar clase ("Tengo clases de...", "Ponme la materia de...")
+        # 2. Otras formas naturales de agregar clase ("Tengo clases de...", "Ponme la materia de...", "en Auditorio 2")
         chat_messages.clear()
         fake_app.chat_input = _FakeEntry("Ponme la materia de Ingeniería de Software los lunes y miércoles de 09:00 a 11:00 en Aula 5")
         app.AssistantApp.send_chat(fake_app)
         is_rows = db.execute("SELECT name, weekday, location FROM classes WHERE name='Ingeniería de Software' ORDER BY weekday").fetchall()
         self.assertEqual(len(is_rows), 2)
         self.assertEqual(is_rows[0]["location"], "Aula 5")
+
+        # Si existía un registro antiguo con "en Auditorio 2" pegado al nombre, se repara automáticamente al guardar o conectar
+        db.execute(
+            "INSERT INTO classes(name, weekday, start_time, end_time, location) VALUES(?,?,?,?,NULL)",
+            ("Matematicas Discretas en Auditorio 2", 2, "13:00", "15:00"),
+        )
+        db.commit()
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("agrega mi clase de Matematicas Discretas los miércoles y viernes de 13:00 a 15:00 en Auditorio 2.")
+        app.AssistantApp.send_chat(fake_app)
+        md_rows = db.execute("SELECT name, weekday, start_time, end_time, location FROM classes WHERE name='Matematicas Discretas' ORDER BY weekday").fetchall()
+        self.assertEqual(len(md_rows), 2)
+        self.assertEqual([(r["weekday"], r["start_time"], r["end_time"], r["location"]) for r in md_rows], [(2, "13:00", "15:00", "Auditorio 2"), (4, "13:00", "15:00", "Auditorio 2")])
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM classes WHERE name LIKE '%en Auditorio%'").fetchone()[0], 0)
+        self.assertTrue(any(spk == "Asistente" and "Guardé tu clase «Matematicas Discretas» para Miércoles, Viernes en horario 13:00–15:00 (Auditorio 2)." in msg for spk, msg in chat_messages))
 
         # 3. Formas naturales de agregar tarea con "que tengo que..."
         chat_messages.clear()
