@@ -13,6 +13,7 @@ import importlib.util
 import json
 import math
 import operator
+import platform
 import time
 import os
 import queue
@@ -5131,6 +5132,458 @@ def is_weekly_grid_query(low_text: str) -> bool:
     )
 
 
+# --- Incremento 10: Reporte de Estado del Equipo en Tiempo Real (Disco, RAM, CPU, Batería y Subsistemas) ---
+
+def _read_system_memory_gb() -> tuple[float, float, float]:
+    """Return (total_gb, avail_gb, used_percent) using Windows GlobalMemoryStatusEx or /proc/meminfo without external deps."""
+    if sys.platform == "win32":
+        try:
+            class _MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            stat = _MEMORYSTATUSEX()
+            stat.dwLength = ctypes.sizeof(_MEMORYSTATUSEX)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                total_gb = round(stat.ullTotalPhys / (1024 ** 3), 2)
+                avail_gb = round(stat.ullAvailPhys / (1024 ** 3), 2)
+                used_pct = float(stat.dwMemoryLoad)
+                return (total_gb, avail_gb, used_pct)
+        except Exception:
+            pass
+    try:
+        meminfo = Path("/proc/meminfo")
+        if meminfo.is_file():
+            raw = meminfo.read_text(encoding="utf-8", errors="replace")
+            vals: dict[str, int] = {}
+            for line in raw.splitlines():
+                parts = line.split(":")
+                if len(parts) == 2:
+                    num_m = re.search(r"(\d+)", parts[1])
+                    if num_m:
+                        vals[parts[0].strip()] = int(num_m.group(1))
+            total_kb = vals.get("MemTotal", 0)
+            avail_kb = vals.get("MemAvailable") or (
+                vals.get("MemFree", 0) + vals.get("Buffers", 0) + vals.get("Cached", 0)
+            )
+            if total_kb > 0:
+                total_gb = round(total_kb / (1024 ** 2), 2)
+                avail_gb = round(avail_kb / (1024 ** 2), 2)
+                used_pct = round(((total_kb - avail_kb) * 100.0) / total_kb, 1)
+                return (total_gb, avail_gb, used_pct)
+    except Exception:
+        pass
+    return (0.0, 0.0, 0.0)
+
+
+def _read_battery_status() -> str:
+    """Return battery percentage and AC power status using Windows GetSystemPowerStatus or /sys/class/power_supply."""
+    if sys.platform == "win32":
+        try:
+            class _SYSTEM_POWER_STATUS(ctypes.Structure):
+                _fields_ = [
+                    ("ACLineStatus", ctypes.c_byte),
+                    ("BatteryFlag", ctypes.c_byte),
+                    ("BatteryLifePercent", ctypes.c_byte),
+                    ("SystemStatusFlag", ctypes.c_byte),
+                    ("BatteryLifeTime", ctypes.c_ulong),
+                    ("BatteryFullLifeTime", ctypes.c_ulong),
+                ]
+
+            pwr = _SYSTEM_POWER_STATUS()
+            if ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(pwr)):
+                if pwr.BatteryFlag == 128 or pwr.BatteryLifePercent == 255:
+                    return "Equipo conectado a corriente alterna (sin batería o PC de escritorio)"
+                pct = int(pwr.BatteryLifePercent)
+                ac_str = "conectado a corriente (cargando)" if pwr.ACLineStatus == 1 else "usando batería"
+                return f"Batería al {pct}% ({ac_str})"
+        except Exception:
+            pass
+    try:
+        for bat_dir in Path("/sys/class/power_supply").glob("BAT*"):
+            cap_file = bat_dir / "capacity"
+            stat_file = bat_dir / "status"
+            if cap_file.is_file():
+                cap = cap_file.read_text(encoding="utf-8").strip()
+                st = stat_file.read_text(encoding="utf-8").strip() if stat_file.is_file() else ""
+                return f"Batería al {cap}%" + (f" ({st})" if st else "")
+    except Exception:
+        pass
+    return "Conectado a corriente continua / equipo de escritorio"
+
+
+def collect_realtime_pc_status(
+    db: sqlite3.Connection | None = None,
+    target_path: Path | None = None,
+) -> dict[str, object]:
+    """Collect real-time disk, RAM, CPU, power, local SQLite counts, and voice/Ollama readiness."""
+    probe_dir = target_path or (DATA_DIR if DATA_DIR.exists() else Path.cwd())
+    try:
+        usage = shutil.disk_usage(probe_dir)
+        disk_total_gb = round(usage.total / (1024 ** 3), 2)
+        disk_used_gb = round(usage.used / (1024 ** 3), 2)
+        disk_free_gb = round(usage.free / (1024 ** 3), 2)
+        disk_used_pct = round((usage.used * 100.0) / max(1, usage.total), 1)
+    except Exception:
+        disk_total_gb = disk_used_gb = disk_free_gb = disk_used_pct = 0.0
+
+    ram_total_gb, ram_avail_gb, ram_used_pct = _read_system_memory_gb()
+    battery_info = _read_battery_status()
+    cpu_cores = os.cpu_count() or 1
+    os_label = f"{platform.system()} {platform.release()} ({platform.machine() or 'x64'})"
+    py_ver = sys.version.split()[0]
+
+    pending_tasks = classes_count = blocks_count = notes_count = routines_count = 0
+    if db is not None:
+        try:
+            ensure_subject_notebook_tables(db)
+            pending_tasks = int(db.execute("SELECT COUNT(*) FROM tasks WHERE done=0").fetchone()[0])
+            classes_count = int(db.execute("SELECT COUNT(*) FROM classes").fetchone()[0])
+            blocks_count = int(db.execute("SELECT COUNT(*) FROM plan_blocks").fetchone()[0])
+            notes_count = int(db.execute("SELECT COUNT(*) FROM subject_notes").fetchone()[0])
+            routines_count = int(db.execute("SELECT COUNT(*) FROM routines WHERE active=1").fetchone()[0])
+        except Exception:
+            pass
+
+    ollama_exe = find_installed_ollama_executable()
+    ollama_ready = ollama_exe is not None
+    voice_diag = collect_voice_diagnostics(APP_BASE_DIR)
+
+    return {
+        "disk_path": str(probe_dir),
+        "disk_total_gb": disk_total_gb,
+        "disk_used_gb": disk_used_gb,
+        "disk_free_gb": disk_free_gb,
+        "disk_used_percent": disk_used_pct,
+        "ram_total_gb": ram_total_gb,
+        "ram_avail_gb": ram_avail_gb,
+        "ram_used_percent": ram_used_pct,
+        "battery_status": battery_info,
+        "cpu_cores": cpu_cores,
+        "os_label": os_label,
+        "python_version": py_ver,
+        "pending_tasks": pending_tasks,
+        "classes_count": classes_count,
+        "blocks_count": blocks_count,
+        "notes_count": notes_count,
+        "routines_count": routines_count,
+        "ollama_installed": ollama_ready,
+        "tts_ready": bool(voice_diag.get("tts_ready")),
+        "ptt_ready": bool(voice_diag.get("ptt_ready")),
+    }
+
+
+def format_realtime_pc_status_report(snapshot: dict[str, object]) -> str:
+    """Format a complete, human-friendly Spanish report of PC hardware and CLARA-V subsystems."""
+    disk_free = float(snapshot.get("disk_free_gb") or 0.0)
+    disk_total = float(snapshot.get("disk_total_gb") or 0.0)
+    disk_pct = float(snapshot.get("disk_used_percent") or 0.0)
+    ram_avail = float(snapshot.get("ram_avail_gb") or 0.0)
+    ram_total = float(snapshot.get("ram_total_gb") or 0.0)
+    ram_pct = float(snapshot.get("ram_used_percent") or 0.0)
+    ram_line = (
+        f"{ram_avail:.2f} GB disponibles de {ram_total:.2f} GB totales ({ram_pct:.1f}% en uso)."
+        if ram_total > 0
+        else "Información de RAM física gestionada por el sistema operativo."
+    )
+    ollama_txt = "instalado localmente" if snapshot.get("ollama_installed") else "modo local esencial (ejecutable no detectado en ruta estándar)"
+    tts_txt = "voz activa" if snapshot.get("tts_ready") else "voz pendiente de configurar"
+    ptt_txt = "micrófono Push-to-Talk listo" if snapshot.get("ptt_ready") else "Push-to-Talk opcional"
+
+    lines = [
+        "💻 Estado de tu equipo y subsistemas de CLARA-V en tiempo real:",
+        f"• Almacenamiento en disco: {disk_free:.2f} GB libres de {disk_total:.2f} GB totales ({disk_pct:.1f}% en uso).",
+        f"• Memoria RAM: {ram_line}",
+        f"• Procesador y sistema: {snapshot.get('os_label')} · {snapshot.get('cpu_cores')} núcleos lógicos · Python {snapshot.get('python_version')}.",
+        f"• Energía / batería: {snapshot.get('battery_status')}.",
+        (
+            f"• Agenda y cuaderno local: {snapshot.get('pending_tasks')} tarea(s) pendiente(s), "
+            f"{snapshot.get('classes_count')} clase(s) semanal(es), {snapshot.get('notes_count')} apunte(s) guardado(s), "
+            f"{snapshot.get('blocks_count')} bloque(s) de estudio y {snapshot.get('routines_count')} rutina(s) activa(s)."
+        ),
+        f"• Subsistemas de IA y Voz: Ollama ({ollama_txt}) · {tts_txt} · {ptt_txt}.",
+    ]
+    return "\n".join(lines)
+
+
+def is_system_status_query(low_text: str) -> bool:
+    """Return True if the user is asking about their computer's status, free disk space, RAM, battery, or system health."""
+    if not low_text:
+        return False
+    return bool(
+        re.search(
+            r"\b(?:como\s+(?:esta|anda|va)\s+(?:mi\s+|la\s+|el\s+)?(?:computadora|pc|equipo|sistema|laptop|ordenador)|"
+            r"estado\s+de(?:l)?\s+(?:mi\s+)?(?:sistema|equipo|computadora|pc|laptop|hardware)|"
+            r"reporte\s+de(?:l)?\s+(?:mi\s+)?(?:sistema|equipo|computadora|pc)|"
+            r"recursos\s+de(?:l)?\s+(?:sistema|equipo|mi\s+pc)|"
+            r"cuanto\s+espacio\s+(?:libre\s+)?(?:tengo|queda|hay)|"
+            r"espacio\s+(?:libre\s+)?en\s+(?:el\s+)?disco|"
+            r"almacenamiento\s+(?:libre|disponible)|"
+            r"cuanta\s+(?:memoria\s+)?ram\s+(?:libre\s+|disponible\s+)?(?:tengo|queda|hay)|"
+            r"uso\s+de\s+(?:memoria\s+)?ram|memoria\s+ram\s+(?:libre|disponible)|"
+            r"cuanta\s+bateria\s+(?:tengo|me\s+queda)|nivel\s+de\s+bateria)\b",
+            low_text,
+        )
+    )
+
+
+# --- Incremento 9: Modo Estudio Activo (Generador de Preguntas de Examen y Flashcards desde tus Apuntes) ---
+
+def _build_question_from_note_sentence(subject: str, title: str, sentence: str, idx: int) -> dict[str, str]:
+    """Transform a study note sentence into an active-recall exam question + hint + full answer."""
+    clean_s = str(sentence or "").strip(" .•-")
+    subj = str(subject or "General").strip()
+    note_title = str(title or f"Apunte {idx}").strip()
+
+    # 1. Detect definition / law / concept patterns: "X es/consiste en/establece que/calcula/determina Y"
+    def_m = re.match(
+        r"^(.{4,85}?)\s+(es|son|consiste\s+en|establece\s+que|define\s+como|se\s+define\s+como|"
+        r"calcula|determina|permite|representa|describe|ocurri[oó]\s+en|fue)\s+(.{10,})$",
+        clean_s,
+        flags=re.IGNORECASE,
+    )
+    if def_m:
+        concept = def_m.group(1).strip(" ,;:-«»\"'")
+        verb = def_m.group(2).strip()
+        explanation = def_m.group(3).strip()
+        # Avoid turning tiny pronouns into the concept
+        if len(concept.split()) <= 10 and concept.casefold() not in ("esto", "eso", "el", "la", "este", "esta"):
+            q_text = f"[{subj}] Según tus apuntes («{note_title}»), ¿qué {verb} {concept}?"
+            hint_words = " ".join(explanation.split()[:4]) + "…"
+            return {
+                "subject": subj,
+                "title": note_title,
+                "question": q_text,
+                "hint": f"Empieza por: «{hint_words}»",
+                "answer": clean_s + ".",
+            }
+
+    # 2. Detect exam / topic scope notes ("El examen viene hasta...", "Temas del parcial: ...")
+    if re.search(r"\b(?:examen|parcial|evaluaci[oó]n|temario|f[oó]rmula|teorema|ley)\b", clean_s, flags=re.IGNORECASE):
+        return {
+            "subject": subj,
+            "title": note_title,
+            "question": f"[{subj}] ¿Qué detalle clave registraste en tus apuntes sobre «{note_title}»?",
+            "hint": f"Relacionado con {subj} ({len(clean_s.split())} palabras clave).",
+            "answer": clean_s + ".",
+        }
+
+    # 3. General active-recall question from note title & content
+    words = [w.strip(".,;:()«»\"'") for w in clean_s.split() if len(w.strip(".,;:()«»\"'")) >= 5]
+    clue = ", ".join(words[:3]) if words else subj
+    return {
+        "subject": subj,
+        "title": note_title,
+        "question": f"[{subj}] Explica el concepto o apunte «{note_title}» con tus propias palabras.",
+        "hint": f"Conceptos clave involucrados: {clue}",
+        "answer": clean_s + ".",
+    }
+
+
+def generate_active_study_quiz(
+    db: sqlite3.Connection,
+    subject: str | None = None,
+    count: int = 5,
+) -> dict[str, object]:
+    """Generate active-recall exam questions and flashcards from the user's subject_notes (and pending tasks)."""
+    ensure_subject_notebook_tables(db)
+    max_cards = max(1, min(15, int(count or 5)))
+    matched_subj = _match_known_subject_in_text(db, subject) if subject else None
+    target_subj = matched_subj or (str(subject).strip() if subject else None)
+    if target_subj and target_subj.casefold() in ("todas", "todas las materias", "general", "mis apuntes", "apuntes"):
+        target_subj = None
+
+    notes = list_subject_notes(db, target_subj)
+    # If a specific subject had no exact match, try substring search across subject_notes
+    if not notes and target_subj:
+        t_norm = normalize_intent_text(target_subj)
+        all_notes = list_subject_notes(db, None)
+        notes = [
+            r for r in all_notes
+            if t_norm in normalize_intent_text(str(r["subject"]))
+            or t_norm in normalize_intent_text(str(r["title"]))
+            or t_norm in normalize_intent_text(str(r["content"]))
+        ]
+
+    cards: list[dict[str, str]] = []
+    seen_answers: set[str] = set()
+
+    for row in notes:
+        subj_name = str(row["subject"] or "General").strip()
+        note_title = str(row["title"] or "Apunte").strip()
+        raw_content = str(row["content"] or "").strip()
+        if not raw_content:
+            continue
+        # Split multi-sentence notes into individual study facts when sentences are substantive
+        sentences = [
+            s.strip()
+            for s in re.split(r"(?<=[.!?])\s+|\n+", raw_content)
+            if len(s.strip()) >= 18
+        ]
+        if not sentences:
+            sentences = [raw_content]
+        for sent in sentences:
+            norm_a = sent.casefold()
+            if norm_a in seen_answers:
+                continue
+            seen_answers.add(norm_a)
+            card = _build_question_from_note_sentence(subj_name, note_title, sent, len(cards) + 1)
+            cards.append(card)
+            if len(cards) >= max_cards:
+                break
+        if len(cards) >= max_cards:
+            break
+
+    # Supplement with pending tasks/deliverables of that subject if fewer cards than requested
+    if len(cards) < max_cards:
+        if target_subj:
+            task_rows = db.execute(
+                "SELECT title, subject, due_date, due_time FROM tasks WHERE done=0 AND LOWER(COALESCE(subject,''))=LOWER(?) ORDER BY COALESCE(due_date,'9999-12-31') LIMIT 5",
+                (target_subj,),
+            ).fetchall()
+        else:
+            task_rows = db.execute(
+                "SELECT title, subject, due_date, due_time FROM tasks WHERE done=0 AND subject IS NOT NULL ORDER BY COALESCE(due_date,'9999-12-31') LIMIT 5"
+            ).fetchall()
+        for t_row in task_rows:
+            if len(cards) >= max_cards:
+                break
+            t_subj = str(t_row["subject"] or target_subj or "Agenda").strip()
+            t_title = str(t_row["title"] or "").strip()
+            due_str = f"Fecha límite: {t_row['due_date']}" + (f" a las {t_row['due_time']}" if t_row["due_time"] else "") if t_row["due_date"] else "Sin fecha límite asignada"
+            ans_str = f"Entrega pendiente de {t_subj}: «{t_title}» ({due_str})."
+            if ans_str.casefold() not in seen_answers:
+                seen_answers.add(ans_str.casefold())
+                cards.append(
+                    {
+                        "subject": t_subj,
+                        "title": f"Pendiente: {t_title}",
+                        "question": f"[{t_subj}] ¿Qué entrega o actividad pendiente tienes registrada para esta materia y cuándo vence?",
+                        "hint": f"Revisa tus pendientes de {t_subj}.",
+                        "answer": ans_str,
+                    }
+                )
+
+    return {
+        "subject": target_subj or "Todas tus materias",
+        "cards": cards,
+        "total": len(cards),
+    }
+
+
+def format_active_study_quiz_chat(quiz_data: dict[str, object], mode: str = "quiz") -> str:
+    """Format generated study cards either as an exam (questions + hints first) or as complete flashcards."""
+    subj_label = str(quiz_data.get("subject") or "Todas tus materias")
+    cards = list(quiz_data.get("cards") or [])
+    if not cards:
+        return (
+            f"🧠 Aún no encontré apuntes guardados para «{subj_label}».\n"
+            "Primero agrega apuntes diciendo por ejemplo:\n"
+            "• «apunta en Redes que el protocolo TCP garantiza la entrega ordenada de paquetes»\n"
+            "• O abre el botón «📓 Apuntes» en la barra superior."
+        )
+    if mode == "flashcards":
+        lines = [f"🧠 Tarjetas de repaso activo (Flashcards) · {subj_label} ({len(cards)} tarjeta(s)):"]
+        for idx, c in enumerate(cards, 1):
+            lines.append(
+                f"\n🗂 Tarjeta {idx} ({c['title']}):\n"
+                f"   ❓ Pregunta: {c['question']}\n"
+                f"   💡 Pista: {c['hint']}\n"
+                f"   ✅ Respuesta: {c['answer']}"
+            )
+        return "\n".join(lines)
+
+    lines = [
+        f"🧠 Examen rápido de estudio activo · {subj_label} ({len(cards)} pregunta(s)):",
+        "Intenta responderlas mentalmente o en el chat. Cuando quieras revisar tus aciertos, dime «ver respuestas del examen» o abre «🧠 Modo Estudio»:",
+    ]
+    for idx, c in enumerate(cards, 1):
+        lines.append(f"\n{idx}. ❓ {c['question']}\n   💡 Pista: {c['hint']}")
+    return "\n".join(lines)
+
+
+def format_active_study_answers_chat(quiz_data: dict[str, object] | None) -> str:
+    """Format the answer key for the most recent active study quiz."""
+    if not quiz_data or not quiz_data.get("cards"):
+        return "No hay un examen rápido activo en este momento. Dime por ejemplo: «hazme un examen rápido de mis apuntes» o «crea tarjetas de repaso»."
+    subj_label = str(quiz_data.get("subject") or "Todas tus materias")
+    cards = list(quiz_data.get("cards") or [])
+    lines = [f"✅ Hoja de respuestas de tu examen rápido · {subj_label}:"]
+    for idx, c in enumerate(cards, 1):
+        lines.append(f"\n{idx}. {c['question']}\n   ✔ Respuesta en tus apuntes: {c['answer']}")
+    return "\n".join(lines)
+
+
+def parse_active_study_command(raw_text: str, db: sqlite3.Connection | None = None) -> dict[str, object] | None:
+    """Detect natural Spanish commands for active study quizzes, flashcards, or revealing exam answers."""
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+
+    # 1. Reveal answers of the last quiz
+    if re.search(
+        r"\b(?:ver\s+(?:las\s+)?respuestas(?:\s+del\s+examen|\s+del\s+cuestionario|\s+de\s+repaso)?|"
+        r"mostrar\s+(?:las\s+)?respuestas|muestrame\s+(?:las\s+)?respuestas|"
+        r"revela(?:r)?\s+(?:las\s+)?respuestas|cuales\s+son\s+las\s+respuestas|"
+        r"califica(?:r)?\s+(?:el\s+|mi\s+)?examen|hoja\s+de\s+respuestas)\b",
+        low,
+    ):
+        return {"action": "reveal_answers"}
+
+    # 2. Start quiz or flashcards
+    has_study_trigger = bool(
+        re.search(
+            r"\b(?:hazme\s+(?:un\s+)?(?:examen|test|cuestionario|quiz)|"
+            r"hazme\s+(?:\d+\s+)?preguntas?\s+(?:sobre|de)|"
+            r"preguntame\s+(?:sobre|de)\s+(?:mis\s+apuntes|la\s+materia|la\s+clase)|"
+            r"ponme\s+a\s+prueba|"
+            r"crea(?:r)?\s+(?:unas?\s+|\d+\s+)?(?:tarjetas?\s+de\s+(?:repaso|estudio)|flashcards?)|"
+            r"genera(?:r)?\s+(?:unas?\s+|\d+\s+)?(?:tarjetas?\s+de\s+(?:repaso|estudio)|flashcards?|preguntas?\s+de\s+examen)|"
+            r"tarjetas?\s+de\s+(?:repaso|estudio)|flashcards?|"
+            r"modo\s+estudio(?:\s+activo)?|examen\s+rapido(?:\s+de)?)\b",
+            low,
+        )
+    )
+    if not has_study_trigger:
+        return None
+
+    mode = "flashcards" if re.search(r"\b(?:tarjeta|tarjetas|flashcard|flashcards)\b", low) else "quiz"
+    count = 5
+    cnt_m = re.search(r"\b(\d{1,2})\s*(?:preguntas?|tarjetas?|flashcards?|reactivos?)\b", low)
+    if cnt_m:
+        count = max(1, min(15, int(cnt_m.group(1))))
+
+    matched_subj = _match_known_subject_in_text(db, raw) if db is not None else None
+    if not matched_subj:
+        subj_m = re.search(
+            r"\b(?:apuntes\s+de|examen(?:\s+r[aá]pido)?\s+de|repaso\s+de|estudio\s+de|flashcards?\s+de|prueba\s+(?:en|de)|preguntas?\s+(?:sobre|de))\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]+)$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if subj_m:
+            cand = subj_m.group(1).strip(" ?¿!¡.,;:")
+            cand = re.sub(r"^(?:mis\s+apuntes\s+de\s+|mis\s+apuntes|la\s+materia\s+de\s+|la\s+clase\s+de\s+)", "", cand, flags=re.IGNORECASE).strip()
+            if cand and cand.casefold() not in ("mis apuntes", "apuntes", "hoy", "todo", "todas"):
+                matched_subj = cand
+
+    return {
+        "action": "start_study",
+        "mode": mode,
+        "count": count,
+        "subject": matched_subj,
+    }
+
+
 def build_weekly_grid_data(db: sqlite3.Connection, ref_date: date | None = None) -> dict[str, object]:
     """Assemble weekly classes, current-week study blocks, and timed routines with overlap flags for Monday–Sunday."""
     repair_legacy_class_locations(db)
@@ -8087,21 +8540,26 @@ class AssistantApp(tk.Tk):
 
     def open_diagnostics(self) -> None:
         window = tk.Toplevel(self)
-        window.title("Diagnóstico del asistente")
-        window.geometry("820x500")
+        window.title("Diagnóstico del asistente y estado del equipo")
+        window.geometry("860x540")
         window.transient(self)
         outer = ttk.Frame(window, padding=18)
         outer.pack(fill="both", expand=True)
-        ttk.Label(outer, text="Revisión guiada de componentes", style="CardTitle.TLabel").pack(anchor="w")
-        ttk.Label(outer, text="Comprueba la configuración local. No escanea archivos, no enciende el micrófono ni envía tareas/clases a internet.", wraplength=760).pack(anchor="w", pady=(4, 8))
+        ttk.Label(outer, text="Revisión guiada de componentes y estado del equipo en tiempo real", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(outer, text="Comprueba disco, memoria RAM, batería y configuración local. No escanea archivos personales, no enciende el micrófono ni envía tareas/clases a internet.", wraplength=800).pack(anchor="w", pady=(4, 8))
         top_bar = ttk.Frame(outer)
         top_bar.pack(side="top", fill="x", pady=(0, 8))
         run_button = ttk.Button(top_bar, text="🔄 Revisar ahora", style="Accent.TButton")
         run_button.pack(side="left", padx=(0, 10))
+        ttk.Button(
+            top_bar,
+            text="💻 Enviar reporte del equipo al chat",
+            command=lambda: self.append_chat("Asistente", format_realtime_pc_status_report(collect_realtime_pc_status(self.db))),
+        ).pack(side="left", padx=(0, 10))
         status = ttk.Label(top_bar, text="Pulsa para iniciar los chequeos.")
         status.pack(side="left")
-        tree = ttk.Treeview(outer, columns=("state", "item", "detail"), show="headings", height=7)
-        for col, label, width in (("state", "Estado", 105), ("item", "Componente", 190), ("detail", "Detalle / siguiente paso", 470)):
+        tree = ttk.Treeview(outer, columns=("state", "item", "detail"), show="headings", height=9)
+        for col, label, width in (("state", "Estado", 105), ("item", "Componente", 190), ("detail", "Detalle / siguiente paso", 510)):
             tree.heading(col, text=label)
             tree.column(col, width=width, anchor="w")
         tree.pack(fill="both", expand=True)
@@ -8111,7 +8569,7 @@ class AssistantApp(tk.Tk):
 
         def run() -> None:
             tree.delete(*tree.get_children())
-            status.configure(text="Revisando configuración local…")
+            status.configure(text="Revisando configuración local y recursos del equipo…")
             run_button.configure(state="disabled")
             threading.Thread(target=lambda: self.ai_results.put(("diagnostics", self.collect_diagnostics())), daemon=True).start()
 
@@ -8123,6 +8581,19 @@ class AssistantApp(tk.Tk):
         def add(state: str, component: str, detail: str) -> None:
             results.append((state, component, detail))
 
+        pc_snap = collect_realtime_pc_status()
+        add(
+            "OK" if float(pc_snap.get("disk_free_gb") or 0.0) >= 2.0 else "Aviso",
+            "Disco local",
+            f"{pc_snap.get('disk_free_gb')} GB libres de {pc_snap.get('disk_total_gb')} GB ({pc_snap.get('disk_used_percent')}% en uso)",
+        )
+        if float(pc_snap.get("ram_total_gb") or 0.0) > 0:
+            add(
+                "OK" if float(pc_snap.get("ram_avail_gb") or 0.0) >= 1.0 else "Aviso",
+                "Memoria RAM",
+                f"{pc_snap.get('ram_avail_gb')} GB disponibles de {pc_snap.get('ram_total_gb')} GB ({pc_snap.get('ram_used_percent')}% en uso)",
+            )
+        add("OK", "Energía / CPU", f"{pc_snap.get('battery_status')} · {pc_snap.get('cpu_cores')} núcleos lógicos")
         add("OK" if sys.version_info >= (3, 10) else "Aviso", "Python", f"{sys.version.split()[0]}" + (" · compatible" if sys.version_info >= (3, 10) else " · se recomienda Python 3.10 o posterior"))
         add("OK", "Interfaz", f"Tkinter {tk.TkVersion}")
         try:
@@ -10018,7 +10489,174 @@ class AssistantApp(tk.Tk):
         ttk.Button(actions, text="🗑 Eliminar", command=delete_selected).pack(side="left")
         ttk.Button(actions, text="📁 Vincular carpeta de materia…", command=link_folder_ui).pack(side="left", padx=8)
         ttk.Button(actions, text="📂 Abrir carpeta vinculada", command=open_folder_ui).pack(side="left")
+        ttk.Button(
+            actions,
+            text="🧠 Modo Estudio / Examen…",
+            style="Accent.TButton",
+            command=lambda: self.open_active_study_dialog(initial_subject=_active_subject_for_folder()),
+        ).pack(side="left", padx=(8, 0))
         refresh()
+
+    # --- Incremento 9: Ventana interactiva de Modo Estudio Activo (Flashcards y Examen Rápido) ---
+
+    def open_active_study_dialog(self, initial_subject: str | None = None) -> None:
+        ensure_subject_notebook_tables(self.db)
+        window = tk.Toplevel(self)
+        window.title("🧠 Modo Estudio Activo · Flashcards y Examen Rápido desde tus Apuntes")
+        window.geometry("880x560")
+        window.minsize(720, 440)
+        window.transient(self)
+        outer = ttk.Frame(window, padding=18)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="🧠 Modo Estudio Activo · Repaso con Flashcards y Examen Rápido", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="Genera tarjetas de autoevaluación y preguntas de examen directamente desde tus apuntes y tareas locales (o dime en el chat: «hazme un examen rápido de Redes» o «crea tarjetas de repaso de Cálculo»).",
+            wraplength=820,
+        ).pack(anchor="w", pady=(4, 10))
+
+        all_subjects = sorted(
+            {
+                str(r[0]).strip()
+                for r in (
+                    list(self.db.execute("SELECT DISTINCT name FROM classes WHERE name IS NOT NULL").fetchall())
+                    + list(self.db.execute("SELECT DISTINCT subject FROM subject_notes WHERE subject IS NOT NULL").fetchall())
+                )
+                if str(r[0]).strip()
+            }
+        )
+        subj_options = ("Todas las materias", *all_subjects)
+        subj_var = tk.StringVar(value=initial_subject if initial_subject in all_subjects else "Todas las materias")
+        count_var = tk.StringVar(value="5")
+
+        top_bar = ttk.Frame(outer, style="Card.TFrame", padding=10)
+        top_bar.pack(fill="x", pady=(0, 10))
+        ttk.Label(top_bar, text="Materia:").pack(side="left")
+        subj_combo = ttk.Combobox(top_bar, textvariable=subj_var, values=subj_options, state="readonly", width=26)
+        subj_combo.pack(side="left", padx=(6, 12))
+        ttk.Label(top_bar, text="Preguntas:").pack(side="left")
+        cnt_combo = ttk.Combobox(top_bar, textvariable=count_var, values=("3", "5", "8", "10"), state="readonly", width=5)
+        cnt_combo.pack(side="left", padx=(6, 12))
+
+        state: dict[str, object] = {
+            "cards": [],
+            "idx": 0,
+            "show_answer": False,
+            "known": set(),
+            "subject": "Todas tus materias",
+        }
+
+        progress_var = tk.StringVar(value="Pulsa «Generar tarjetas» para comenzar tu sesión de estudio.")
+        ttk.Label(outer, textvariable=progress_var, foreground="#60e2df", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 6))
+
+        card_box = tk.Text(
+            outer,
+            height=11,
+            wrap="word",
+            bg="#081624",
+            fg="#eff8ff",
+            insertbackground="#eff8ff",
+            font=("Segoe UI", 11),
+            padx=14,
+            pady=12,
+        )
+        card_box.pack(fill="both", expand=True, pady=(0, 10))
+        card_box.configure(state="disabled")
+
+        def _render_current() -> None:
+            cards = list(state.get("cards") or [])
+            card_box.configure(state="normal")
+            card_box.delete("1.0", "end")
+            if not cards:
+                progress_var.set("No hay apuntes registrados para esa materia todavía.")
+                card_box.insert(
+                    "1.0",
+                    "Aún no tienes apuntes guardados en esta materia.\n\n"
+                    "Ve a «📓 Apuntes» o escribe en el chat:\n"
+                    "«apunta en Cálculo que la derivada de sen(x) es cos(x)».",
+                )
+                card_box.configure(state="disabled")
+                return
+            idx = max(0, min(len(cards) - 1, int(state.get("idx") or 0)))
+            state["idx"] = idx
+            c = cards[idx]
+            known_set = state.get("known") or set()
+            progress_var.set(
+                f"Tarjeta {idx + 1} de {len(cards)}  ·  Materia: {c['subject']}  ·  Dominadas: {len(known_set)}/{len(cards)}"
+            )
+            status_badge = " [✅ DOMINADA]" if idx in known_set else ""
+            body = (
+                f"📌 Tema: {c['title']}{status_badge}\n\n"
+                f"❓ PREGUNTA:\n{c['question']}\n\n"
+                f"💡 PISTA:\n{c['hint']}\n"
+            )
+            if state.get("show_answer"):
+                body += f"\n✅ RESPUESTA SEGÚN TUS APUNTES:\n{c['answer']}\n"
+            else:
+                body += "\n(Pulsa «👁 Mostrar / Ocultar respuesta» para verificar tu respuesta)"
+            card_box.insert("1.0", body)
+            card_box.configure(state="disabled")
+
+        def _generate(*_a) -> None:
+            chosen = subj_var.get().strip()
+            try:
+                cnt = int(count_var.get() or "5")
+            except ValueError:
+                cnt = 5
+            quiz = generate_active_study_quiz(self.db, None if chosen == "Todas las materias" else chosen, count=cnt)
+            state["cards"] = list(quiz.get("cards") or [])
+            state["subject"] = str(quiz.get("subject") or chosen)
+            state["idx"] = 0
+            state["show_answer"] = False
+            state["known"] = set()
+            self.active_study_session = quiz
+            _render_current()
+
+        def _toggle_answer() -> None:
+            state["show_answer"] = not bool(state.get("show_answer"))
+            _render_current()
+
+        def _prev_card() -> None:
+            cards = list(state.get("cards") or [])
+            if cards:
+                state["idx"] = (int(state.get("idx") or 0) - 1) % len(cards)
+                state["show_answer"] = False
+                _render_current()
+
+        def _next_card() -> None:
+            cards = list(state.get("cards") or [])
+            if cards:
+                state["idx"] = (int(state.get("idx") or 0) + 1) % len(cards)
+                state["show_answer"] = False
+                _render_current()
+
+        def _mark_known() -> None:
+            cards = list(state.get("cards") or [])
+            if not cards:
+                return
+            known_set = set(state.get("known") or set())
+            known_set.add(int(state.get("idx") or 0))
+            state["known"] = known_set
+            _render_current()
+
+        def _send_to_chat() -> None:
+            quiz = {"subject": state.get("subject"), "cards": state.get("cards")}
+            self.active_study_session = quiz
+            self.append_chat("Asistente", format_active_study_quiz_chat(quiz, mode="quiz"))
+
+        ttk.Button(top_bar, text="🔄 Generar tarjetas", style="Accent.TButton", command=_generate).pack(side="left", padx=(0, 8))
+        ttk.Button(top_bar, text="📤 Enviar examen al chat", command=_send_to_chat).pack(side="left")
+
+        nav_bar = ttk.Frame(outer)
+        nav_bar.pack(fill="x")
+        ttk.Button(nav_bar, text="⬅ Anterior", command=_prev_card).pack(side="left")
+        ttk.Button(nav_bar, text="👁 Mostrar / Ocultar respuesta", style="Accent.TButton", command=_toggle_answer).pack(side="left", padx=8)
+        ttk.Button(nav_bar, text="Siguiente ➡", command=_next_card).pack(side="left")
+        ttk.Button(nav_bar, text="✅ Ya me la sé", command=_mark_known).pack(side="left", padx=12)
+
+        subj_combo.bind("<<ComboboxSelected>>", _generate)
+        cnt_combo.bind("<<ComboboxSelected>>", _generate)
+        _generate()
 
     # --- Punto 6: Vista semanal visual en cuadrícula (Horario Lunes–Sábado con colores y empalmes en rojo) ---
 
@@ -11827,6 +12465,27 @@ class AssistantApp(tk.Tk):
 
         if is_schedule_conflict_query(low_action):
             self.append_chat("Asistente", build_schedule_conflicts_report(self.db))
+            return
+
+        if is_system_status_query(low_action):
+            pc_snap = collect_realtime_pc_status(self.db)
+            self.append_chat("Asistente", format_realtime_pc_status_report(pc_snap))
+            return
+
+        study_cmd = parse_active_study_command(text_action, db=self.db)
+        if study_cmd is not None:
+            if study_cmd.get("action") == "reveal_answers":
+                last_quiz = getattr(self, "active_study_session", None)
+                self.append_chat("Asistente", format_active_study_answers_chat(last_quiz))
+                return
+            quiz_data = generate_active_study_quiz(
+                self.db,
+                subject=str(study_cmd.get("subject")) if study_cmd.get("subject") else None,
+                count=int(study_cmd.get("count") or 5),
+            )
+            self.active_study_session = quiz_data
+            mode_str = str(study_cmd.get("mode") or "quiz")
+            self.append_chat("Asistente", format_active_study_quiz_chat(quiz_data, mode=mode_str))
             return
 
         if is_weekly_grid_query(low_action):

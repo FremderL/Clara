@@ -2306,6 +2306,38 @@ END:VCALENDAR\r
         self.assertIn("rescatados horas después por el transatlántico RMS Carpathia.", r_titanic)
         self.assertFalse(r_titanic.rstrip().endswith("caí"))
 
+        # --- Incremento 10: Reporte de Estado del Equipo en Tiempo Real ---
+        r_pc = send("¿cómo está mi computadora?")
+        self.assertIn("Estado de tu equipo y subsistemas de CLARA-V en tiempo real", r_pc)
+        self.assertIn("Almacenamiento en disco:", r_pc)
+        self.assertIn("GB libres", r_pc)
+        self.assertIn("Memoria RAM:", r_pc)
+        self.assertIn("Agenda y cuaderno local:", r_pc)
+
+        r_disk = send("cuánto espacio libre tengo en el disco")
+        self.assertIn("Almacenamiento en disco:", r_disk)
+        self.assertIn("GB libres", r_disk)
+
+        # --- Incremento 9: Modo Estudio Activo (Examen rápido y Flashcards desde tus Apuntes) ---
+        send("apunta en Matemáticas Discretas que el algoritmo de Kruskal permite construir un árbol recubridor mínimo ordenando las aristas por peso")
+        send("apunta en Matemáticas Discretas que un grafo bipartito es un grafo cuyos vértices se pueden dividir en dos conjuntos disjuntos U y V")
+        r_quiz = send("hazme un examen rápido de Matemáticas Discretas")
+        self.assertIn("Examen rápido de estudio activo", r_quiz)
+        self.assertIn("Discretas", r_quiz)
+        self.assertIn("¿qué es un grafo bipartito?", r_quiz)
+        self.assertIn("💡 Pista:", r_quiz)
+
+        r_ans = send("ver respuestas del examen")
+        self.assertIn("Hoja de respuestas de tu examen rápido", r_ans)
+        self.assertIn("Kruskal", r_ans)
+        self.assertIn("grafo bipartito", r_ans)
+
+        r_flash = send("crea tarjetas de repaso de Matemáticas Discretas")
+        self.assertIn("Tarjetas de repaso activo (Flashcards)", r_flash)
+        self.assertIn("❓ Pregunta:", r_flash)
+        self.assertIn("✅ Respuesta:", r_flash)
+        self.assertIn("Kruskal", r_flash)
+
 
 if __name__ == "__main__":
     unittest.main()
