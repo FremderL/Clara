@@ -2183,6 +2183,29 @@ END:VCALENDAR\r
         monday_items = grid_data["cells_by_day"][0]
         self.assertTrue(any(item["has_conflict"] for item in monday_items))
 
+        # --- Verificar "prepara un bloque" y compatibilidad de payload con llama3.2 (sin "think": False) ---
+        r_prep_block = send("prepara un bloque")
+        self.assertIn("Para agendar un bloque", r_prep_block)
+        self.assertNotIn("motor neuronal local (Ollama) no está disponible", r_prep_block)
+
+        r_prep_block_full = send("prepara un bloque mañana de 16:00 a 17:30 para repasar grafos")
+        self.assertIn("Agendé el bloque", r_prep_block_full)
+        self.assertIn("repasar grafos", r_prep_block_full)
+
+        self.assertFalse(app._model_supports_think_parameter("llama3.2"))
+        self.assertFalse(app._model_supports_think_parameter("llama3.2:latest"))
+        self.assertTrue(app._model_supports_think_parameter("qwen3:4b"))
+        consolidated = app._consolidate_ollama_messages(
+            [
+                {"role": "system", "content": "Prompt base"},
+                {"role": "system", "content": "Contexto de agenda"},
+                {"role": "user", "content": "Hola"},
+            ]
+        )
+        self.assertEqual(len(consolidated), 2)
+        self.assertEqual(consolidated[0]["role"], "system")
+        self.assertIn("Prompt base\n\nContexto de agenda", consolidated[0]["content"])
+
 
 if __name__ == "__main__":
     unittest.main()

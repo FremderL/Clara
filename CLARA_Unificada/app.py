@@ -1740,13 +1740,17 @@ def parse_security_chat_command(
 
 def build_ollama_unavailable_message(detail: str = "") -> str:
     """Return a clear, user-friendly Spanish notice when local Ollama cannot be used for open questions."""
-    return (
+    base = (
         "En este momento mi motor neuronal local (Ollama) no está disponible, por lo que mis capacidades "
         "se encuentran en modo local esencial y no puedo responder a todas las preguntas abiertas o de conocimiento general.\n"
         "Aun así, siguen activas todas mis funciones locales integradas: puedo agregar y consultar tus clases, tareas, bloques "
         "y rutinas, decirte qué sigue hoy, revisar el clima y titulares, explorar carpetas/archivos permitidos y gestionar "
         "tus niveles de seguridad y bóveda encriptada."
     )
+    clean_detail = str(detail or "").strip()
+    if clean_detail and "not found" in clean_detail.casefold():
+        base += "\n\n💡 Nota: Parece que el modelo «llama3.2» aún no termina de instalarse en Ollama. Pulsa el botón «⬇ Descargar llama3.2…» o dime «descargar modelo llama3.2»."
+    return base
 
 
 def select_preferred_ollama_model(models: list[str], current: str = "") -> str:
@@ -1782,13 +1786,51 @@ def list_local_ollama_models(host: str = "http://127.0.0.1:11434") -> list[str]:
                     name = item.get("model") or item.get("name")
                 if name:
                     names.append(str(name))
-            return names
+            if names:
+                return names
         except Exception:
             pass
-    req = urllib.request.Request(f"{host.rstrip('/')}/api/tags")
-    with urllib.request.urlopen(req, timeout=2.5) as resp:
-        raw_models = json.loads(resp.read().decode("utf-8")).get("models", [])
-    return [str(m.get("name", "")) for m in raw_models if m.get("name")]
+    last_exc: Exception | None = None
+    for candidate_host in (host, "http://localhost:11434", "http://127.0.0.1:11434"):
+        try:
+            req = urllib.request.Request(
+                f"{candidate_host.rstrip('/')}/api/tags",
+                headers={"Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=6.0) as resp:
+                raw_models = json.loads(resp.read().decode("utf-8")).get("models", [])
+            return [str(m.get("name", "")) for m in raw_models if m.get("name")]
+        except Exception as exc:
+            last_exc = exc
+    if last_exc is not None:
+        raise last_exc
+    return []
+
+
+def _consolidate_ollama_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Combine multiple system messages into a single initial system message (compatible with llama3.2 in Viernes)."""
+    sys_parts: list[str] = []
+    other_msgs: list[dict[str, str]] = []
+    for msg in messages or []:
+        role = str(msg.get("role") or "user")
+        content = str(msg.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "system":
+            sys_parts.append(content)
+        else:
+            other_msgs.append({"role": role, "content": content})
+    consolidated: list[dict[str, str]] = []
+    if sys_parts:
+        consolidated.append({"role": "system", "content": "\n\n".join(sys_parts)})
+    consolidated.extend(other_msgs)
+    return consolidated
+
+
+def _model_supports_think_parameter(model: str) -> bool:
+    """Return True only for models that accept Ollama's 'think' parameter (llama3.2 rejects 'think' with HTTP 400)."""
+    low_m = str(model or "").casefold()
+    return any(tok in low_m for tok in ("qwen3", "deepseek-r1", "qwq"))
 
 
 def stream_ollama_chat_direct(
@@ -1800,26 +1842,27 @@ def stream_ollama_chat_direct(
     host: str = "http://127.0.0.1:11434",
     on_http_response=None,
 ):
-    """Stream conversational responses directly via the Python 'ollama' module (ollama.Client.chat) with HTTP fallback."""
-    opts = options or {"temperature": 0.4, "num_ctx": 2048, "num_predict": 320}
+    """Stream conversational responses via ollama.Client.chat or HTTP /api/chat (with Viernes non-stream fallback)."""
+    opts = options or {"temperature": 0.45, "num_ctx": 4096, "num_predict": 320}
+    clean_messages = _consolidate_ollama_messages(messages)
+    use_think = _model_supports_think_parameter(model)
+
     if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
         try:
             client = ollama_sdk.Client(host=host)
+            chat_kwargs: dict[str, object] = {
+                "model": model,
+                "messages": clean_messages,
+                "stream": True,
+                "options": opts,
+            }
+            if use_think:
+                chat_kwargs["think"] = False
             try:
-                stream = client.chat(
-                    model=model,
-                    messages=messages,
-                    stream=True,
-                    think=False,
-                    options=opts,
-                )
-            except TypeError:
-                stream = client.chat(
-                    model=model,
-                    messages=messages,
-                    stream=True,
-                    options=opts,
-                )
+                stream = client.chat(**chat_kwargs)
+            except Exception:
+                chat_kwargs.pop("think", None)
+                stream = client.chat(**chat_kwargs)
             if callable(on_http_response):
                 on_http_response(stream)
             for chunk in stream:
@@ -1842,41 +1885,64 @@ def stream_ollama_chat_direct(
                 return
             # Fall back to local HTTP endpoint if the SDK raised a transport/version mismatch
 
-    body = json.dumps(
-        {
+    payload_dict: dict[str, object] = {
+        "model": model,
+        "messages": clean_messages,
+        "stream": True,
+        "options": opts,
+    }
+    if use_think:
+        payload_dict["think"] = False
+
+    try:
+        body = json.dumps(payload_dict).encode("utf-8")
+        request = urllib.request.Request(
+            f"{host.rstrip('/')}/api/chat",
+            data=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        response = urllib.request.urlopen(request, timeout=120)
+        if callable(on_http_response):
+            on_http_response(response)
+        try:
+            for raw_line in response:
+                if cancel_event is not None and cancel_event.is_set():
+                    break
+                if not raw_line.strip():
+                    continue
+                data = json.loads(raw_line.decode("utf-8"))
+                fragment = str(data.get("message", {}).get("content", "") or "")
+                done_flag = bool(data.get("done"))
+                yield fragment, done_flag
+                if done_flag:
+                    break
+            return
+        finally:
+            try:
+                response.close()
+            except Exception:
+                pass
+    except Exception:
+        if cancel_event is not None and cancel_event.is_set():
+            return
+        # Fallback to Viernes's exact non-streaming /api/chat request (Bienvenido_Señor/viernes_app/integrations/ai.py)
+        fallback_payload = {
             "model": model,
-            "messages": messages,
-            "stream": True,
-            "think": False,
+            "messages": clean_messages,
+            "stream": False,
             "options": opts,
         }
-    ).encode("utf-8")
-    request = urllib.request.Request(
-        f"{host.rstrip('/')}/api/chat",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    response = urllib.request.urlopen(request, timeout=25)
-    if callable(on_http_response):
-        on_http_response(response)
-    try:
-        for raw_line in response:
-            if cancel_event is not None and cancel_event.is_set():
-                break
-            if not raw_line.strip():
-                continue
-            data = json.loads(raw_line.decode("utf-8"))
-            fragment = str(data.get("message", {}).get("content", "") or "")
-            done_flag = bool(data.get("done"))
-            yield fragment, done_flag
-            if done_flag:
-                break
-    finally:
-        try:
-            response.close()
-        except Exception:
-            pass
+        req_fb = urllib.request.Request(
+            f"{host.rstrip('/')}/api/chat",
+            data=json.dumps(fallback_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req_fb, timeout=120) as resp_fb:
+            result_fb = json.loads(resp_fb.read().decode("utf-8"))
+            text_fb = str(result_fb.get("message", {}).get("content", "") or "").strip()
+            yield text_fb, True
 
 
 def _is_transient_ollama_pull_error(err_text: str) -> bool:
@@ -5176,7 +5242,7 @@ def is_class_add_command(low_text: str) -> bool:
         return False
     has_add_verb = bool(
         re.search(
-            r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|programa(?:r)?)\b",
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|programa(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|planifica(?:r)?)\b",
             low_text,
         )
     )
@@ -5223,12 +5289,12 @@ def is_task_add_command(low_text: str) -> bool:
     if is_analytical_schedule_question(low_text):
         return False
     if re.search(
-        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?)\b.*\b(?:tarea|tareas|pendiente|entrega|trabajo|encargo|actividad)\b",
+        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|planifica(?:r)?)\b.*\b(?:tarea|tareas|pendiente|entrega|trabajo|encargo|actividad)\b",
         low_text,
     ):
         return True
     if re.search(
-        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?)\s+que\s+(?:tengo\s+que|debo|hay\s+que|me\s+dejaron)\b",
+        r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|prepara(?:r|me)?)\s+que\s+(?:tengo\s+que|debo|hay\s+que|me\s+dejaron)\b",
         low_text,
     ):
         return True
@@ -5268,7 +5334,7 @@ def is_routine_add_command(low_text: str) -> bool:
         return False
     return bool(
         re.search(
-            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|guarda(?:r)?|configura(?:r)?|anota(?:r)?|nueva|tengo)\b.*\brutinas?\b",
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|guarda(?:r)?|configura(?:r)?|anota(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|nueva|tengo)\b.*\brutinas?\b",
             low_text,
         )
     )
@@ -5289,11 +5355,11 @@ def is_block_edit_command(low_text: str) -> bool:
 def is_block_add_command(low_text: str) -> bool:
     if not low_text or is_class_add_command(low_text) or is_block_edit_command(low_text):
         return False
-    if re.match(r"^(?:reserva(?:r)?|bloquea(?:r)?|aparta(?:r)?)\b", low_text):
+    if re.match(r"^(?:reserva(?:r)?|bloquea(?:r)?|aparta(?:r)?|nuevo\s+bloque|bloque\s+de\s+estudio)\b", low_text):
         return True
     return bool(
         re.search(
-            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|agenda(?:r)?|programa(?:r)?|reserva(?:r)?)\b.*\b(?:bloque|tiempo\s+de\s+estudio|espacio\s+de\s+estudio)\b",
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|pon(?:er|me)?|agenda(?:r)?|programa(?:r)?|reserva(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|planifica(?:r)?|haz(?:me)?|hacer)\b.*\b(?:bloque|bloques|tiempo\s+de\s+estudio|espacio\s+de\s+estudio)\b",
             low_text,
         )
     )
@@ -10560,18 +10626,18 @@ class AssistantApp(tk.Tk):
         def _resolve_active_model() -> str:
             if model:
                 return model
-            for attempt in range(2):
+            for attempt in range(3):
                 try:
                     names = list_local_ollama_models()
                     if names:
                         _put_if_current("models", names)
                         return select_preferred_ollama_model(names)
-                    return ""
+                    return "llama3.2"
                 except Exception:
                     if attempt == 0:
                         ensure_local_ollama_running()
-                        time.sleep(0.8)
-            return ""
+                    time.sleep(1.0)
+            return "llama3.2"
 
         def worker() -> None:
             response = None
@@ -10650,7 +10716,7 @@ class AssistantApp(tk.Tk):
         candidate = text.strip()
         candidate = re.sub(
             r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
-            r"(?:(?:quiero|puedes)\s+)?(?:(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?)"
+            r"(?:(?:quiero|puedes)\s+)?(?:(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|planifica(?:r)?)"
             r"(?:\s+que)?(?:\s+(?:tengo(?:\s+que)?|debo|hay\s+que|me\s+dejaron|nos\s+dejaron))?(?:\s+(?:una|un|la|el|mi))?(?:\s+nueva)?(?:\s+(?:tarea|pendiente|entrega|actividad|trabajo|encargo))?(?:\s+de|\s+para|\s+que)?"
             r"|recu[eé]rdame(?:\s+que)?|me\s+dejaron(?:\s+una)?(?:\s+tarea)?|nos\s+dejaron(?:\s+una)?(?:\s+tarea)?|me\s+acaban\s+de\s+dejar|me\s+encargaron|tengo\s+que\s+entregar|debo\s+entregar|tengo\s+pendiente|tengo\s+una\s+tarea(?:\s+de)?|nueva\s+tarea(?:\s+de)?|tarea\s+de|trabajo\s+de)\b\s*",
             "",
@@ -10782,7 +10848,7 @@ class AssistantApp(tk.Tk):
         if not start or not end or end <= start:
             return None
         title=text[:range_match.start()]+" "+text[range_match.end():]
-        title=re.sub(r"^\s*(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|pon(?:er|me)?|reserva|reservar|bloquea|bloquear|aparta(?:r)?|agenda(?:r)?|programa(?:r)?|crea(?:r)?)\s+(?:(?:un|una|mi|el)\s+)?(?:bloque(?:\s+local|\s+de\s+estudio)?|tiempo|espacio)?\s*", "", title, flags=re.IGNORECASE)
+        title=re.sub(r"^\s*(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|pon(?:er|me)?|reserva|reservar|bloquea|bloquear|aparta(?:r)?|agenda(?:r)?|programa(?:r)?|crea(?:r)?|prepara(?:r|me)?|prepare|arma(?:r)?|planifica(?:r)?|haz(?:me)?|hacer)\s+(?:(?:un|una|mi|el)\s+)?(?:bloque(?:\s+local|\s+de\s+estudio)?|tiempo|espacio)?\s*", "", title, flags=re.IGNORECASE)
         if iso_match:
             title=title.replace(iso_match.group()," ")
         title=re.sub(r"\b(?:pasado\s+mañana|mañana|hoy|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b", " ", title, flags=re.IGNORECASE)
@@ -11259,17 +11325,18 @@ class AssistantApp(tk.Tk):
             return
         if is_task_add_command(low_action):
             def _do_add_task() -> None:
-                proposal = self.parse_task_proposal(text_action)
+                proposal = AssistantApp.parse_task_proposal(self, text_action)
                 if proposal["title"] == "Tarea nueva":
                     self.append_chat("Asistente", "Dime el nombre de la tarea (por ejemplo: «agrega tarea de Química entregar práctica mañana a las 16:00») o escríbela en el formulario que acabo de abrir.")
-                    self.add_task()
+                    if hasattr(self, "add_task"):
+                        self.add_task()
                     return
                 saved, summary = execute_add_task_from_chat(self.db, proposal)
                 if saved:
                     if hasattr(self, "refresh_tasks"):
                         self.refresh_tasks()
                     self.append_chat("Asistente", summary)
-                else:
+                elif hasattr(self, "add_task"):
                     self.add_task(preset=str(proposal["title"] or ""), prefill=proposal)
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_task):
                 _do_add_task()
@@ -11283,15 +11350,20 @@ class AssistantApp(tk.Tk):
             return
         if is_block_add_command(low_action):
             def _do_add_block() -> None:
-                block = self.parse_block_request(text_action)
+                block = AssistantApp.parse_block_request(self, text_action)
                 if block:
                     saved, summary = execute_add_block_from_chat(self.db, block)
                     if saved:
                         self.append_chat("Asistente", summary)
-                    else:
+                    elif hasattr(self, "open_plan_block_form"):
                         self.open_plan_block_form(self, prefill=block)
                 else:
-                    self.append_chat("Asistente","Para agendar un bloque dime el título, la fecha y las horas de inicio y fin. Ejemplo: “reserva de 15:00 a 16:00 mañana para estudiar Física”.")
+                    if hasattr(self, "open_plan_block_form") and getattr(self, "tk", None) is not None:
+                        self.open_plan_block_form(self)
+                    self.append_chat(
+                        "Asistente",
+                        "Para agendar un bloque dime el título, la fecha y las horas de inicio y fin (o llénalo en la ventana que acabo de abrir). Ejemplo: “reserva de 15:00 a 16:00 mañana para estudiar Física”.",
+                    )
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_block):
                 _do_add_block()
             return
