@@ -1595,6 +1595,125 @@ END:VCALENDAR\r
         app.AssistantApp.send_chat(fake_app)
         self.assertEqual(opened_app_manager, [True])
 
+    def test_level3_user_promotion_direct_ollama_sdk_and_llama32_model(self) -> None:
+        db = create_test_db()
+        app.ensure_security_tables(db)
+        chat_messages: list[tuple[str, str]] = []
+        pulled_models: list[str] = []
+
+        class _FakeEntry:
+            def __init__(self, text: str) -> None:
+                self._text = text
+
+            def get(self) -> str:
+                return self._text
+
+            def delete(self, _a: int, _b: str) -> None:
+                self._text = ""
+
+        class _FakeModelVar:
+            def __init__(self, value: str = "") -> None:
+                self.value = value
+
+            def get(self) -> str:
+                return self.value
+
+            def set(self, value: str) -> None:
+                self.value = value
+
+        model_var = _FakeModelVar("")
+        fake_app = SimpleNamespace(
+            db=db,
+            tk=None,
+            ai_busy=False,
+            current_auth_user=None,
+            current_auth_level=0,
+            _active_vault_passphrase="",
+            _pending_protected_action=None,
+            settings=dict(app.DEFAULT_SETTINGS),
+            chat_input=_FakeEntry(""),
+            model_var=model_var,
+            append_chat=lambda spk, msg, **_kw: chat_messages.append((spk, msg)),
+            refresh_tasks=lambda: None,
+            _update_auth_status_label=lambda: None,
+            start_ollama_model_pull=lambda m, confirm_first=True: pulled_models.append(m),
+        )
+        fake_app.require_permission = lambda act, pending_callable=None: app.AssistantApp.require_permission(fake_app, act, pending_callable=pending_callable)
+        fake_app.lock_security_session = lambda: app.AssistantApp.lock_security_session(fake_app)
+        fake_app.handle_security_chat_command = lambda cmd: app.AssistantApp.handle_security_chat_command(fake_app, cmd)
+        fake_app.handle_ollama_model_command_from_chat = lambda raw: app.AssistantApp.handle_ollama_model_command_from_chat(fake_app, raw)
+
+        # 1. Registrar propietario Nivel 3 (Luis) y usuario Nivel 1 (Ana)
+        fake_app.chat_input = _FakeEntry("Luis ju89yt56rf")
+        app.AssistantApp.send_chat(fake_app)
+        fake_app.chat_input = _FakeEntry("registrar usuario Ana claveAna12 nivel 1")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT access_level FROM security_users WHERE username='Ana'").fetchone()["access_level"], 1)
+
+        # 2. Nivel 3 (Luis) autoriza / aumenta el nivel de Ana sin necesitar saber ni escribir la contraseña de Ana
+        fake_app.chat_input = _FakeEntry("Luis ju89yt56rf")
+        app.AssistantApp.send_chat(fake_app)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("aumenta el nivel de Ana a 2")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT access_level FROM security_users WHERE username='Ana'").fetchone()["access_level"], 2)
+        self.assertTrue(any("Nivel de acceso autorizado por Luis" in msg and "Nivel 2" in msg for _spk, msg in chat_messages))
+
+        # La contraseña original de Ana sigue funcionando intacta con su nuevo Nivel 2
+        auth_ana = app.authenticate_security_user(db, "Ana", "claveAna12")
+        self.assertTrue(auth_ana["authenticated"])
+        self.assertEqual(auth_ana["access_level"], 2)
+
+        # 3. Si Ana (Nivel 2) intenta aumentarse a sí misma a Nivel 3, Clara detiene la orden y pide autorización Nivel 3
+        fake_app.chat_input = _FakeEntry("Ana claveAna12")
+        app.AssistantApp.send_chat(fake_app)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("autoriza a Ana con nivel 3")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT access_level FROM security_users WHERE username='Ana'").fetchone()["access_level"], 2)
+        self.assertTrue(any("¿De quién es la orden?" in msg for _spk, msg in chat_messages))
+
+        # Cuando Luis (Nivel 3) autoriza con su usuario y contraseña, Ana sube a Nivel 3 automáticamente
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Luis ju89yt56rf")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT access_level FROM security_users WHERE username='Ana'").fetchone()["access_level"], 3)
+        self.assertTrue(any("Nivel 3" in msg for _spk, msg in chat_messages))
+
+        # 4. Prioridad de llama3.2 (el modelo de Viernes) y comandos de descarga/selección por chat
+        self.assertEqual(app.select_preferred_ollama_model(["qwen3:4b", "llama3.2:latest"]), "llama3.2:latest")
+        self.assertEqual(app.select_preferred_ollama_model(["mistral:latest", "llama3.2"]), "llama3.2")
+
+        with mock.patch.object(app, "warmup_local_ollama_model", return_value=None):
+            fake_app.chat_input = _FakeEntry("usar modelo llama3.2")
+            app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(model_var.get(), "llama3.2")
+
+        fake_app.chat_input = _FakeEntry("descargar modelo llama3.2")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(pulled_models, ["llama3.2"])
+
+        # 5. Uso directo del módulo Python `ollama` (ollama_sdk.Client) para listar modelos y conversar en streaming
+        class _FakeSdkClient:
+            def __init__(self, host: str = "") -> None:
+                self.host = host
+
+            def list(self):
+                return {"models": [{"model": "llama3.2"}, {"model": "qwen3:4b"}]}
+
+            def chat(self, model: str, messages: list, stream: bool = True, **_kw):
+                return iter([
+                    {"message": {"content": "Hola desde "}, "done": False},
+                    {"message": {"content": model}, "done": True},
+                ])
+
+        fake_sdk = SimpleNamespace(Client=_FakeSdkClient)
+        with mock.patch.object(app, "OLLAMA_PYTHON_MODULE_AVAILABLE", True), mock.patch.object(app, "ollama_sdk", fake_sdk):
+            models = app.list_local_ollama_models()
+            self.assertEqual(models, ["llama3.2", "qwen3:4b"])
+            chunks = list(app.stream_ollama_chat_direct("llama3.2", [{"role": "user", "content": "hola"}]))
+            self.assertEqual(chunks, [("Hola desde ", False), ("llama3.2", True)])
+
 
 if __name__ == "__main__":
     unittest.main()

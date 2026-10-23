@@ -66,6 +66,13 @@ except ModuleNotFoundError:  # pragma: no cover - entorno Linux headless sin pyt
     messagebox = _TkModuleStub()  # type: ignore[assignment]
     ttk = _TkModuleStub()  # type: ignore[assignment]
 
+try:
+    import ollama as ollama_sdk  # type: ignore[import-not-found]
+    OLLAMA_PYTHON_MODULE_AVAILABLE = True
+except ModuleNotFoundError:
+    ollama_sdk = None  # type: ignore[assignment]
+    OLLAMA_PYTHON_MODULE_AVAILABLE = False
+
 APP_NAME = "CLARA-V (Clara Viernes) · Asistente Personal Unificada"
 APP_VERSION = "2.0.0"
 APP_BASE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
@@ -76,6 +83,7 @@ NEWS_CACHE_PATH = DATA_DIR / "news_cache.json"  # Caché local de titulares para
 VT_KEY_PATH = DATA_DIR / "virustotal_api_key.dpapi"  # DPAPI; deliberately excluded from settings and backups
 DEFAULT_SETTINGS = {"morning_time": "07:00", "weather_location": "Colima, Colima, México", "news_topic": "General", "news_source": "Google News México", "news_count": "5", "chat_history_enabled": "false", "auto_speak_responses": "true", "native_notifications_enabled": "false", "minimize_to_tray": "false", "reminders_paused_until": "", "pattern_suggestions": "false", "calendar_ics_path": "", "allowed_applications": "[]"}
 SPOKEN_CHAT_SPEAKERS = ("Asistente", "Clara", "Rutina matutina", "Clima y noticias")
+PREFERRED_OLLAMA_MODELS = ("llama3.2", "llama3.2:latest", "llama3.2:3b", "llama3.2:1b", "qwen3:4b", "llama3.1", "llama3")
 AUTO_DOWNLOADS_ENABLED = False  # Prohibido descargar o instalar recursos automáticamente sin autorización explícita
 OFFICIAL_RESOURCES = {
     "vosk-model-small-es-0.42": {
@@ -124,6 +132,22 @@ OFFICIAL_RESOURCES = {
         "version": ">=0.19.5",
         "size": "~3.5 MB (incluyendo Pillow)",
         "license": "LGPL-3.0 / HPND",
+        "sha256": None,
+    },
+    "ollama": {
+        "source": "https://pypi.org/project/ollama/",
+        "resource": "Módulo oficial de Python para conversar directamente con Ollama local (ollama)",
+        "version": ">=0.4.0",
+        "size": "~25 KB",
+        "license": "MIT",
+        "sha256": None,
+    },
+    "llama3.2": {
+        "source": "https://ollama.com/library/llama3.2",
+        "resource": "Modelo conversacional local Llama 3.2 (el modelo predeterminado usado en Viernes)",
+        "version": "3B (latest)",
+        "size": "~2.0 GB",
+        "license": "Llama 3.2 Community License",
         "sha256": None,
     },
 }
@@ -1260,6 +1284,73 @@ def register_security_user(
     }
 
 
+def update_security_user_level(
+    db: sqlite3.Connection,
+    target_username: str,
+    new_level: int | str | None = None,
+    *,
+    increment: bool = False,
+    authorized_by: str | None = None,
+) -> dict[str, object]:
+    """Allow a Nivel 3 (Prioritario) user to authorize or increase/change another user's access level without resetting their password."""
+    ensure_security_tables(db)
+    clean_user = re.sub(r"\s+", " ", str(target_username or "").strip(" .,;:"))
+    if not clean_user:
+        raise ValueError("Indica el nombre del usuario cuyo nivel de acceso deseas autorizar o cambiar.")
+    row = db.execute(
+        "SELECT id, username, access_level FROM security_users WHERE LOWER(username)=LOWER(?) LIMIT 1",
+        (clean_user,),
+    ).fetchone()
+    if row is None:
+        return {
+            "updated": False,
+            "user_exists": False,
+            "username": clean_user,
+            "access_level": 0,
+            "message": (
+                f"No encontré al usuario «{clean_user}» registrado. Puedes registrarlo diciendo:\n"
+                f"«registrar usuario {clean_user} <contraseña> nivel 2» o desde el botón 🔐 Niveles y Bóveda."
+            ),
+        }
+    prev_lvl = coerce_security_level(row["access_level"], default=1)
+    if increment and new_level is None:
+        lvl = min(3, prev_lvl + 1)
+    else:
+        lvl = coerce_security_level(new_level, default=min(3, prev_lvl + 1))
+    db.execute(
+        "UPDATE security_users SET access_level=? WHERE id=?",
+        (lvl, int(row["id"])),
+    )
+    prev_spec = SECURITY_LEVEL_SPECS[prev_lvl]
+    spec = SECURITY_LEVEL_SPECS[lvl]
+    authorizer = str(authorized_by or "Propietario (Nivel 3)").strip()
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    db.execute(
+        "INSERT INTO security_events(source, summary, created_at) VALUES(?,?,?)",
+        (
+            "Control de acceso",
+            f"Nivel de {row['username']} autorizado/cambiado de {prev_spec['short']} a {spec['short']} por {authorizer}",
+            now_iso,
+        ),
+    )
+    db.commit()
+    return {
+        "updated": True,
+        "user_exists": True,
+        "username": str(row["username"]),
+        "previous_level": prev_lvl,
+        "access_level": lvl,
+        "level_name": spec["name"],
+        "short_level": spec["short"],
+        "capabilities": spec["capabilities"],
+        "message": (
+            f"✅ Nivel de acceso autorizado por {authorizer}: el usuario «{row['username']}» ahora tiene "
+            f"{spec['short']} ({spec['name']}; antes {prev_spec['short']}).\n"
+            f"Permisos activos para {row['username']}: {spec['capabilities']}."
+        ),
+    }
+
+
 def authenticate_security_user(db: sqlite3.Connection, username: str, password: str) -> dict[str, object]:
     """Authenticate a user by username and password (typed or spoken) and return their clearance."""
     ensure_security_tables(db)
@@ -1485,6 +1576,61 @@ def parse_security_chat_command(
         lvl = coerce_security_level(raw_lvl, default=3)
         return {"kind": "register_user", "username": uname, "password": upass, "access_level": lvl}
 
+    # 1b. Nivel 3 user authorization / promotion of another user's access level without requiring their password:
+    # e.g. "aumenta el nivel de Ana a 2", "sube el nivel de Ana a nivel avanzado", "cambia el nivel de Ana a 3",
+    # "autoriza a Ana con nivel 2", "autoriza al usuario Ana a nivel prioritario", "dale nivel 2 a Ana", "aumenta el nivel de Ana"
+    lvl_change_m1 = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:aumenta(?:r)?|sube|subir|eleva(?:r)?|incrementa(?:r)?|cambia(?:r)?|modifica(?:r)?|actualiza(?:r)?|promueve|promover|baja(?:r)?|asigna(?:r)?|pon(?:er)?)\s+(?:el\s+)?nivel(?:\s+de\s+acceso|\s+de\s+seguridad)?\s+(?:de(?:l\s+usuario)?|a(?:l\s+usuario)?|para)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9_.-]{2,30})(?:\s+(?:a|en|como|al)\s+(?:el\s+)?(?:nivel\s+)?(.+))?$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if lvl_change_m1:
+        uname = lvl_change_m1.group(1).strip(" .,;:")
+        raw_target_lvl = (lvl_change_m1.group(2) or "").strip(" .,;:")
+        if raw_target_lvl:
+            return {
+                "kind": "change_user_level",
+                "username": uname,
+                "access_level": coerce_security_level(raw_target_lvl, default=2),
+                "increment": False,
+            }
+        return {
+            "kind": "change_user_level",
+            "username": uname,
+            "access_level": None,
+            "increment": True,
+        }
+
+    lvl_change_m2 = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:autoriza(?:r)?|sube|subir|eleva(?:r)?|promueve|promover|pasa(?:r)?|pon(?:er)?|cambia(?:r)?)\s+(?:a(?:l\s+usuario)?\s+|el\s+usuario\s+)([A-Za-zÁÉÍÓÚáéíóúñÑ0-9_.-]{2,30})\s+(?:a|con|en|al|como)\s+(?:el\s+)?nivel(?:\s+de\s+acceso)?\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if lvl_change_m2:
+        uname = lvl_change_m2.group(1).strip(" .,;:")
+        raw_target_lvl = lvl_change_m2.group(2).strip(" .,;:")
+        return {
+            "kind": "change_user_level",
+            "username": uname,
+            "access_level": coerce_security_level(raw_target_lvl, default=2),
+            "increment": False,
+        }
+
+    lvl_change_m3 = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:dale|da(?:r)?|asigna(?:r)?|otorga(?:r)?|concede(?:r)?)\s+(?:el\s+)?nivel(?:\s+de\s+acceso)?\s+(.+?)\s+(?:a(?:l\s+usuario)?|para)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9_.-]{2,30})$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if lvl_change_m3:
+        raw_target_lvl = lvl_change_m3.group(1).strip(" .,;:")
+        uname = lvl_change_m3.group(2).strip(" .,;:")
+        return {
+            "kind": "change_user_level",
+            "username": uname,
+            "access_level": coerce_security_level(raw_target_lvl, default=2),
+            "increment": False,
+        }
+
     # 2. Explicit prefixed authentication: "usuario Luis contraseña ju89yt56rf" / "soy Luis clave ju89yt56rf" / "orden de Luis ju89yt56rf"
     auth_prefix_match = re.match(
         r"^(?:soy|usuario|mi\s+usuario\s+es|acceso|login|identificar(?:me)?|orden\s+de|autoriza)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9_.-]{2,30})\s+(?:contrase[nñ]a\s+|clave\s+|pass\s+)?(\S{4,80})$",
@@ -1577,6 +1723,218 @@ def build_ollama_unavailable_message(detail: str = "") -> str:
         "y rutinas, decirte qué sigue hoy, revisar el clima y titulares, explorar carpetas/archivos permitidos y gestionar "
         "tus niveles de seguridad y bóveda encriptada."
     )
+
+
+def select_preferred_ollama_model(models: list[str], current: str = "") -> str:
+    """Choose the best available local Ollama model, prioritizing 'llama3.2' (used in Viernes)."""
+    clean_models = [str(m).strip() for m in (models or []) if str(m).strip()]
+    if not clean_models:
+        return ""
+    if current and current in clean_models:
+        return current
+    for pref in PREFERRED_OLLAMA_MODELS:
+        exact = next((m for m in clean_models if m.casefold() == pref.casefold()), None)
+        if exact:
+            return exact
+        prefix = next((m for m in clean_models if m.casefold().startswith(pref.casefold())), None)
+        if prefix:
+            return prefix
+    return clean_models[0]
+
+
+def list_local_ollama_models(host: str = "http://127.0.0.1:11434") -> list[str]:
+    """List installed local Ollama models using the Python 'ollama' module directly (with HTTP fallback)."""
+    if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
+        try:
+            client = ollama_sdk.Client(host=host)
+            raw = client.list()
+            items = getattr(raw, "models", None)
+            if items is None and isinstance(raw, dict):
+                items = raw.get("models", [])
+            names: list[str] = []
+            for item in items or []:
+                name = getattr(item, "model", None) or getattr(item, "name", None)
+                if not name and isinstance(item, dict):
+                    name = item.get("model") or item.get("name")
+                if name:
+                    names.append(str(name))
+            return names
+        except Exception:
+            pass
+    req = urllib.request.Request(f"{host.rstrip('/')}/api/tags")
+    with urllib.request.urlopen(req, timeout=2.5) as resp:
+        raw_models = json.loads(resp.read().decode("utf-8")).get("models", [])
+    return [str(m.get("name", "")) for m in raw_models if m.get("name")]
+
+
+def stream_ollama_chat_direct(
+    model: str,
+    messages: list[dict[str, str]],
+    *,
+    options: dict[str, object] | None = None,
+    cancel_event: threading.Event | None = None,
+    host: str = "http://127.0.0.1:11434",
+    on_http_response=None,
+):
+    """Stream conversational responses directly via the Python 'ollama' module (ollama.Client.chat) with HTTP fallback."""
+    opts = options or {"temperature": 0.4, "num_ctx": 2048, "num_predict": 320}
+    if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
+        try:
+            client = ollama_sdk.Client(host=host)
+            try:
+                stream = client.chat(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    think=False,
+                    options=opts,
+                )
+            except TypeError:
+                stream = client.chat(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    options=opts,
+                )
+            if callable(on_http_response):
+                on_http_response(stream)
+            for chunk in stream:
+                if cancel_event is not None and cancel_event.is_set():
+                    break
+                msg_obj = getattr(chunk, "message", None)
+                if msg_obj is not None:
+                    content = getattr(msg_obj, "content", "") or ""
+                elif isinstance(chunk, dict):
+                    content = chunk.get("message", {}).get("content", "") or ""
+                else:
+                    content = ""
+                done_flag = getattr(chunk, "done", None)
+                if done_flag is None and isinstance(chunk, dict):
+                    done_flag = bool(chunk.get("done"))
+                yield str(content), bool(done_flag)
+            return
+        except Exception:
+            if cancel_event is not None and cancel_event.is_set():
+                return
+            # Fall back to local HTTP endpoint if the SDK raised a transport/version mismatch
+
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+            "think": False,
+            "options": opts,
+        }
+    ).encode("utf-8")
+    request = urllib.request.Request(
+        f"{host.rstrip('/')}/api/chat",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    response = urllib.request.urlopen(request, timeout=25)
+    if callable(on_http_response):
+        on_http_response(response)
+    try:
+        for raw_line in response:
+            if cancel_event is not None and cancel_event.is_set():
+                break
+            if not raw_line.strip():
+                continue
+            data = json.loads(raw_line.decode("utf-8"))
+            fragment = str(data.get("message", {}).get("content", "") or "")
+            done_flag = bool(data.get("done"))
+            yield fragment, done_flag
+            if done_flag:
+                break
+    finally:
+        try:
+            response.close()
+        except Exception:
+            pass
+
+
+def pull_ollama_model_direct(
+    model_name: str,
+    *,
+    progress_callback=None,
+    host: str = "http://127.0.0.1:11434",
+) -> tuple[bool, str]:
+    """Download/pull a local Ollama model (such as 'llama3.2') with live progress reporting after explicit user confirmation."""
+    clean_model = re.sub(r"[^A-Za-z0-9_.:/-]", "", str(model_name or "").strip())
+    if not clean_model:
+        return (False, "Indica un nombre de modelo válido (por ejemplo: llama3.2).")
+    ensure_local_ollama_running()
+    if callable(progress_callback):
+        progress_callback(f"Iniciando descarga del modelo «{clean_model}» en Ollama local…")
+
+    # 1. Primary path: Python 'ollama' module (ollama.Client.pull)
+    if OLLAMA_PYTHON_MODULE_AVAILABLE and ollama_sdk is not None:
+        try:
+            client = ollama_sdk.Client(host=host)
+            for part in client.pull(model=clean_model, stream=True):
+                status = getattr(part, "status", None) or (part.get("status") if isinstance(part, dict) else "") or "descargando"
+                completed = getattr(part, "completed", None) or (part.get("completed") if isinstance(part, dict) else 0) or 0
+                total = getattr(part, "total", None) or (part.get("total") if isinstance(part, dict) else 0) or 0
+                if callable(progress_callback):
+                    if total and completed:
+                        pct = min(100, int((int(completed) * 100) / max(1, int(total))))
+                        progress_callback(f"Descargando «{clean_model}» con módulo ollama: {status} ({pct}%)")
+                    else:
+                        progress_callback(f"Descargando «{clean_model}» con módulo ollama: {status}")
+            return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
+        except Exception:
+            pass
+
+    # 2. Fallback path: Local Ollama HTTP API (/api/pull)
+    try:
+        body = json.dumps({"name": clean_model, "stream": True}).encode("utf-8")
+        req = urllib.request.Request(
+            f"{host.rstrip('/')}/api/pull",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=600) as resp:
+            for raw_line in resp:
+                if not raw_line.strip():
+                    continue
+                data = json.loads(raw_line.decode("utf-8"))
+                if data.get("error"):
+                    return (False, f"Ollama reportó un error al descargar «{clean_model}»: {data['error']}")
+                status = str(data.get("status") or "descargando")
+                completed = int(data.get("completed") or 0)
+                total = int(data.get("total") or 0)
+                if callable(progress_callback):
+                    if total > 0 and completed >= 0:
+                        pct = min(100, int((completed * 100) / total))
+                        progress_callback(f"Descargando «{clean_model}» en Ollama local: {status} ({pct}%)")
+                    else:
+                        progress_callback(f"Descargando «{clean_model}» en Ollama local: {status}")
+        return (True, f"✅ Modelo «{clean_model}» descargado y listo en Ollama local.")
+    except Exception as http_exc:
+        # 3. Secondary fallback: local 'ollama pull <model>' CLI binary if installed
+        exe = find_installed_ollama_executable()
+        if exe is not None:
+            try:
+                proc = subprocess.run(
+                    [str(exe), "pull", clean_model],
+                    capture_output=True,
+                    text=True,
+                    timeout=600,
+                    shell=False,
+                )
+                if proc.returncode == 0:
+                    return (True, f"✅ Modelo «{clean_model}» descargado mediante CLI local de Ollama.")
+                return (False, f"No se pudo completar 'ollama pull {clean_model}': {proc.stderr.strip() or proc.stdout.strip()}")
+            except Exception as cli_exc:
+                return (False, f"No pude descargar el modelo «{clean_model}»: {cli_exc}")
+        return (
+            False,
+            f"No pude conectar con Ollama local para descargar «{clean_model}» ({http_exc}). "
+            "Verifica que Ollama esté instalado en Windows o ejecuta `ollama pull llama3.2`.",
+        )
 
 
 
@@ -2552,10 +2910,11 @@ def is_blocked_unsafe_request(text: str) -> str | None:
     if re.search(r"\b(?:apaga|apagar|reinicia|reiniciar|suspende|suspender|bloquea|bloquear)\s+(?:la\s+|el\s+|mi\s+)?(?:pc|computadora|equipo|sistema|windows)\b", low):
         return "Clara no ejecuta apagados, reinicios ni bloqueos del sistema operativo."
     if re.search(r"\b(?:instala|instalar|descarga\s+e\s+instala|ejecuta\s+instalador|setup\.exe|installer\.exe|msiexec|winget)\b", low):
-        return (
-            "Clara no realiza descargas ni instalaciones automáticas o silenciosas. "
-            "Cualquier complemento opcional muestra primero su fuente oficial, recurso, versión, tamaño y licencia, y requiere tu acción manual."
-        )
+        if not re.search(r"\b(?:modelo|llama\s*3|qwen|mistral|gemma|vosk)\b", low):
+            return (
+                "Clara no realiza descargas ni instalaciones automáticas o silenciosas. "
+                "Cualquier complemento opcional muestra primero su fuente oficial, recurso, versión, tamaño y licencia, y requiere tu acción manual."
+            )
     return None
 
 
@@ -3803,9 +4162,10 @@ class AssistantApp(tk.Tk):
         model_row.grid(row=2, column=0, sticky="ew", pady=(0, 8))
         ttk.Label(model_row, text="Modelo:", background="#0d1b2d").pack(side="left", padx=(0, 6))
         self.model_var = tk.StringVar(value="")
-        self.model_combo = ttk.Combobox(model_row, textvariable=self.model_var, values=(), state="readonly", width=24)
+        self.model_combo = ttk.Combobox(model_row, textvariable=self.model_var, values=(), state="readonly", width=20)
         self.model_combo.pack(side="left", fill="x", expand=True)
         ttk.Button(model_row, text="Detectar Ollama", command=self.refresh_ollama_models).pack(side="left", padx=(8, 0))
+        ttk.Button(model_row, text="⬇ Descargar llama3.2…", style="Accent.TButton", command=self.open_ollama_model_downloader).pack(side="left", padx=(6, 0))
         self.ollama_status = ttk.Label(right, text="IA local inactiva · tareas y recordatorios siguen funcionando", background="#0d1b2d", foreground="#91aabd")
         self.ollama_status.grid(row=3, column=0, sticky="w", pady=(0, 6))
         self.chat_log = tk.Text(right, height=3, wrap="word", state="disabled", relief="flat", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", selectbackground="#1b4961", selectforeground="#ffffff", padx=12, pady=10, font=("Segoe UI", 10))
@@ -3935,6 +4295,27 @@ class AssistantApp(tk.Tk):
             self.current_auth_level = int(res["access_level"])
             self._active_vault_passphrase = upass
             self._update_auth_status_label()
+            msg = str(res["message"])
+            self.append_chat("Asistente", msg)
+            return msg
+
+        if kind == "change_user_level":
+            uname = str(sec_cmd.get("username") or "").strip()
+            if not self.require_permission(
+                "manage_users",
+                pending_callable=lambda: self.handle_security_chat_command(sec_cmd),
+            ):
+                return "Se solicitó autorización de Nivel 3 (Prioritario) para autorizar o aumentar el nivel de otro usuario."
+            res = update_security_user_level(
+                self.db,
+                uname,
+                sec_cmd.get("access_level"),
+                increment=bool(sec_cmd.get("increment", False)),
+                authorized_by=getattr(self, "current_auth_user", None) or "Propietario (Nivel 3)",
+            )
+            if res.get("updated") and str(res.get("username", "")).casefold() == str(getattr(self, "current_auth_user", "") or "").casefold():
+                self.current_auth_level = int(res["access_level"])
+                self._update_auth_status_label()
             msg = str(res["message"])
             self.append_chat("Asistente", msg)
             return msg
@@ -4152,6 +4533,53 @@ class AssistantApp(tk.Tk):
             self.append_chat("Asistente", str(res["message"]))
             messagebox.showinfo("Usuario guardado", str(res["message"]), parent=window)
 
+        def on_select_user(_event=None) -> None:
+            sel = users_tree.selection()
+            if not sel:
+                return
+            vals = users_tree.item(sel[0], "values")
+            if vals:
+                user_var.set(str(vals[0]))
+                lvl_text = str(vals[1] or "")
+                for ch in level_choices:
+                    if f"Nivel {ch[0]}" in lvl_text:
+                        level_var.set(ch)
+                        break
+
+        users_tree.bind("<<TreeviewSelect>>", on_select_user)
+
+        def do_change_user_level() -> None:
+            if getattr(self, "current_auth_level", 0) < 3:
+                messagebox.showwarning(
+                    "Nivel prioritario requerido",
+                    "Solo un usuario autenticado con Nivel 3 (Prioritario) puede autorizar o aumentar el nivel de otros usuarios.",
+                    parent=window,
+                )
+                return
+            sel = users_tree.selection()
+            target_user = str(users_tree.item(sel[0], "values")[0]) if sel else user_var.get().strip()
+            if not target_user:
+                messagebox.showinfo(
+                    "Selecciona un usuario",
+                    "Selecciona un usuario de la tabla inferior (o escribe su nombre en Usuario) y elige el nuevo nivel en el desplegable.",
+                    parent=window,
+                )
+                return
+            res = update_security_user_level(
+                self.db,
+                target_user,
+                level_var.get()[0],
+                authorized_by=getattr(self, "current_auth_user", None) or "Propietario (Nivel 3)",
+            )
+            if not res.get("updated"):
+                messagebox.showwarning("Usuario no encontrado", str(res["message"]), parent=window)
+                return
+            if str(res.get("username", "")).casefold() == str(getattr(self, "current_auth_user", "") or "").casefold():
+                self.current_auth_level = int(res["access_level"])
+            refresh_tables()
+            self.append_chat("Asistente", str(res["message"]))
+            messagebox.showinfo("Nivel de usuario autorizado", str(res["message"]), parent=window)
+
         def do_delete_user() -> None:
             if getattr(self, "current_auth_level", 0) < 3:
                 messagebox.showwarning("Nivel prioritario requerido", "Solo un usuario con Nivel 3 (Prioritario) puede eliminar cuentas.", parent=window)
@@ -4168,8 +4596,9 @@ class AssistantApp(tk.Tk):
 
         ttk.Button(btn_row, text="🔓 Verificar e iniciar sesión", style="Accent.TButton", command=do_login).pack(side="left", padx=(0, 8))
         ttk.Button(btn_row, text="➕ Registrar / actualizar usuario", command=do_register).pack(side="left", padx=(0, 8))
+        ttk.Button(btn_row, text="⬆ Autorizar / cambiar nivel", command=do_change_user_level).pack(side="left", padx=(0, 8))
         ttk.Button(btn_row, text="🔒 Bloquear sesión (Modo Invitado)", command=lambda: (self.lock_security_session(), refresh_tables())).pack(side="left", padx=(0, 8))
-        ttk.Button(btn_row, text="🗑 Eliminar usuario seleccionado", command=do_delete_user).pack(side="left")
+        ttk.Button(btn_row, text="🗑 Eliminar usuario", command=do_delete_user).pack(side="left")
 
         ttk.Label(frame, text="Usuarios registrados y sus niveles:", background="#07111f", foreground="#91aabd").pack(anchor="w", pady=(2, 4))
         users_tree.pack(fill="x", pady=(0, 10))
@@ -7396,10 +7825,7 @@ class AssistantApp(tk.Tk):
         self.ollama_status.configure(text="Buscando o iniciando servidor local de Ollama…")
 
         def _fetch_models() -> list[str]:
-            request = urllib.request.Request("http://127.0.0.1:11434/api/tags")
-            with urllib.request.urlopen(request, timeout=2.5) as response:
-                models = json.loads(response.read().decode("utf-8")).get("models", [])
-            return [item.get("name", "") for item in models if item.get("name")]
+            return list_local_ollama_models()
 
         def worker() -> None:
             try:
@@ -7421,6 +7847,104 @@ class AssistantApp(tk.Tk):
                 self.ai_results.put(("models_error", str(last_exc)))
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def start_ollama_model_pull(self, model_name: str = "llama3.2", *, confirm_first: bool = True) -> None:
+        """Download and activate a local Ollama model (default 'llama3.2', used in Viernes) after explicit user consent."""
+        clean_model = re.sub(r"[^A-Za-z0-9_.:/-]", "", str(model_name or "llama3.2").strip()) or "llama3.2"
+        if confirm_first and TKINTER_AVAILABLE and getattr(self, "tk", None) is not None:
+            disclosure = (
+                f"¿Deseas descargar y activar el modelo «{clean_model}» en tu Ollama local?\n\n"
+                "• Fuente oficial: https://ollama.com/library/llama3.2\n"
+                "• Modelo: llama3.2 (el modelo conversacional predeterminado de Viernes)\n"
+                "• Tamaño aprox.: ~2.0 GB\n"
+                "• Licencia: Meta Llama 3.2 Community License\n\n"
+                "La descarga se realizará en segundo plano y se seleccionará automáticamente al terminar."
+            )
+            if not messagebox.askyesno("Confirmar descarga de modelo en Ollama local", disclosure, parent=self):
+                self.append_chat("Asistente", f"Cancelé la descarga del modelo «{clean_model}».")
+                return
+        self.ollama_status.configure(text=f"Iniciando descarga del modelo «{clean_model}» en Ollama local…")
+        self.append_chat(
+            "Asistente",
+            f"⬇ Iniciando descarga del modelo «{clean_model}» en tu Ollama local (en segundo plano). Te avisaré aquí en cuanto quede listo y activo.",
+        )
+
+        def _worker() -> None:
+            ok, msg = pull_ollama_model_direct(
+                clean_model,
+                progress_callback=lambda st: self.ai_results.put(("model_pull_progress", st)),
+            )
+            if ok:
+                self.ai_results.put(("model_pull_done", (clean_model, msg)))
+            else:
+                self.ai_results.put(("model_pull_error", (clean_model, msg)))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def open_ollama_model_downloader(self, initial_model: str = "llama3.2") -> None:
+        """Open a dialog with top action buttons to download or switch local Ollama models (defaulting to Viernes's llama3.2)."""
+        window = tk.Toplevel(self)
+        window.title("Modelos locales de Ollama · Descargar o cambiar (llama3.2)")
+        window.geometry("680x380")
+        window.minsize(580, 320)
+        window.transient(self)
+        frame = ttk.Frame(window, padding=18)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Modelos conversacionales de Ollama (llama3.2 de Viernes)", style="CardTitle.TLabel").pack(anchor="w")
+        sdk_state = "Activo (import ollama directo)" if OLLAMA_PYTHON_MODULE_AVAILABLE else "Modo API local directa (instala `pip install ollama` si deseas el paquete Python)"
+        ttk.Label(
+            frame,
+            text=(
+                f"En Viernes el modelo configurado era «llama3.2» (ligero, rápido y conversacional en español).\n"
+                f"Estado del módulo Python ollama: {sdk_state}.\n"
+                "Elige un modelo de la lista o escribe su nombre y usa los botones superiores para descargarlo o activarlo."
+            ),
+            wraplength=630,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 12))
+
+        top_btns = ttk.Frame(frame)
+        top_btns.pack(side="top", fill="x", pady=(0, 12))
+
+        row = ttk.Frame(frame)
+        row.pack(fill="x", pady=(0, 10))
+        ttk.Label(row, text="Modelo de Ollama:").pack(side="left")
+        suggested_models = ("llama3.2", "llama3.2:1b", "qwen3:4b", "llama3.1", "mistral", "gemma2")
+        chosen_var = tk.StringVar(value=initial_model or "llama3.2")
+        combo = ttk.Combobox(row, textvariable=chosen_var, values=suggested_models, width=28)
+        combo.pack(side="left", padx=(8, 0))
+
+        info_label = ttk.Label(
+            frame,
+            text=(
+                "Nota: «llama3.2» (~2.0 GB) es el modelo estándar de 3B parámetros usado en Viernes. "
+                "Si tu equipo tiene poca RAM puedes elegir «llama3.2:1b» (~1.3 GB).\n"
+                "También puedes descargarlo desde el chat diciendo: «descargar modelo llama3.2» o ejecutando `descargar_llama3.2.bat`."
+            ),
+            wraplength=630,
+            foreground="#91aabd",
+            justify="left",
+        )
+        info_label.pack(anchor="w", pady=(4, 8))
+
+        def _download_now() -> None:
+            target_m = chosen_var.get().strip() or "llama3.2"
+            window.destroy()
+            self.start_ollama_model_pull(target_m, confirm_first=True)
+
+        def _use_existing() -> None:
+            target_m = chosen_var.get().strip() or "llama3.2"
+            self.model_var.set(target_m)
+            warmup_local_ollama_model(target_m)
+            self.ollama_status.configure(text=f"Modelo activo seleccionado: {target_m}")
+            self.append_chat("Asistente", f"¡Listo! Seleccioné el modelo «{target_m}» para conversar con Ollama.")
+            window.destroy()
+
+        ttk.Button(top_btns, text="⬇ Descargar y activar en Ollama", style="Accent.TButton", command=_download_now).pack(side="left", padx=(0, 8))
+        ttk.Button(top_btns, text="✓ Usar modelo (si ya está descargado)", command=_use_existing).pack(side="left", padx=(0, 8))
+        ttk.Button(top_btns, text="Cerrar", command=window.destroy).pack(side="left")
+        window.grab_set()
 
     def process_ai_results(self) -> None:
         try:
@@ -7509,16 +8033,33 @@ class AssistantApp(tk.Tk):
                     self.model_combo.configure(values=models)
                     if models:
                         current = self.model_var.get()
-                        selected = current if current in models else next((m for m in models if m.startswith("qwen3:4b")), models[0])
+                        selected = select_preferred_ollama_model(models, current)
                         self.model_var.set(selected)
-                        self.ollama_status.configure(text=f"Ollama conectado · {len(models)} modelo(s) local(es) disponible(s)")
+                        sdk_tag = "módulo ollama" if OLLAMA_PYTHON_MODULE_AVAILABLE else "API local"
+                        self.ollama_status.configure(text=f"Ollama conectado ({sdk_tag}) · {len(models)} modelo(s) · activo: {selected}")
                         self.append_chat("Sistema", "Modelos detectados: " + ", ".join(models))
                         warmup_local_ollama_model(selected)
                     else:
                         self.model_var.set("")
-                        self.ollama_status.configure(text="Ollama responde, pero no hay modelos descargados.")
+                        self.ollama_status.configure(text="Ollama responde, pero no hay modelos descargados (pulsa «⬇ Descargar llama3.2…»).")
                 elif kind == "models_error":
                     self.ollama_status.configure(text="No se encontró Ollama activo en este equipo.")
+                elif kind == "model_pull_progress":
+                    self.ollama_status.configure(text=str(payload))
+                elif kind == "model_pull_done":
+                    pulled_model, done_msg = payload if isinstance(payload, tuple) else ("llama3.2", str(payload))
+                    self.model_var.set(pulled_model)
+                    self.ollama_status.configure(text=f"Modelo «{pulled_model}» descargado y activo en Ollama")
+                    self.append_chat(
+                        "Asistente",
+                        f"{done_msg}\nYa quedó seleccionado «{pulled_model}» (el modelo de Viernes) como tu modelo activo en CLARA-V.",
+                    )
+                    self.refresh_ollama_models()
+                    warmup_local_ollama_model(pulled_model)
+                elif kind == "model_pull_error":
+                    _pulled_model, err_msg = payload if isinstance(payload, tuple) else ("llama3.2", str(payload))
+                    self.ollama_status.configure(text="No se pudo completar la descarga del modelo en Ollama.")
+                    self.append_chat("Asistente", str(err_msg))
                 elif kind == "answer_start":
                     self.stream_text = ""
                     self.stream_started = True
@@ -7666,13 +8207,10 @@ class AssistantApp(tk.Tk):
                 return model
             for attempt in range(2):
                 try:
-                    req = urllib.request.Request("http://127.0.0.1:11434/api/tags")
-                    with urllib.request.urlopen(req, timeout=2.5) as resp:
-                        raw_models = json.loads(resp.read().decode("utf-8")).get("models", [])
-                    names = [m.get("name", "") for m in raw_models if m.get("name")]
+                    names = list_local_ollama_models()
                     if names:
                         _put_if_current("models", names)
-                        return next((m for m in names if m.startswith("qwen3:4b")), names[0])
+                        return select_preferred_ollama_model(names)
                     return ""
                 except Exception:
                     if attempt == 0:
@@ -7687,36 +8225,32 @@ class AssistantApp(tk.Tk):
                 if not chosen_model:
                     _put_if_current("answer_error", "No hay un modelo de Ollama activo o descargado en este equipo.")
                     return
-                body = json.dumps({
-                    "model": chosen_model,
-                    "messages": messages,
-                    "stream": True,
-                    "think": False,
-                    "options": {"temperature": 0.4, "num_ctx": 1024, "num_predict": 240},
-                }).encode("utf-8")
-                request = urllib.request.Request(
-                    "http://127.0.0.1:11434/api/chat",
-                    data=body,
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                response = urllib.request.urlopen(request, timeout=22)
-                with self.response_lock:
-                    self.active_response = response
+
+                def _register_stream(handle) -> None:
+                    nonlocal response
+                    response = handle
+                    with self.response_lock:
+                        self.active_response = handle
+
                 if cancel_event.is_set():
-                    response.close()
                     _put_if_current("answer_cancelled", None)
                     return
-                _put_if_current("answer_start", text)
+
+                started_ui = False
                 completed = False
                 in_think_block = False
-                for raw_line in response:
+                for fragment, is_done in stream_ollama_chat_direct(
+                    chosen_model,
+                    messages,
+                    options={"temperature": 0.4, "num_ctx": 2048, "num_predict": 320},
+                    cancel_event=cancel_event,
+                    on_http_response=_register_stream,
+                ):
                     if cancel_event.is_set():
                         break
-                    if not raw_line.strip():
-                        continue
-                    data = json.loads(raw_line.decode("utf-8"))
-                    fragment = data.get("message", {}).get("content", "")
+                    if not started_ui:
+                        _put_if_current("answer_start", text)
+                        started_ui = True
                     if fragment:
                         if "<think>" in fragment:
                             in_think_block = True
@@ -7729,12 +8263,12 @@ class AssistantApp(tk.Tk):
                                 fragment = ""
                         if fragment:
                             _put_if_current("answer_chunk", fragment)
-                    if data.get("done"):
+                    if is_done:
                         completed = True
                         break
                 if cancel_event.is_set():
                     _put_if_current("answer_cancelled", None)
-                elif completed:
+                elif completed or started_ui:
                     _put_if_current("answer_done", text)
                 else:
                     _put_if_current("answer_error", "La respuesta terminó antes de recibir el cierre normal.")
@@ -7747,7 +8281,7 @@ class AssistantApp(tk.Tk):
                 with self.response_lock:
                     if self.active_response is response:
                         self.active_response = None
-                if response is not None:
+                if response is not None and hasattr(response, "close"):
                     try:
                         response.close()
                     except Exception:
@@ -7990,6 +8524,58 @@ class AssistantApp(tk.Tk):
             return True
         return False
 
+    def handle_ollama_model_command_from_chat(self, raw_text: str) -> bool:
+        """Allow querying, switching, or downloading local Ollama models (such as 'llama3.2' from Viernes) via natural chat."""
+        raw = str(raw_text or "").strip()
+        low = normalize_intent_text(raw)
+
+        if any(
+            p in low
+            for p in (
+                "que modelo usas", "que modelo de ollama usas", "que modelo tienes activo",
+                "cual es el modelo activo", "modelos de ollama", "que modelo usaba viernes",
+            )
+        ):
+            cur = self.model_var.get().strip() or "ninguno detectado aún (se prefiere llama3.2 por defecto)"
+            sdk_info = "módulo Python `ollama` directo" if OLLAMA_PYTHON_MODULE_AVAILABLE else "API local de Ollama (127.0.0.1:11434)"
+            self.append_chat(
+                "Asistente",
+                f"Modelo activo actual: «{cur}» (conectado mediante {sdk_info}).\n"
+                "En Viernes el modelo configurado era «llama3.2». Puedes decirme «descargar modelo llama3.2» o «usar modelo llama3.2», "
+                "o pulsar el botón «⬇ Descargar llama3.2…» junto al selector de modelo.",
+            )
+            return True
+
+        dl_m = re.match(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:quiero\s+)?(?:descarga(?:r)?|baja(?:r)?|instala(?:r)?|obtener|pull)\s+(?:el\s+|otro\s+)?(?:modelo(?:\s+de\s+ollama)?\s+)?(llama\s*3(?:\.\d+)?(?::\S+)?|qwen\S*|mistral\S*|gemma\S*|deepseek\S*|phi\S*)$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if dl_m:
+            target_model = re.sub(r"\s+", "", dl_m.group(1).strip(" .,;:"))
+            if hasattr(self, "start_ollama_model_pull"):
+                self.start_ollama_model_pull(target_model, confirm_first=True)
+            else:
+                AssistantApp.start_ollama_model_pull(self, target_model, confirm_first=True)
+            return True
+
+        use_m = re.match(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:usa(?:r)?|cambia(?:r)?(?:\s+a(?:l)?|\s+el\s+modelo\s+a)?|pon(?:er)?|selecciona(?:r)?|activa(?:r)?)\s+(?:el\s+)?(?:modelo(?:\s+de\s+ollama)?\s+)?(llama\s*3(?:\.\d+)?(?::\S+)?|qwen\S*|mistral\S*|gemma\S*|deepseek\S*|phi\S*)$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if use_m:
+            target_model = re.sub(r"\s+", "", use_m.group(1).strip(" .,;:"))
+            if hasattr(self.model_var, "set"):
+                self.model_var.set(target_model)
+            warmup_local_ollama_model(target_model)
+            self.append_chat(
+                "Asistente",
+                f"¡Listo! Cambié el modelo activo de Ollama a «{target_model}». Si aún no lo tienes descargado, dime «descargar modelo {target_model}» o pulsa «⬇ Descargar llama3.2…».",
+            )
+            return True
+        return False
+
     def day_agenda_summary(self, target: date) -> str:
         today=date.today()
         day_label="hoy" if target==today else "mañana" if target==today+timedelta(days=1) else target.strftime("%A %d/%m/%Y")
@@ -8179,6 +8765,11 @@ class AssistantApp(tk.Tk):
             text.strip(),
             flags=re.IGNORECASE,
         ).strip() or text
+
+        if hasattr(self, "handle_ollama_model_command_from_chat") and self.handle_ollama_model_command_from_chat(text_action):
+            return
+        if not hasattr(self, "handle_ollama_model_command_from_chat") and AssistantApp.handle_ollama_model_command_from_chat(self, text_action):
+            return
 
         if hasattr(self, "handle_app_command_from_chat") and self.handle_app_command_from_chat(text_action):
             return
