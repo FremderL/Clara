@@ -2267,6 +2267,45 @@ END:VCALENDAR\r
         self.assertIn("_reflow_toolbar", ui_src)
         self.assertIn("divmod(idx, cols)", ui_src)
 
+        # --- Investigación sin cortes a mitad de palabra ni de oración (caso RMS Titanic > 560 chars) ---
+        titanic_extract = (
+            "El hundimiento del RMS Titanic fue una catástrofe marítima ocurrida en la noche del 14 al 15 de abril de 1912, "
+            "cuando el transatlántico británico RMS Titanic —de la White Star Line—, que realizaba su viaje inaugural de "
+            "Southampton a Nueva York, colisionó con un iceberg en el norte del océano Atlántico frente a las costas de Terranova. "
+            "La colisión se produjo en el lado de estribor a las 23:40 del 14 de abril, lo que provocó el hundimiento del barco "
+            "en menos de tres horas, a las 02:20 del 15 de abril. Fallecieron unas 1500 personas por golpes diversos, caídas, "
+            "ahogamiento o hipotermia debido a las aguas heladas, convirtiéndose en uno de los peores desastres marítimos en "
+            "tiempo de paz de la historia y el más famoso. El barco carecía de botes salvavidas suficientes para todos los pasajeros "
+            "y los pocos más de 700 supervivientes fueron rescatados horas después por el transatlántico RMS Carpathia."
+        )
+
+        def _fake_titanic_urlopen(req, timeout=8):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            if "list=search" in url:
+                payload = {"query": {"search": [{"title": "Hundimiento del RMS Titanic", "snippet": "Catástrofe marítima"}]}}
+            elif "prop=extracts" in url:
+                payload = {"query": {"pages": {"1": {"extract": titanic_extract}}}}
+            elif "page/summary" in url:
+                payload = {"extract": titanic_extract}
+            else:
+                payload = {"Heading": "", "AbstractText": "", "RelatedTopics": []}
+
+            class _Resp:
+                def __enter__(self_inner):
+                    return self_inner
+                def __exit__(self_inner, *_a):
+                    return False
+                def read(self_inner):
+                    return json.dumps(payload).encode("utf-8")
+
+            return _Resp()
+
+        with mock.patch.object(app.urllib.request, "urlopen", side_effect=_fake_titanic_urlopen):
+            r_titanic = send("investiga como se hundio el titanic")
+        self.assertIn("caídas, ahogamiento o hipotermia", r_titanic)
+        self.assertIn("rescatados horas después por el transatlántico RMS Carpathia.", r_titanic)
+        self.assertFalse(r_titanic.rstrip().endswith("caí"))
+
 
 if __name__ == "__main__":
     unittest.main()

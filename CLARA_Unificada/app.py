@@ -493,6 +493,29 @@ def clean_rss_text(raw: str) -> str:
     return re.sub(r"\s+", " ", without_tags).strip()
 
 
+def truncate_at_sentence_boundary(text: str, max_chars: int = 2600) -> str:
+    """Return text up to max_chars, cutting only at a complete sentence or word boundary so words/ideas are never cut mid-way."""
+    clean = str(text or "").strip()
+    if not clean or len(clean) <= max_chars:
+        return clean
+    window = clean[: max_chars + 1]
+    # Look for the last sentence-ending punctuation (. ! ? ;) followed by whitespace or end of window
+    min_pos = max(120, int(max_chars * 0.45))
+    best_end = -1
+    for match in re.finditer(r"[.!?](?=\s|$)", window):
+        pos = match.end()
+        if pos >= min_pos and pos <= max_chars:
+            best_end = pos
+    if best_end != -1:
+        return window[:best_end].strip()
+    # Fallback: cut at the last space before max_chars so we never slice a word in half
+    last_space = window[:max_chars].rfind(" ")
+    if last_space > min_pos:
+        clipped = window[:last_space].rstrip(" ,;:-")
+        return clipped + ("." if not clipped.endswith((".", "!", "?")) else "")
+    return window[:max_chars].strip()
+
+
 def extract_news_item_summary(raw_description: str, main_title: str, source_name: str = "") -> str:
     """Extract an informative, readable summary from RSS <description> (handling both article abstracts and Google News HTML lists)."""
     if not raw_description:
@@ -517,7 +540,7 @@ def extract_news_item_summary(raw_description: str, main_title: str, source_name
             if txt not in angles:
                 angles.append(txt)
         if angles:
-            return " · ".join(angles[:3])[:460]
+            return truncate_at_sentence_boundary(" · ".join(angles[:4]), max_chars=750)
 
     text = clean_rss_text(unescaped)
     text = re.sub(r"\s*https?://\S+", "", text).strip(" -·")
@@ -529,7 +552,7 @@ def extract_news_item_summary(raw_description: str, main_title: str, source_name
         return ""
     if source_name and text.endswith(source_name):
         text = text[: -len(source_name)].rstrip(" -·")
-    return text[:460]
+    return truncate_at_sentence_boundary(text, max_chars=750)
 
 
 def format_rich_news_digest(
@@ -1952,7 +1975,7 @@ def stream_ollama_chat_direct(
     on_http_response=None,
 ):
     """Stream conversational responses via ollama.Client.chat or HTTP /api/chat (with Viernes non-stream fallback)."""
-    opts = options or {"temperature": 0.45, "num_ctx": 4096, "num_predict": 320}
+    opts = options or {"temperature": 0.45, "num_ctx": 4096, "num_predict": 900}
     clean_messages = _consolidate_ollama_messages(messages)
     use_think = _model_supports_think_parameter(model)
 
@@ -5445,7 +5468,7 @@ def _clean_web_search_text(value: str) -> str:
 
 
 def _wikipedia_es_summary(query: str, urlopen=None) -> str | None:
-    """Query Spanish Wikipedia REST/Search API for an authoritative encyclopedia summary."""
+    """Query Spanish Wikipedia REST/Extracts API for a complete, multi-sentence encyclopedia summary without mid-word truncation."""
     opener = urlopen or urllib.request.urlopen
     clean_q = re.sub(r"\s+", " ", str(query or "")).strip(" ?¿!¡.,;:")
     if not clean_q:
@@ -5453,7 +5476,7 @@ def _wikipedia_es_summary(query: str, urlopen=None) -> str | None:
     search_url = (
         "https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch="
         + urllib.parse.quote_plus(clean_q)
-        + "&utf8=1&format=json&srlimit=2"
+        + "&utf8=1&format=json&srlimit=3"
     )
     req = urllib.request.Request(search_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
     with opener(req, timeout=8) as resp:
@@ -5464,16 +5487,44 @@ def _wikipedia_es_summary(query: str, urlopen=None) -> str | None:
     top_title = str(hits[0].get("title") or "").strip()
     if not top_title:
         return None
-    sum_url = "https://es.wikipedia.org/api/rest_v1/page/summary/" + urllib.parse.quote(top_title.replace(" ", "_"))
-    req_sum = urllib.request.Request(sum_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
-    with opener(req_sum, timeout=8) as resp_sum:
-        sum_data = json.loads(resp_sum.read().decode("utf-8", errors="replace"))
-    extract = _clean_web_search_text(str(sum_data.get("extract") or ""))
+
+    extract = ""
+    try:
+        sum_url = "https://es.wikipedia.org/api/rest_v1/page/summary/" + urllib.parse.quote(top_title.replace(" ", "_"))
+        req_sum = urllib.request.Request(sum_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+        with opener(req_sum, timeout=8) as resp_sum:
+            sum_data = json.loads(resp_sum.read().decode("utf-8", errors="replace"))
+        extract = _clean_web_search_text(str(sum_data.get("extract") or ""))
+    except Exception:
+        extract = ""
+
+    # Also query MediaWiki extracts API to obtain the complete multi-paragraph explanation when available
+    try:
+        ext_url = (
+            "https://es.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=plain&exchars=3200&titles="
+            + urllib.parse.quote_plus(top_title)
+            + "&utf8=1&format=json"
+        )
+        req_ext = urllib.request.Request(ext_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+        with opener(req_ext, timeout=8) as resp_ext:
+            ext_data = json.loads(resp_ext.read().decode("utf-8", errors="replace"))
+        pages = ext_data.get("query", {}).get("pages", {})
+        if isinstance(pages, dict):
+            for page_obj in pages.values():
+                if isinstance(page_obj, dict) and page_obj.get("extract"):
+                    full_ext = _clean_web_search_text(str(page_obj.get("extract") or ""))
+                    if len(full_ext) > len(extract):
+                        extract = full_ext
+                    break
+    except Exception:
+        pass
+
     if extract:
-        return f"Wikipedia ({top_title}): {extract[:560]}"
+        complete_extract = truncate_at_sentence_boundary(extract, max_chars=2800)
+        return f"Wikipedia ({top_title}): {complete_extract}"
     snippet = _clean_web_search_text(str(hits[0].get("snippet") or ""))
     if snippet:
-        return f"Wikipedia ({top_title}): {snippet[:420]}"
+        return f"Wikipedia ({top_title}): {truncate_at_sentence_boundary(snippet, max_chars=900)}"
     return None
 
 
@@ -5492,10 +5543,12 @@ def _duckduckgo_instant_and_html(query: str, urlopen=None) -> list[str]:
         abstract = _clean_web_search_text(str(data.get("AbstractText") or ""))
         heading = _clean_web_search_text(str(data.get("Heading") or ""))
         if abstract:
-            results.append(f"{heading + ': ' if heading else ''}{abstract[:480]}")
-        for item in (data.get("RelatedTopics") or [])[:2]:
+            results.append(
+                f"{heading + ': ' if heading else ''}{truncate_at_sentence_boundary(abstract, max_chars=1400)}"
+            )
+        for item in (data.get("RelatedTopics") or [])[:3]:
             if isinstance(item, dict) and item.get("Text"):
-                results.append(_clean_web_search_text(str(item["Text"]))[:360])
+                results.append(truncate_at_sentence_boundary(_clean_web_search_text(str(item["Text"])), max_chars=800))
     except Exception:
         pass
     if len(results) < 2:
@@ -5520,7 +5573,7 @@ def _duckduckgo_instant_and_html(query: str, urlopen=None) -> list[str]:
                 entry = f"{title}: {snip}" if title else snip
                 if entry.casefold() not in seen:
                     seen.add(entry.casefold())
-                    results.append(entry[:380])
+                    results.append(truncate_at_sentence_boundary(entry, max_chars=850))
                 if len(results) >= 3:
                     break
         except Exception:
@@ -5529,7 +5582,7 @@ def _duckduckgo_instant_and_html(query: str, urlopen=None) -> list[str]:
 
 
 def search_web_summary(query: str, urlopen=None) -> str:
-    """Research a topic on the internet using Spanish Wikipedia + DuckDuckGo (from Viernes)."""
+    """Research a topic on the internet using Spanish Wikipedia + DuckDuckGo (from Viernes) without mid-sentence truncation."""
     clean_q = re.sub(
         r"^(?:que\s+es(?:\s+un|\s+una|\s+el|\s+la)?|quien\s+(?:es|fue)|cual\s+es|como\s+funciona|definicion\s+de|significado\s+de)\s+",
         "",
@@ -5555,8 +5608,8 @@ def search_web_summary(query: str, urlopen=None) -> str:
         pass
     if not sections:
         return f"🌐 Busqué «{clean_q}» en internet, pero no obtuve fragmentos directos en este momento. Verifica tu conexión o intenta con términos más específicos."
-    bullets = "\n".join(f"• {sec}" for sec in sections[:3])
-    return f"🌐 Investigación en internet sobre «{clean_q}»:\n{bullets}"
+    bullets = "\n\n".join(f"• {sec}" for sec in sections[:4])
+    return f"🌐 Investigación en internet sobre «{clean_q}»:\n\n{bullets}"
 
 
 def extract_web_research_query(raw_text: str) -> str | None:
@@ -11225,7 +11278,7 @@ class AssistantApp(tk.Tk):
                 for fragment, is_done in stream_ollama_chat_direct(
                     chosen_model,
                     messages,
-                    options={"temperature": 0.4, "num_ctx": 2048, "num_predict": 320},
+                    options={"temperature": 0.4, "num_ctx": 4096, "num_predict": 900},
                     cancel_event=cancel_event,
                     on_http_response=_register_stream,
                 ):
