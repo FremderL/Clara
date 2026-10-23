@@ -2369,6 +2369,19 @@ END:VCALENDAR\r
         row_ing3 = db.execute("SELECT done FROM tasks WHERE title='3 tareas' AND subject='Ingles'").fetchone()
         self.assertEqual(int(row_ing3["done"]), 1)
 
+        # --- Programación relativa al horario real de clases ("una hora antes a mi primera clase del dia en todos los dias") ---
+        r_rel = send("Agrega Ir a la Universidad una hora antes a mi primera clase del dia en todos los dias.")
+        self.assertIn("Calculé y programé «Ir a la Universidad»", r_rel)
+        self.assertIn("antes de", r_rel)
+        routine_uni = db.execute("SELECT * FROM routines WHERE title='Ir a la Universidad'").fetchall()
+        self.assertGreaterEqual(len(routine_uni), 1)
+        blocks_uni = db.execute("SELECT * FROM plan_blocks WHERE title='Ir a la Universidad'").fetchall()
+        self.assertGreaterEqual(len(blocks_uni), 1)
+
+        r_rel_after = send("Agrega Regresar a casa media hora después de mi última clase en todos los días")
+        self.assertIn("Calculé y programé «Regresar a casa»", r_rel_after)
+        self.assertIn("30 min después", r_rel_after)
+
 
 if __name__ == "__main__":
     unittest.main()

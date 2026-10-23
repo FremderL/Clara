@@ -6310,6 +6310,247 @@ def build_local_analytical_schedule_answer(
     return "\n".join(out)
 
 
+_SPANISH_TIME_NUMBER_WORDS: dict[str, int] = {
+    "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+    "seis": 6, "diez": 10, "quince": 15, "veinte": 20, "veinticinco": 25,
+    "treinta": 30, "cuarenta": 40, "cuarenta y cinco": 45, "cincuenta": 50,
+    "sesenta": 60, "noventa": 90,
+}
+
+
+def _parse_relative_offset_minutes(low_text: str) -> tuple[str, int] | None:
+    """Extract ('before' | 'after', offset_minutes) from natural Spanish relative time expressions around classes."""
+    anchor_rel = r"(?:antes|previo|despues|luego|al\s+terminar|al\s+salir|saliendo)"
+    if not re.search(rf"\b{anchor_rel}\s+(?:de|a|del|al)\s+(?:mi\s+|la\s+|las\s+|mis\s+|entrar\s+a\s+|salir\s+de\s+)?(?:primera\s+|ultima\s+|1ra\s+|1a\s+)?clases?\b", low_text):
+        return None
+
+    direction = "after" if re.search(r"\b(?:despues|luego|al\s+terminar|al\s+salir|saliendo)\s+(?:de|a|del|al)\b", low_text) else "before"
+
+    # Special fractional phrases: "hora y media", "media hora", "un cuarto de hora"
+    if re.search(r"\b(?:una?\s+|1\s+)?hora\s+y\s+media\s+(?:antes|previo|despues|luego)\b", low_text):
+        return (direction, 90)
+    if re.search(r"\bmedia\s+hora\s+(?:antes|previo|despues|luego)\b", low_text):
+        return (direction, 30)
+    if re.search(r"\b(?:un\s+)?cuarto\s+de\s+hora\s+(?:antes|previo|despues|luego)\b", low_text):
+        return (direction, 15)
+
+    # Numeric or word-number + horas/minutos: "una hora antes", "2 horas antes", "30 minutos antes", "quince minutos antes"
+    num_m = re.search(
+        r"\b(\d{1,3}|cuarenta\s+y\s+cinco|veinticinco|UN|una|uno|dos|tres|cuatro|cinco|diez|quince|veinte|treinta|cuarenta|cincuenta|sesenta|noventa)\s*"
+        r"(horas?|hrs?|h|minutos?|mins?|m)\s+(?:antes|previo|despues|luego)\b",
+        low_text,
+        flags=re.IGNORECASE,
+    )
+    if num_m:
+        raw_num = num_m.group(1).strip().casefold()
+        unit = num_m.group(2).strip().casefold()
+        val = int(raw_num) if raw_num.isdigit() else _SPANISH_TIME_NUMBER_WORDS.get(raw_num, 1)
+        mins = val * 60 if unit.startswith("h") else val
+        return (direction, max(5, min(360, mins)))
+
+    if re.search(r"\b(?:al\s+terminar|al\s+salir|saliendo\s+de)\b", low_text):
+        return ("after", 0)
+    return (direction, 60)
+
+
+def parse_and_execute_relative_schedule_command(
+    db: sqlite3.Connection,
+    raw_text: str,
+    today: date | None = None,
+) -> tuple[bool, str] | None:
+    """Resolve and schedule activities expressed relative to the user's classes (e.g. 'Agrega Ir a la Universidad una hora antes a mi primera clase del día en todos los días')."""
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+    today = today or date.today()
+
+    # Must start with or contain an add/schedule verb
+    if not re.search(
+        r"\b(?:agrega(?:r)?|anad(?:e|ir)|pon(?:er|me)?|programa(?:r)?|reserva(?:r)?|crea(?:r)?|"
+        r"registra(?:r)?|guarda(?:r)?|anota(?:r)?|apunta(?:r)?|configura(?:r)?|prepara(?:r|me)?)\b",
+        low,
+    ):
+        return None
+
+    rel_info = _parse_relative_offset_minutes(low)
+    if rel_info is None:
+        return None
+    direction, offset_mins = rel_info
+
+    # Determine anchor type: first class of the day, last class of the day, or a specific subject class
+    if re.search(r"\b(?:primera|1ra|1a)\s+clase\b|\bentrar\s+a\s+clases?\b", low):
+        anchor_kind = "first_class"
+    elif re.search(r"\b(?:ultima)\s+clase\b|\bsalir\s+de\s+clases?\b", low):
+        anchor_kind = "last_class"
+    else:
+        anchor_kind = "specific_class"
+
+    # Extract the activity title by removing leading verb and the relative time + day clauses
+    title_cand = re.sub(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+        r"(?:(?:me\s+)?(?:puedes|podr[ií]as)\s+)?"
+        r"(?:agrega(?:r)?|a[nñ]ad(?:e|ir)|pon(?:er|me)?|programa(?:r)?|reserva(?:r)?|crea(?:r)?|"
+        r"registra(?:r)?|guarda(?:r)?|anota(?:r)?|apunta(?:r)?|configura(?:r)?|prepara(?:r|me)?)"
+        r"(?:\s+(?:una?\s+|la\s+|mi\s+|un\s+)?(?:rutina|bloque|actividad|recordatorio|evento)(?:\s+de|\s+para)?)?\s+",
+        "",
+        raw,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    # Strip from the relative offset expression onward
+    title_cand = re.sub(
+        r"\s+\b(?:\d{1,3}|una?\s+hora\s+y\s+media|media\s+hora|(?:un\s+)?cuarto\s+de\s+hora|"
+        r"cuarenta\s+y\s+cinco|veinticinco|un|una|uno|dos|tres|cuatro|cinco|diez|quince|veinte|treinta|cuarenta|cincuenta|sesenta|noventa)"
+        r"(?:\s*(?:horas?|hrs?|h|minutos?|mins?|m))?\s+(?:antes|previo|despu[eé]s|luego)\s+(?:de|a|del|al)\b.*$",
+        "",
+        title_cand,
+        flags=re.IGNORECASE,
+    )
+    title_cand = re.sub(
+        r"\s+\b(?:justo\s+)?(?:antes|previo|despu[eé]s|luego|al\s+terminar|al\s+salir|saliendo)\s+(?:de|a|del|al)\s+(?:mi\s+|la\s+|las\s+|mis\s+)?(?:primera\s+|última\s+|ultima\s+)?clases?\b.*$",
+        "",
+        title_cand,
+        flags=re.IGNORECASE,
+    )
+    title_cand = re.sub(
+        r"\s+\b(?:en\s+todos\s+los\s+d[ií]as|todos\s+los\s+d[ií]as|cada\s+d[ií]a|diario|de\s+lunes\s+a\s+viernes)\b.*$",
+        "",
+        title_cand,
+        flags=re.IGNORECASE,
+    )
+    title_cand = re.sub(r"\s+", " ", title_cand).strip(" :,-.;\"'«»")
+    if not title_cand:
+        title_cand = "Ir a la Universidad" if direction == "before" else "Actividad después de clases"
+    elif title_cand[0].islower():
+        title_cand = title_cand[0].upper() + title_cand[1:]
+
+    repair_legacy_class_locations(db)
+    all_classes = db.execute(
+        "SELECT id, name, weekday, start_time, end_time, location FROM classes ORDER BY weekday, start_time, id"
+    ).fetchall()
+    if not all_classes:
+        return (
+            False,
+            f"Quise programar «{title_cand}» en relación con tus clases, pero aún no tienes clases registradas en tu horario semanal.",
+        )
+
+    # Determine target weekdays
+    weekday_map = {"lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3, "viernes": 4, "sabado": 5, "domingo": 6}
+    explicit_days = [idx for w_name, idx in weekday_map.items() if re.search(r"\b" + w_name + r"\b", low)]
+    if not explicit_days and not re.search(r"\b(?:todos\s+los\s+dias|cada\s+dia|diario|lunes\s+a\s+viernes)\b", low):
+        if "pasado manana" in low:
+            explicit_days = [(today + timedelta(days=2)).weekday()]
+        elif "manana" in low and "por la manana" not in low and "de la manana" not in low:
+            explicit_days = [(today + timedelta(days=1)).weekday()]
+        elif re.search(r"\bhoy\b", low):
+            explicit_days = [today.weekday()]
+
+    matched_subj = _match_known_subject_in_text(db, raw) if anchor_kind == "specific_class" else None
+
+    by_weekday: dict[int, list[sqlite3.Row]] = {}
+    for c_row in all_classes:
+        wd = int(c_row["weekday"])
+        if explicit_days and wd not in explicit_days:
+            continue
+        if anchor_kind == "specific_class" and matched_subj:
+            if normalize_intent_text(str(c_row["name"])) != normalize_intent_text(matched_subj):
+                continue
+        by_weekday.setdefault(wd, []).append(c_row)
+
+    if not by_weekday:
+        return (
+            False,
+            f"No encontré clases registradas en esos días para calcular el horario de «{title_cand}».",
+        )
+
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    scheduled_items: list[dict[str, object]] = []
+
+    for wd in sorted(by_weekday.keys()):
+        day_classes = sorted(by_weekday[wd], key=lambda r: _time_to_minutes(r["start_time"]) or 0)
+        anchor_cls = day_classes[-1] if anchor_kind == "last_class" else day_classes[0]
+        cls_start = _time_to_minutes(anchor_cls["start_time"]) or (8 * 60)
+        cls_end = _time_to_minutes(anchor_cls["end_time"]) or min(23 * 60 + 59, cls_start + 60)
+
+        if direction == "before":
+            dur = max(15, offset_mins)
+            start_min = max(0, cls_start - offset_mins)
+            end_min = min(cls_start, start_min + dur)
+            ref_desc = f"antes de {anchor_cls['name']} ({anchor_cls['start_time']})"
+        else:
+            dur = offset_mins if offset_mins > 0 else 60
+            start_min = min(23 * 60, cls_end + (0 if offset_mins == 0 else offset_mins))
+            end_min = min(23 * 60 + 59, start_min + dur)
+            ref_desc = f"después de {anchor_cls['name']} ({_minutes_to_time(cls_end)})"
+
+        scheduled_items.append(
+            {
+                "weekday": wd,
+                "day_label": days_labels[wd],
+                "start_time": _minutes_to_time(start_min),
+                "end_time": _minutes_to_time(end_min),
+                "ref_desc": ref_desc,
+            }
+        )
+
+    # 1. Group by start_time to persist clean recurring routines in `routines`
+    time_to_days: dict[str, list[int]] = {}
+    for item in scheduled_items:
+        time_to_days.setdefault(str(item["start_time"]), []).append(int(item["weekday"]))
+
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    for rem_time, wds in time_to_days.items():
+        weekdays_csv = ",".join(str(d) for d in sorted(set(wds)))
+        dup = db.execute(
+            "SELECT id FROM routines WHERE LOWER(TRIM(title))=LOWER(TRIM(?)) AND weekdays=? AND COALESCE(reminder_time,'')=COALESCE(?,'') LIMIT 1",
+            (title_cand, weekdays_csv, rem_time),
+        ).fetchone()
+        if not dup:
+            db.execute(
+                "INSERT INTO routines(title, subject, weekdays, reminder_time, active, created_at, source) VALUES(?,NULL,?,?,1,?,?)",
+                (title_cand, weekdays_csv, rem_time, now_iso, "Programada relativamente al horario de clases desde el chat"),
+            )
+
+    # 2. Also create concrete plan_blocks for each matching day in the current 7-day window so it shows in Agenda, Grid & ¿Qué sigue?
+    for item in scheduled_items:
+        wd = int(item["weekday"])
+        delta = (wd - today.weekday()) % 7
+        target_date_str = (today + timedelta(days=delta)).isoformat()
+        s_t = str(item["start_time"])
+        e_t = str(item["end_time"])
+        existing_blk = db.execute(
+            "SELECT id FROM plan_blocks WHERE block_date=? AND start_time=? AND LOWER(TRIM(title))=LOWER(TRIM(?)) LIMIT 1",
+            (target_date_str, s_t, title_cand),
+        ).fetchone()
+        if not existing_blk:
+            db.execute(
+                "INSERT INTO plan_blocks(title, block_date, start_time, end_time, notes, created_at) VALUES(?,?,?,?,?,?)",
+                (title_cand, target_date_str, s_t, e_t, f"Calculado automáticamente ({item['ref_desc']})", now_iso),
+            )
+    db.commit()
+
+    rel_label = (
+        f"{offset_mins} min {'antes' if direction == 'before' else 'después'}"
+        if offset_mins % 60 != 0
+        else f"{offset_mins // 60} hora(s) {'antes' if direction == 'before' else 'después'}"
+        if offset_mins > 0
+        else "al terminar"
+    )
+    anchor_label = (
+        "tu primera clase de cada día"
+        if anchor_kind == "first_class"
+        else "tu última clase de cada día"
+        if anchor_kind == "last_class"
+        else f"tu clase de {matched_subj or 'la materia'}"
+    )
+    lines = [f"¡Listo! Calculé y programé «{title_cand}» ({rel_label} de {anchor_label}):"]
+    for item in scheduled_items:
+        lines.append(f"• {item['day_label']}: {item['start_time']}–{item['end_time']} ({item['ref_desc']})")
+    lines.append("Quedó guardado en tus rutinas semanales y en los bloques de tu agenda.")
+    return (True, "\n".join(lines))
+
+
 def is_class_delete_command(low_text: str) -> bool:
     """Return True if the normalized text is a request to remove a class/subject from the weekly schedule."""
     return bool(
@@ -6350,6 +6591,8 @@ def is_class_edit_command(low_text: str, db: sqlite3.Connection | None = None) -
 def is_class_add_command(low_text: str) -> bool:
     """Return True for any natural Spanish phrasing requesting to add/register/schedule a class or subject."""
     if not low_text or is_class_delete_command(low_text) or is_class_edit_command(low_text):
+        return False
+    if _parse_relative_offset_minutes(low_text) is not None:
         return False
     if re.search(r"\b(?:no\s+hay\s+clases|sin\s+clases|no\s+tengo\s+clases|cancela(?:r)?\s+(?:la\s+|mi\s+)?clase|se\s+cancelo\s+la\s+clase)\b", low_text):
         return False
@@ -12746,6 +12989,18 @@ class AssistantApp(tk.Tk):
                 self.run_web_research_async(web_q)
             else:
                 self.append_chat("Asistente", search_web_summary(web_q))
+            return
+
+        if _parse_relative_offset_minutes(low_action) is not None:
+            def _do_rel_schedule() -> None:
+                rel_res = parse_and_execute_relative_schedule_command(self.db, text_action)
+                if rel_res is not None:
+                    saved, msg = rel_res
+                    if saved and hasattr(self, "apply_routines"):
+                        self.apply_routines(date.today())
+                    self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_rel_schedule):
+                _do_rel_schedule()
             return
 
         if is_class_delete_command(low_action):
