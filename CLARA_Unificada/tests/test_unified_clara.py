@@ -2338,6 +2338,37 @@ END:VCALENDAR\r
         self.assertIn("✅ Respuesta:", r_flash)
         self.assertIn("Kruskal", r_flash)
 
+        # --- Comprensión flexible para completar tareas ("3 tareas [Ingles]") y sincronización real en SQLite ---
+        db.execute(
+            "INSERT INTO tasks(title, subject, due_date, priority, done, created_at) VALUES(?,?,?,?,0,?)",
+            ("3 tareas", "Ingles", date.today().isoformat(), "Normal", datetime.now().isoformat(timespec="seconds")),
+        )
+        db.commit()
+        r_comp1 = send("marca la tarea de inglés como completada")
+        self.assertIn("Marcada como hecha", r_comp1)
+        row_ing = db.execute("SELECT done FROM tasks WHERE title='3 tareas' AND subject='Ingles'").fetchone()
+        self.assertEqual(int(row_ing["done"]), 1)
+
+        # Reset done=0 and test with "marca 3 tareas [Ingles] como completada"
+        db.execute("UPDATE tasks SET done=0 WHERE title='3 tareas' AND subject='Ingles'")
+        db.commit()
+        r_comp2 = send("marca 3 tareas [Ingles] · entrega: 2026-10-23 como completada")
+        self.assertIn("Marcada como hecha", r_comp2)
+        row_ing2 = db.execute("SELECT done FROM tasks WHERE title='3 tareas' AND subject='Ingles'").fetchone()
+        self.assertEqual(int(row_ing2["done"]), 1)
+
+        # Reset done=0 and test Ollama-implied completion sync safety net
+        db.execute("UPDATE tasks SET done=0 WHERE title='3 tareas' AND subject='Ingles'")
+        db.commit()
+        sync_msg = app.sync_ollama_implied_task_actions(
+            db,
+            "marcame lo de ingles como completada",
+            "- 3 tareas [Ingles] · entrega: 2026-10-23 (COMPLETADA)",
+        )
+        self.assertIsNotNone(sync_msg)
+        row_ing3 = db.execute("SELECT done FROM tasks WHERE title='3 tareas' AND subject='Ingles'").fetchone()
+        self.assertEqual(int(row_ing3["done"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

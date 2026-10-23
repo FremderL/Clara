@@ -4267,39 +4267,205 @@ def execute_add_task_from_chat(db: sqlite3.Connection, proposal: dict) -> tuple[
     return (True, "¡Listo! Guardé la tarea " + " · ".join(details) + " en tu lista de pendientes.")
 
 
-def execute_complete_or_delete_task_from_chat(db: sqlite3.Connection, raw_text: str, *, delete: bool = False) -> tuple[bool, str]:
-    """Complete or delete a task matched by title/subject when explicitly commanded in chat."""
-    clean = re.sub(
-        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:marca(?:r)?\s+como\s+(?:hecha|completada|lista|terminada)|completa(?:r)?|termina(?:r)?|finaliza(?:r)?|ya\s+hice|ya\s+termine|elimina(?:r)?|borra(?:r)?|quita(?:r)?)\s+(?:la\s+|mi\s+)?(?:tarea\s+)?(?:de\s+)?",
-        "",
-        str(raw_text or "").strip(),
+_TASK_NOISE_WORDS = {
+    "hola", "clara", "clara-v", "viernes", "por", "favor", "oye", "puedes", "podrias", "quiero",
+    "que", "me", "ayudes", "a", "marca", "marcar", "marcala", "marcalas", "marcalo", "marcalos",
+    "marcame", "pon", "poner", "ponla", "ponlas", "ponlo", "ponme", "da", "dar", "dala", "dalas",
+    "deja", "dejar", "dejala", "completa", "completar", "completala", "completalas", "complete",
+    "termina", "terminar", "terminala", "terminalas", "termine", "finaliza", "finalizar", "finalizala",
+    "acaba", "acabar", "acabe", "tacha", "tachar", "tachala", "palomea", "palomear", "check",
+    "ya", "hice", "entregue", "realice", "cumpli", "quedo", "lista", "listas", "listo", "listos",
+    "hecha", "hechas", "hecho", "hechos", "completada", "completadas", "completado", "completados",
+    "terminada", "terminadas", "terminado", "terminados", "entregada", "entregadas", "entregado",
+    "finalizada", "finalizadas", "finalizado", "resuelta", "resueltas", "resuelto", "como",
+    "elimina", "eliminar", "borra", "borrar", "quita", "quitar", "suprime", "suprimir",
+    "desmarca", "desmarcar", "reabre", "reabrir", "pendiente", "pendientes", "entrega", "prioridad",
+    "normal", "alta", "baja", "sin", "fecha", "limite", "hoy", "manana", "ayer", "el", "la",
+    "los", "las", "un", "una", "unos", "unas", "mi", "mis", "tu", "tus", "su", "sus", "lo",
+    "de", "del", "al", "en", "para", "con", "sobre", "materia", "clase", "asignatura",
+}
+
+
+def _strip_task_command_wrappers(raw_text: str) -> tuple[str, str]:
+    """Return (clean_phrase_preserving_task_word, core_tokens_without_generic_words) from a natural Spanish task command."""
+    s = str(raw_text or "").strip()
+    # Remove copy-pasted RAG metadata like "· entrega: 2026-10-23", "(prioridad Normal)", "(COMPLETADA)"
+    s = re.sub(r"·\s*entrega:\s*\S+", " ", s, flags=re.IGNORECASE)
+    s = re.sub(r"\(\s*(?:prioridad\s+\w+|completad[oa]s?|hech[oa]s?|terminad[oa]s?|pendiente)\s*\)", " ", s, flags=re.IGNORECASE)
+    s = re.sub(r"\b20\d{2}-\d{2}-\d{2}\b", " ", s)
+    s = re.sub(r"[\[\]•·\"'«»“”]", " ", s)
+    # Remove leading/trailing status clauses ("como completada", "por terminada", "como hecha", etc.) anywhere in the text
+    s = re.sub(
+        r"\b(?:como|por)\s+(?:hech[oa]s?|completad[oa]s?|terminad[oa]s?|list[oa]s?|entregad[oa]s?|finalizad[oa]s?|resuelt[oa]s?|pendientes?)\b",
+        " ",
+        s,
         flags=re.IGNORECASE,
-    ).strip(" .,;:")
-    clean_no_verb = re.sub(r"^(?:entregar|hacer|realizar)\s+", "", clean, flags=re.IGNORECASE).strip(" .,;:") or clean
-    if not clean:
-        return (False, "Dime el nombre de la tarea, por ejemplo: «marca como hecha la tarea entregar práctica».")
-    row = db.execute(
-        "SELECT id, title FROM tasks WHERE ("
-        "LOWER(TRIM(title))=LOWER(TRIM(?)) OR LOWER(TRIM(title))=LOWER(TRIM(?)) "
-        "OR LOWER(title) LIKE ? OR LOWER(title) LIKE ? "
-        "OR LOWER(COALESCE(subject,'')) LIKE ?"
-        ") ORDER BY done ASC, id DESC LIMIT 1",
-        (
-            clean,
-            clean_no_verb,
-            f"%{clean.casefold()}%",
-            f"%{clean_no_verb.casefold()}%",
-            f"%{clean_no_verb.casefold()}%",
-        ),
-    ).fetchone()
+    )
+    # Remove leading command verbs
+    s = re.sub(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+        r"(?:(?:me\s+)?(?:puedes|podr[ií]as)|quiero(?:\s+que)?|le\s+ped[ií]\s+que)?\s*"
+        r"(?:marca(?:r|la|las|lo|los|me|ra)?|pon(?:er|la|las|lo|me|ga)?|da(?:r|la|las)?|deja(?:r|la)?|"
+        r"completa(?:r|la|las)?|termina(?:r|la|las)?|finaliza(?:r|la)?|acaba(?:r)?|tacha(?:r|la)?|palomea(?:r)?|"
+        r"ya\s+(?:hice|termin[eé]|acab[eé]|entregu[eé]|complet[eé]|realic[eé]|qued[oó])|listo\s+con|"
+        r"elimina(?:r|la)?|borra(?:r|la)?|quita(?:r|la)?|reabre|reabrir|desmarca(?:r)?)\s+",
+        " ",
+        s,
+        flags=re.IGNORECASE,
+    )
+    # Remove trailing isolated status words ("... completada", "... hecha")
+    s = re.sub(
+        r"\s+\b(?:completad[oa]s?|hech[oa]s?|terminad[oa]s?|finalizad[oa]s?|entregad[oa]s?)\s*$",
+        " ",
+        s,
+        flags=re.IGNORECASE,
+    )
+    clean_phrase = re.sub(r"\s+", " ", s).strip(" -.,;:?¿!¡")
+    # Also build a version without generic wrapper "la tarea (de)", "mi pendiente (de)"
+    core = re.sub(
+        r"^(?:(?:una|la|el|mi|mis|las|los)\s+)?(?:tarea|pendiente|entrega|trabajo|encargo|actividad)\s+(?:de\s+|sobre\s+|para\s+)?",
+        "",
+        clean_phrase,
+        flags=re.IGNORECASE,
+    ).strip(" -.,;:")
+    return (clean_phrase, core or clean_phrase)
+
+
+def find_best_matching_task(
+    db: sqlite3.Connection,
+    raw_text: str,
+    *,
+    prefer_pending: bool = True,
+) -> sqlite3.Row | None:
+    """Find the best matching task in SQLite using title, subject, and token-overlap scoring."""
+    rows = db.execute("SELECT * FROM tasks ORDER BY done ASC, id DESC").fetchall()
+    if not rows:
+        return None
+    low_full = normalize_intent_text(raw_text)
+    clean_phrase, clean_core = _strip_task_command_wrappers(raw_text)
+    norm_phrase = normalize_intent_text(clean_phrase)
+    norm_core = normalize_intent_text(clean_core)
+
+    # Extract meaningful user tokens (keeping numbers like '3' and words not in noise list)
+    user_tokens = [
+        tok for tok in re.findall(r"[a-z0-9]+", norm_phrase)
+        if (tok.isdigit() or (len(tok) >= 3 and tok not in _TASK_NOISE_WORDS))
+    ]
+    # Note: if a task's title actually contains the word "tarea" or "tareas" (like "3 tareas"), allow "tarea"/"tareas" in title tokens
+    best_row: sqlite3.Row | None = None
+    best_score = 0
+
+    for r in rows:
+        t_norm = normalize_intent_text(str(r["title"] or ""))
+        s_norm = normalize_intent_text(str(r["subject"] or ""))
+        combined = f"{t_norm} {s_norm}".strip()
+        if not combined:
+            continue
+        score = 0
+
+        # 1. Exact matches on title, subject, or "title subject"
+        if t_norm and (t_norm == norm_phrase or t_norm == norm_core):
+            score += 130
+        if combined and (combined == norm_phrase or combined == norm_core):
+            score += 150
+        if s_norm and (s_norm == norm_core or s_norm == norm_phrase):
+            score += 95
+
+        # 2. Substring presence in user's normalized utterance
+        if t_norm and len(t_norm) >= 3 and (t_norm in norm_phrase or t_norm in low_full):
+            score += 90
+        if s_norm and len(s_norm) >= 3 and (s_norm in norm_phrase or s_norm in low_full):
+            score += 80
+
+        # 3. Token overlap between user tokens and task (title + subject)
+        row_tokens = set(re.findall(r"[a-z0-9]+", combined))
+        title_tokens = [tok for tok in re.findall(r"[a-z0-9]+", t_norm) if tok.isdigit() or len(tok) >= 3]
+        matched_user_tokens = [tok for tok in user_tokens if tok in row_tokens]
+        if matched_user_tokens:
+            score += len(matched_user_tokens) * 30
+        if title_tokens and all(tok in re.findall(r"[a-z0-9]+", low_full) for tok in title_tokens):
+            score += 55
+        if t_norm and s_norm and (t_norm in low_full) and (s_norm in low_full):
+            score += 70
+
+        if score > 0 and prefer_pending and int(r["done"] or 0) == 0:
+            score += 35
+
+        if score > best_score:
+            best_score = score
+            best_row = r
+
+    if best_row is not None and best_score >= 30:
+        return best_row
+
+    # Fallback: if there is only 1 pending task in the entire database and the user said "marca mi tarea como completada"
+    pending_rows = [r for r in rows if int(r["done"] or 0) == 0]
+    if prefer_pending and len(pending_rows) == 1 and re.search(r"\b(?:tarea|pendiente|entrega)\b", low_full):
+        return pending_rows[0]
+    return None
+
+
+def execute_complete_or_delete_task_from_chat(db: sqlite3.Connection, raw_text: str, *, delete: bool = False) -> tuple[bool, str]:
+    """Complete, reopen, or delete a task matched by title/subject/tokens when commanded in natural Spanish."""
+    clean_phrase, clean_core = _strip_task_command_wrappers(raw_text)
+    low = normalize_intent_text(raw_text)
+    want_reopen = bool(re.search(r"\b(?:reabre|reabrir|desmarca(?:r)?|volver\s+a\s+pendiente)\b", low))
+
+    row = find_best_matching_task(db, raw_text, prefer_pending=(not delete and not want_reopen))
     if not row:
-        return (False, f"No encontré ninguna tarea que coincida con «{clean}».")
+        label = clean_core or clean_phrase or str(raw_text or "").strip()
+        return (False, f"No encontré ninguna tarea que coincida con «{label}».")
+    subj_suffix = f" [{row['subject']}]" if row["subject"] else ""
     if delete:
         db.execute("DELETE FROM tasks WHERE id=?", (int(row["id"]),))
         db.commit()
-        return (True, f"¡Listo! Eliminé la tarea «{row['title']}».")
-    msg = toggle_task_completion(db, int(row["id"])) or f"Actualicé la tarea «{row['title']}»."
-    return (True, f"¡Listo! {msg}")
+        return (True, f"¡Listo! Eliminé la tarea «{row['title']}»{subj_suffix}.")
+
+    is_done = bool(int(row["done"] or 0))
+    if want_reopen:
+        if is_done:
+            msg = toggle_task_completion(db, int(row["id"])) or f"Reabrí «{row['title']}»."
+            return (True, f"¡Listo! {msg}")
+        return (True, f"La tarea «{row['title']}»{subj_suffix} ya estaba marcada como pendiente.")
+
+    # Completing the task: ensure it transitions to done=1 (never accidentally reopen an already completed task)
+    if not is_done:
+        msg = toggle_task_completion(db, int(row["id"])) or f"Marcada como hecha: «{row['title']}»."
+        return (True, f"¡Listo! {msg}")
+    return (True, f"¡Listo! La tarea «{row['title']}»{subj_suffix} ya se encontraba marcada como completada.")
+
+
+def sync_ollama_implied_task_actions(
+    db: sqlite3.Connection,
+    user_text: str,
+    assistant_text: str,
+) -> str | None:
+    """If an indirect user request reached Ollama and Ollama marked a pending task as (COMPLETADA) / completada, persist done=1 in SQLite."""
+    u_low = normalize_intent_text(str(user_text or ""))
+    a_low = normalize_intent_text(str(assistant_text or ""))
+    user_wants_complete = bool(
+        re.search(
+            r"\b(?:completad[oa]s?|hech[oa]s?|terminad[oa]s?|list[oa]s?|entregad[oa]s?|finalizad[oa]s?|"
+            r"marca(?:r|la|las)?|completa(?:r|la|las)?|termina(?:r|la|las)?|tacha(?:r|la)?|"
+            r"ya\s+(?:hice|termine|acabe|entregue|complete|realice|quedo))\b",
+            u_low,
+        )
+    )
+    ollama_claimed_complete = bool(
+        re.search(
+            r"(?:\(\s*(?:completad[oa]s?|hech[oa]s?|terminad[oa]s?)\s*\)|"
+            r"marcad[oa]s?\s+como\s+(?:completad[oa]s?|hech[oa]s?|terminad[oa]s?))",
+            a_low,
+        )
+    )
+    if not (user_wants_complete and ollama_claimed_complete):
+        return None
+    row = find_best_matching_task(db, f"{user_text} {assistant_text}", prefer_pending=True)
+    if row is not None and int(row["done"] or 0) == 0:
+        toggle_task_completion(db, int(row["id"]))
+        subj_suffix = f" [{row['subject']}]" if row["subject"] else ""
+        return f"✅ Sincronizado en tu base de datos local: «{row['title']}»{subj_suffix} quedó marcada como completada."
+    return None
 
 
 def execute_add_block_from_chat(db: sqlite3.Connection, block: dict) -> tuple[bool, str]:
@@ -6207,25 +6373,63 @@ def is_class_add_command(low_text: str) -> bool:
     return has_add_verb or (has_have_verb and has_day_or_time)
 
 
-def is_task_complete_command(low_text: str) -> bool:
-    return bool(
-        re.search(
-            r"\b(?:marca(?:r)?\s+como\s+(?:hecha|completada|lista|terminada)|completa(?:r)?\s+(?:la\s+|mi\s+)?tarea|termina(?:r)?\s+(?:la\s+|mi\s+)?tarea|ya\s+hice\s+(?:la\s+|mi\s+)?tarea|ya\s+termine\s+(?:la\s+|mi\s+)?tarea|ya\s+entregue)\b",
-            low_text,
-        )
-    )
+def is_task_complete_command(low_text: str, db: sqlite3.Connection | None = None) -> bool:
+    """Return True for any natural Spanish phrasing requesting to mark a task as completed/done (regardless of word order)."""
+    if not low_text:
+        return False
+    # Exclude pure questions about completed tasks ("qué tareas ya completé", "cuáles tareas están hechas")
+    if re.match(r"^(?:que|cuales|cual|cuantas|como\s+van|ver|mostrar|muestrame|dime)\s+(?:las\s+|mis\s+)?tareas\b", low_text):
+        return False
+
+    status_token = r"(?:hech[oa]s?|completad[oa]s?|terminad[oa]s?|list[oa]s?|entregad[oa]s?|finalizad[oa]s?|resuelt[oa]s?)"
+    # 1. "marca ... como completada/hecha/terminada" or "pon ... como completada" or "da ... por terminada" (any word order!)
+    if (
+        re.search(r"\b(?:marca(?:r|la|las|lo|los|me)?|pon(?:er|la|las|lo|me)?|da(?:r|la|las)?|deja(?:r|la)?|pasa(?:r)?|cambia(?:r)?)\b", low_text)
+        and re.search(rf"\b(?:como|por|a)\s+{status_token}\b", low_text)
+    ):
+        return True
+
+    # 2. Direct completion verbs ("completa la tarea...", "completa 3 tareas...", "termina las tareas...", "tacha la tarea...", "ya hice...", "ya terminé...", "ya entregué...")
+    if re.search(
+        r"\b(?:completa(?:r|la|las)?|termina(?:r|la|las)?|finaliza(?:r|la|las)?|acaba(?:r)?|tacha(?:r|la|las)?|palomea(?:r)?|"
+        r"ya\s+(?:hice|termine|acabe|entregue|complete|realice|cumpli|quedo)|listo\s+con)\b",
+        low_text,
+    ):
+        if re.search(r"\b(?:tarea|tareas|pendiente|pendientes|entrega|entregas|trabajo|encargo|actividad|practica|ejercicio|lo\s+de)\b", low_text):
+            return True
+        if db is not None and find_best_matching_task(db, low_text, prefer_pending=True) is not None:
+            return True
+
+    # 3. Copy-pasted task line with "(completada)" or trailing "completada" / "hecha" + matching task in DB
+    if re.search(rf"(?:\(\s*{status_token}\s*\)|\bcomo\s+{status_token}\b|\btarea\s+{status_token}\b)", low_text):
+        if db is not None and find_best_matching_task(db, low_text, prefer_pending=True) is not None:
+            return True
+        if re.search(r"\b(?:tarea|tareas|entrega|pendiente)\b", low_text):
+            return True
+
+    # 4. Reopen task ("reabre la tarea...", "desmarca la tarea...")
+    if re.search(r"\b(?:reabre|reabrir|desmarca(?:r)?)\b.*\b(?:tarea|tareas|pendiente|entrega)\b", low_text):
+        return True
+
+    return False
 
 
-def is_task_delete_command(low_text: str) -> bool:
-    return bool(
-        re.search(r"\b(?:elimina(?:r)?|borra(?:r)?|quita(?:r)?)\b", low_text)
-        and re.search(r"\b(?:tarea|pendiente|entrega|encargo)\b", low_text)
-    )
+def is_task_delete_command(low_text: str, db: sqlite3.Connection | None = None) -> bool:
+    if not low_text or is_task_complete_command(low_text, db=db):
+        return False
+    if re.search(r"\b(?:clase|clases|materia|rutina|bloque|apunte|recuerdo)\b", low_text) and not re.search(r"\b(?:tarea|tareas|pendiente|entrega|encargo)\b", low_text):
+        return False
+    has_del = bool(re.search(r"\b(?:elimina(?:r|la|las)?|borra(?:r|la|las)?|quita(?:r|la|las)?|suprime|suprimir|descarta(?:r)?)\b", low_text))
+    if not has_del:
+        return False
+    if re.search(r"\b(?:tarea|tareas|pendiente|pendientes|entrega|encargo|actividad)\b", low_text):
+        return True
+    return bool(db is not None and find_best_matching_task(db, low_text, prefer_pending=False) is not None)
 
 
-def is_task_edit_command(low_text: str) -> bool:
+def is_task_edit_command(low_text: str, db: sqlite3.Connection | None = None) -> bool:
     """Return True if the user is asking to reschedule/postpone/modify an existing task."""
-    if not low_text or is_task_complete_command(low_text) or is_task_delete_command(low_text):
+    if not low_text or is_task_complete_command(low_text, db=db) or is_task_delete_command(low_text, db=db):
         return False
     if re.search(r"\b(?:clase|clases|rutina|bloque|documento|archivo|pdf|docx)\b", low_text):
         return False
@@ -11752,12 +11956,23 @@ class AssistantApp(tk.Tk):
                         self.ai_history = self.ai_history[-12:]
                     else:
                         answer = raw_output or "No recibí texto del modelo."
+                        sync_note = None
+                        try:
+                            sync_note = sync_ollama_implied_task_actions(self.db, str(payload), answer)
+                            if sync_note and hasattr(self, "refresh_tasks"):
+                                self.refresh_tasks()
+                        except Exception:
+                            sync_note = None
+                        if sync_note:
+                            answer = f"{answer}\n\n{sync_note}"
                         self.ai_history.extend(({"role": "user", "content": payload}, {"role": "assistant", "content": answer}))
                         self.ai_history = self.ai_history[-12:]
                         self.last_assistant_response = answer
                         self.chat_log.configure(state="normal")
                         if not raw_output:
                             self.chat_log.insert("end", answer)
+                        elif sync_note:
+                            self.chat_log.insert("end", f"\n{sync_note}")
                         self.chat_log.insert("end", "\n")
                         self.chat_log.see("end")
                         self.chat_log.configure(state="disabled")
@@ -12557,7 +12772,7 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_class):
                 _do_add_class()
             return
-        if is_task_complete_command(low_action):
+        if is_task_complete_command(low_action, self.db):
             def _do_complete_task() -> None:
                 ok, msg = execute_complete_or_delete_task_from_chat(self.db, text_action, delete=False)
                 if ok and hasattr(self, "refresh_tasks"):
@@ -12566,7 +12781,7 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_complete_task):
                 _do_complete_task()
             return
-        if is_task_delete_command(low_action):
+        if is_task_delete_command(low_action, self.db):
             def _do_delete_task() -> None:
                 ok, msg = execute_complete_or_delete_task_from_chat(self.db, text_action, delete=True)
                 if ok and hasattr(self, "refresh_tasks"):
@@ -12575,7 +12790,7 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_delete_task):
                 _do_delete_task()
             return
-        if is_task_edit_command(low_action):
+        if is_task_edit_command(low_action, self.db):
             def _do_edit_task() -> None:
                 ok, msg = execute_edit_task_from_chat(self.db, text_action)
                 if ok and hasattr(self, "refresh_tasks"):
