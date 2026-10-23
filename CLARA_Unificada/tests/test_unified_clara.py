@@ -1383,6 +1383,121 @@ END:VCALENDAR\r
         for required_rule in ("*.db", "settings.json", "*.dpapi", ".env", "news_cache.json", "backups_before_restore/"):
             self.assertIn(required_rule, gitignore_text)
 
+    def test_security_levels_voice_or_text_auth_vault_and_ollama_fallback(self) -> None:
+        db = create_test_db()
+        app.ensure_security_tables(db)
+        db.execute(
+            "INSERT INTO classes(name,weekday,start_time,end_time,location) VALUES(?,?,?,?,?)",
+            ("Química", 3, "18:00", "19:00", "Lab 2"),
+        )
+        db.commit()
+
+        chat_messages: list[tuple[str, str]] = []
+
+        class _FakeEntry:
+            def __init__(self, value: str = "") -> None:
+                self.value = value
+
+            def get(self) -> str:
+                return self.value
+
+            def delete(self, *_args) -> None:
+                self.value = ""
+
+        fake_app = SimpleNamespace(
+            db=db,
+            tk=None,
+            ai_busy=False,
+            current_auth_user=None,
+            current_auth_level=0,
+            _active_vault_passphrase="",
+            _pending_protected_action=None,
+            settings={"weather_location": "Colima, Colima, México", "auto_speak_responses": "false", "chat_history_enabled": "false"},
+            chat_input=_FakeEntry(),
+            model_var=SimpleNamespace(get=lambda: ""),
+            append_chat=lambda speaker, msg, **_kw: chat_messages.append((speaker, msg)),
+            refresh_tasks=lambda: None,
+            open_local_file_tools=lambda intent=None: None,
+            _update_auth_status_label=lambda: None,
+        )
+        fake_app.require_permission = lambda act, pending_callable=None: app.AssistantApp.require_permission(fake_app, act, pending_callable=pending_callable)
+        fake_app.lock_security_session = lambda: app.AssistantApp.lock_security_session(fake_app)
+        fake_app._present_decrypted_secrets_in_chat = lambda: app.AssistantApp._present_decrypted_secrets_in_chat(fake_app)
+        fake_app._execute_reset_clara_with_confirmation = lambda: app.AssistantApp._execute_reset_clara_with_confirmation(fake_app)
+        fake_app.handle_security_chat_command = lambda cmd: app.AssistantApp.handle_security_chat_command(fake_app, cmd)
+        fake_app.apply_chat_intent = lambda u, i: app.AssistantApp.apply_chat_intent(fake_app, u, i)
+
+        # 1. Usuario escribe o dicta "Luis ju89yt56rf" -> confirma nivel de acceso prioritario y oculta contraseña
+        fake_app.chat_input = _FakeEntry("Luis ju89yt56rf")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(fake_app.current_auth_user, "Luis")
+        self.assertEqual(fake_app.current_auth_level, 3)
+        self.assertTrue(any(spk == "Tú" and "[contraseña oculta por seguridad]" in msg and "ju89yt56rf" not in msg for spk, msg in chat_messages))
+        self.assertTrue(any(spk == "Asistente" and "Usuario y contraseñas confirmadas: Luis, nivel de acceso prioritario" in msg for spk, msg in chat_messages))
+
+        # 2. Guardar secreto encriptado en la bóveda (solo Nivel 3 Prioritario) y verificar cifrado en SQLite
+        fake_app.chat_input = _FakeEntry("guardar secreto Correo principal: ClaveSecreta987!")
+        app.AssistantApp.send_chat(fake_app)
+        raw_vault_row = db.execute("SELECT secret_label, encrypted_payload FROM encrypted_secrets").fetchone()
+        self.assertIsNotNone(raw_vault_row)
+        self.assertEqual(raw_vault_row["secret_label"], "Correo principal")
+        self.assertTrue(str(raw_vault_row["encrypted_payload"]).startswith("CLARA-VAULT-V1:"))
+        self.assertNotIn("ClaveSecreta987!", str(raw_vault_row["encrypted_payload"]))
+        with self.assertRaises(ValueError):
+            app.decrypt_vault_secret(str(raw_vault_row["encrypted_payload"]), "clave_incorrecta")
+
+        # 3. Registrar un usuario estándar (Nivel 1: Ana) y bloquear la sesión a modo Invitado (Nivel 0)
+        fake_app.chat_input = _FakeEntry("registrar usuario Ana claveAna12 nivel 1")
+        app.AssistantApp.send_chat(fake_app)
+        fake_app.chat_input = _FakeEntry("bloquear sesion")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(fake_app.current_auth_level, 0)
+        self.assertIsNone(fake_app.current_auth_user)
+
+        # 4. Otro usuario usa el dispositivo e intenta ver contraseñas guardadas -> Clara pregunta "¿De quién es la orden?"
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("ver contraseñas guardadas")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("¿De quién es la orden?" in msg for _spk, msg in chat_messages))
+        self.assertFalse(any("ClaveSecreta987!" in msg for _spk, msg in chat_messages))
+
+        # 5. Si responde Ana (Nivel 1 Estándar), Clara verifica su identidad pero rechaza la orden por falta de permisos
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Ana claveAna12")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(fake_app.current_auth_user, "Ana")
+        self.assertEqual(fake_app.current_auth_level, 1)
+        self.assertTrue(any("Orden rechazada" in msg for _spk, msg in chat_messages))
+        self.assertFalse(any("ClaveSecreta987!" in msg for _spk, msg in chat_messages))
+
+        # 6. Si Ana intenta eliminar una clase (requiere Nivel 2+) o ver secretos (Nivel 3) y luego autoriza Luis (Nivel 3), se ejecuta
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("ver secretos encriptados")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("¿De quién es la orden?" in msg for _spk, msg in chat_messages))
+
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Luis ju89yt56rf")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(fake_app.current_auth_user, "Luis")
+        self.assertEqual(fake_app.current_auth_level, 3)
+        self.assertTrue(any("Permisos verificados" in msg for _spk, msg in chat_messages))
+        self.assertTrue(any("Correo principal: ClaveSecreta987!" in msg for _spk, msg in chat_messages))
+
+        # 7. Cuando no se puede usar Ollama para una pregunta abierta, Clara informa claramente su modo local esencial
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("¿Cuál es la distancia de la Tierra a Júpiter?")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(
+            any(
+                spk == "Asistente"
+                and "motor neuronal local (Ollama) no está disponible" in msg
+                and "modo local esencial" in msg
+                for spk, msg in chat_messages
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
+
