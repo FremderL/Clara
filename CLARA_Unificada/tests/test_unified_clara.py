@@ -1960,6 +1960,229 @@ END:VCALENDAR\r
             self.assertIn("✏ Editar seleccionado", src)
         self.assertIn("🔍 Revisar empalmes", inspect.getsource(app.AssistantApp.open_classes))
 
+    def test_voice_recognition_accumulates_utterances_boosts_gain_and_viernes_fallback(self) -> None:
+        # 1. Reproducir el bug exacto reportado: el usuario habla una frase, hace una pausa antes de
+        # pulsar "Detener micrófono" (AcceptWaveform devuelve True y vacía el buffer hacia Result(),
+        # dejando FinalResult() vacío ""). Antes se perdía toda la frase; ahora se conserva íntegra.
+        class _FakeKaldiPauseBeforeStop:
+            def __init__(self) -> None:
+                self._step = 0
+
+            def AcceptWaveform(self, _chunk: bytes) -> bool:
+                self._step += 1
+                return self._step == 2
+
+            def Result(self) -> str:
+                return json.dumps({"text": "hola clara que clases tengo hoy"})
+
+            def PartialResult(self) -> str:
+                return json.dumps({"partial": "hola clara"} if self._step == 1 else {"partial": ""})
+
+            def FinalResult(self) -> str:
+                # Vacío porque la frase ya se cerró en Result() durante la pausa previa al clic en Detener
+                return json.dumps({"text": ""})
+
+        rec = _FakeKaldiPauseBeforeStop()
+        segments: list[str] = []
+        partial_holder = [""]
+        p1 = app.accumulate_vosk_stream_chunk(rec, b"\x10\x00" * 400, segments, partial_holder)
+        self.assertEqual(p1, "hola clara")
+        self.assertEqual(partial_holder[0], "hola clara")
+        p2 = app.accumulate_vosk_stream_chunk(rec, b"\x10\x00" * 400, segments, partial_holder)
+        self.assertEqual(p2, "hola clara que clases tengo hoy")
+        self.assertEqual(segments, ["hola clara que clases tengo hoy"])
+        self.assertEqual(partial_holder[0], "")
+        # Silencio mientras el usuario mueve el ratón al botón Detener
+        app.accumulate_vosk_stream_chunk(rec, b"\x00\x00" * 400, segments, partial_holder)
+        final_text = app.finalize_vosk_recognition(rec, segments, partial_holder[0])
+        self.assertEqual(final_text, "hola clara que clases tengo hoy")
+
+        # 2. Caso en que el usuario pulsa Detener a mitad de frase y FinalResult viene vacío:
+        # debe rescatar last_partial en lugar de mostrar "No alcancé a reconocer palabras"
+        class _FakeKaldiStoppedMidPhrase:
+            def AcceptWaveform(self, _chunk: bytes) -> bool:
+                return False
+
+            def PartialResult(self) -> str:
+                return json.dumps({"partial": "agrega tarea de bases de datos"})
+
+            def FinalResult(self) -> str:
+                return json.dumps({"text": ""})
+
+        rec_mid = _FakeKaldiStoppedMidPhrase()
+        segs_mid: list[str] = []
+        part_mid = [""]
+        app.accumulate_vosk_stream_chunk(rec_mid, b"\x20\x00" * 400, segs_mid, part_mid)
+        rescued = app.finalize_vosk_recognition(rec_mid, segs_mid, part_mid[0])
+        self.assertEqual(rescued, "agrega tarea de bases de datos")
+
+        # 3. Normalización automática de ganancia (AGC) para micrófonos con volumen bajo en Windows
+        import struct
+        quiet_samples = [400, -400, 600, -600] * 300
+        quiet_pcm = struct.pack(f"<{len(quiet_samples)}h", *quiet_samples)
+        boosted_pcm, peak, gain = app._boost_pcm16_gain(quiet_pcm)
+        self.assertEqual(peak, 600)
+        self.assertGreater(gain, 5.0)
+        boosted_samples = struct.unpack(f"<{len(quiet_samples)}h", boosted_pcm)
+        self.assertGreater(max(abs(s) for s in boosted_samples), 6000)
+
+        # 4. Segunda pasada Vosk con ganancia aumentada + silencio final y respaldo Viernes (SpeechRecognition)
+        class _FakeSecondPassRecognizer:
+            def __init__(self, _model, _rate: int) -> None:
+                self._max_seen = 0
+
+            def AcceptWaveform(self, chunk: bytes) -> bool:
+                cnt = len(chunk) // 2
+                if cnt:
+                    vals = struct.unpack(f"<{cnt}h", chunk[: cnt * 2])
+                    self._max_seen = max(self._max_seen, max(abs(v) for v in vals))
+                return False
+
+            def PartialResult(self) -> str:
+                return json.dumps({"partial": ""})
+
+            def FinalResult(self) -> str:
+                return json.dumps({"text": "reconocido en segunda pasada" if self._max_seen > 5000 else ""})
+
+        second_pass_txt = app.recognize_pcm_with_vosk_second_pass(
+            object(),
+            quiet_pcm,
+            16000,
+            recognizer_cls=_FakeSecondPassRecognizer,
+        )
+        self.assertEqual(second_pass_txt, "reconocido en segunda pasada")
+
+        class _FakeSRModule:
+            class AudioData:
+                def __init__(self, raw: bytes, rate: int, width: int) -> None:
+                    self.raw = raw
+                    self.rate = rate
+                    self.width = width
+
+            class Recognizer:
+                def recognize_google(self, _audio, language: str = "es-MX") -> str:
+                    return f"transcrito por respaldo viernes ({language})"
+
+        viernes_txt = app.recognize_pcm_with_viernes_backends(quiet_pcm, 16000, sr_module=_FakeSRModule)
+        self.assertEqual(viernes_txt, "transcrito por respaldo viernes (es-MX)")
+
+    def test_points_4_5_6_pomodoro_subject_notebook_and_weekly_grid(self) -> None:
+        db = create_test_db()
+        app.ensure_security_tables(db)
+        app.ensure_subject_notebook_tables(db)
+        messages: list[tuple[str, str]] = []
+        sphere_labels: list[str] = []
+
+        class _FakeEntry:
+            def __init__(self, text: str = "") -> None:
+                self.value = text
+            def get(self) -> str:
+                return self.value
+            def delete(self, _start, _end) -> None:
+                self.value = ""
+
+        fake_app = SimpleNamespace(
+            db=db,
+            settings=dict(app.DEFAULT_SETTINGS),
+            chat_input=_FakeEntry(),
+            ai_busy=False,
+            current_auth_user="LuisAdmin",
+            current_auth_level=3,
+            _active_vault_passphrase="",
+            _pending_protected_action=None,
+            pomodoro_active=False,
+            pomodoro_paused=False,
+            pomodoro_remaining_seconds=0,
+            pomodoro_total_minutes=0,
+            pomodoro_label="",
+            pomodoro_subject=None,
+            sphere_state_label=SimpleNamespace(configure=lambda **kw: sphere_labels.append(str(kw.get("text", "")))),
+            set_sphere_state=lambda _st: None,
+            append_chat=lambda speaker, text, **_kw: messages.append((speaker, text)),
+            refresh_tasks=lambda: None,
+            apply_chat_intent=lambda user_text, intent: app.AssistantApp.apply_chat_intent(fake_app, user_text, intent),
+        )
+
+        def send(msg: str) -> str:
+            messages.clear()
+            fake_app.chat_input.value = msg
+            app.AssistantApp.send_chat(fake_app)
+            self.assertTrue(messages, f"No hubo respuesta para: {msg}")
+            return messages[-1][1]
+
+        # Registrar materias primero
+        send("agrega clase de Matematicas Discretas los lunes de 11:00 a 13:00 en el Salon B2")
+        send("agrega clase de Bases de Datos los miercoles de 09:00 a 11:00 en el Laboratorio 1")
+
+        # --- PUNTO 4: Temporizador Pomodoro y Enfoque en la Esfera Viva ---
+        r_pomo_start = send("pon un Pomodoro de 25 minutos para estudiar Matematicas Discretas")
+        self.assertIn("25 minuto(s)", r_pomo_start)
+        self.assertIn("Matematicas Discretas", r_pomo_start)
+        self.assertTrue(fake_app.pomodoro_active)
+        self.assertEqual(fake_app.pomodoro_remaining_seconds, 25 * 60)
+        self.assertTrue(any("25:00" in lbl for lbl in sphere_labels))
+
+        r_pomo_status = send("¿cuánto falta del Pomodoro?")
+        self.assertIn("25:00", r_pomo_status)
+
+        r_pomo_pause = send("pausa el Pomodoro")
+        self.assertIn("en pausa", r_pomo_pause)
+        self.assertTrue(fake_app.pomodoro_paused)
+
+        r_pomo_resume = send("reanuda el Pomodoro")
+        self.assertIn("Reanudé", r_pomo_resume)
+        self.assertFalse(fake_app.pomodoro_paused)
+
+        # Simular el último segundo del Pomodoro para verificar el aviso y el registro en action_events
+        fake_app.pomodoro_remaining_seconds = 1
+        messages.clear()
+        app.AssistantApp._tick_pomodoro(fake_app)
+        self.assertFalse(fake_app.pomodoro_active)
+        self.assertTrue(any("¡Tiempo cumplido!" in m[1] for m in messages))
+        logged_pomo = db.execute("SELECT action, outcome FROM action_events WHERE action='Sesión Pomodoro completada'").fetchone()
+        self.assertIsNotNone(logged_pomo)
+        self.assertIn("Matematicas Discretas", logged_pomo["outcome"])
+
+        # --- PUNTO 5: Cuaderno de apuntes rápidos y carpeta vinculada por Materia ---
+        r_note_add = send("apunta en Matematicas Discretas que el examen parcial viene hasta grafos bipartitos")
+        self.assertIn("Guardé tu apunte", r_note_add)
+        self.assertIn("Matematicas Discretas", r_note_add)
+        self.assertIn("grafos bipartitos", r_note_add)
+
+        r_note_list = send("¿qué apuntes tengo de Matematicas Discretas?")
+        self.assertIn("grafos bipartitos", r_note_list)
+
+        # Verificar que el apunte forma parte del contexto privado RAG para Llama 3.2
+        rag_ctx = app.build_private_agenda_rag_context(db)
+        self.assertIn("Apuntes rápidos por materia:", rag_ctx)
+        self.assertIn("grafos bipartitos", rag_ctx)
+
+        # Vincular una carpeta real temporal a la materia
+        with tempfile.TemporaryDirectory() as tmp_subj_dir:
+            r_link = send(f"vincula la carpeta de Matematicas Discretas a {tmp_subj_dir}")
+            self.assertIn("Vinculé la materia", r_link)
+            self.assertEqual(
+                Path(app.get_subject_folder(db, "Matematicas Discretas")).resolve(),
+                Path(tmp_subj_dir).resolve(),
+            )
+
+        r_note_del = send("borra el apunte de grafos bipartitos")
+        self.assertIn("Eliminé el apunte", r_note_del)
+        self.assertEqual(len(app.list_subject_notes(db, "Matematicas Discretas")), 0)
+
+        # --- PUNTO 6: Vista semanal visual en cuadrícula (Horario Lunes–Sábado con empalmes) ---
+        # Agregar una clase que se empalme el lunes de 12:00 a 14:00 para probar el resaltado de conflicto en la cuadrícula
+        send("agrega clase de Fisica los lunes de 12:00 a 14:00 en el Salon A1")
+        r_grid = send("muéstrame mi horario en cuadrícula")
+        self.assertIn("Vista semanal en cuadrícula", r_grid)
+        self.assertIn("Matematicas Discretas", r_grid)
+        self.assertIn("Fisica", r_grid)
+        self.assertIn("⚠️ EMPALME", r_grid)
+        grid_data = app.build_weekly_grid_data(db)
+        self.assertGreaterEqual(int(grid_data["conflict_count"]), 1)
+        monday_items = grid_data["cells_by_day"][0]
+        self.assertTrue(any(item["has_conflict"] for item in monday_items))
+
 
 if __name__ == "__main__":
     unittest.main()

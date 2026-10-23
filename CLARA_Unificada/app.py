@@ -1073,9 +1073,31 @@ def connect_db() -> sqlite3.Connection:
     )""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_plan_blocks_date_time ON plan_blocks(block_date,start_time)")
     ensure_security_tables(conn)
+    ensure_subject_notebook_tables(conn)
     repair_legacy_class_locations(conn)
     conn.commit()
     return conn
+
+
+def ensure_subject_notebook_tables(conn: sqlite3.Connection) -> None:
+    """Create tables for quick subject notes and linked subject folders if they do not exist."""
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS subject_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_subject_notes_subject ON subject_notes(subject)")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS subject_folders (
+            subject TEXT PRIMARY KEY,
+            folder_path TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )"""
+    )
 
 
 SECURITY_LEVEL_SPECS: dict[int, dict[str, str]] = {
@@ -4569,8 +4591,484 @@ def build_private_agenda_rag_context(
             t_str = f" a las {r['reminder_time']}" if r["reminder_time"] else ""
             lines.append(f"   - {r['title']} ({d_str}{t_str})")
 
+    try:
+        ensure_subject_notebook_tables(db)
+        notes_rows = db.execute(
+            "SELECT subject, title, content FROM subject_notes ORDER BY id DESC LIMIT 10"
+        ).fetchall()
+        if notes_rows:
+            lines.append("6) Apuntes rápidos por materia:")
+            for nr in notes_rows:
+                lines.append(f"   - [{nr['subject']}] {nr['title']}: {nr['content'][:160]}")
+    except Exception:
+        pass
+
     safe_lines = [ln for ln in lines if not contains_potential_api_key(ln)]
-    return "\n".join(safe_lines)[:3200]
+    return "\n".join(safe_lines)[:3400]
+
+
+def add_subject_note(
+    db: sqlite3.Connection,
+    subject: str,
+    content: str,
+    title: str | None = None,
+) -> dict[str, object]:
+    """Save a quick note linked to a specific subject."""
+    ensure_subject_notebook_tables(db)
+    clean_subj = str(subject or "General").strip(" .,;:-")[:120] or "General"
+    clean_content = str(content or "").strip(" .,;:-")[:2000]
+    if not clean_content:
+        raise ValueError("El contenido del apunte no puede estar vacío.")
+    if title and str(title).strip():
+        clean_title = str(title).strip()[:120]
+    else:
+        words = clean_content.split()
+        clean_title = " ".join(words[:6]).capitalize()[:80]
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    cur = db.execute(
+        "INSERT INTO subject_notes(subject, title, content, created_at) VALUES(?,?,?,?)",
+        (clean_subj, clean_title, clean_content, now_iso),
+    )
+    db.commit()
+    return {
+        "id": int(cur.lastrowid or 0),
+        "subject": clean_subj,
+        "title": clean_title,
+        "content": clean_content,
+        "created_at": now_iso,
+    }
+
+
+def update_subject_note(
+    db: sqlite3.Connection,
+    note_id: int,
+    subject: str,
+    title: str,
+    content: str,
+) -> bool:
+    """Update an existing subject note."""
+    ensure_subject_notebook_tables(db)
+    clean_subj = str(subject or "General").strip()[:120] or "General"
+    clean_title = str(title or "Apunte").strip()[:120] or "Apunte"
+    clean_content = str(content or "").strip()[:2000]
+    if not clean_content:
+        return False
+    cur = db.execute(
+        "UPDATE subject_notes SET subject=?, title=?, content=? WHERE id=?",
+        (clean_subj, clean_title, clean_content, int(note_id)),
+    )
+    db.commit()
+    return cur.rowcount > 0
+
+
+def delete_subject_note(db: sqlite3.Connection, note_id: int) -> bool:
+    """Delete a subject note by ID."""
+    ensure_subject_notebook_tables(db)
+    cur = db.execute("DELETE FROM subject_notes WHERE id=?", (int(note_id),))
+    db.commit()
+    return cur.rowcount > 0
+
+
+def list_subject_notes(db: sqlite3.Connection, subject: str | None = None) -> list[sqlite3.Row]:
+    """List subject notes optionally filtered by subject name."""
+    ensure_subject_notebook_tables(db)
+    if subject and str(subject).strip() and str(subject).strip().casefold() != "todas las materias":
+        s_norm = normalize_intent_text(subject)
+        rows = db.execute("SELECT * FROM subject_notes ORDER BY id DESC").fetchall()
+        return [r for r in rows if s_norm in normalize_intent_text(str(r["subject"]))]
+    return db.execute("SELECT * FROM subject_notes ORDER BY subject, id DESC").fetchall()
+
+
+def set_subject_folder(db: sqlite3.Connection, subject: str, folder_path: str | Path) -> str:
+    """Link an existing local directory to a specific subject."""
+    ensure_subject_notebook_tables(db)
+    clean_subj = str(subject or "").strip(" .,;:-")[:120]
+    if not clean_subj:
+        raise ValueError("Indica el nombre de la materia para vincular su carpeta.")
+    validated = validate_selected_folder(folder_path)
+    now_iso = datetime.now().isoformat(timespec="seconds")
+    db.execute(
+        "INSERT INTO subject_folders(subject, folder_path, updated_at) VALUES(?,?,?) "
+        "ON CONFLICT(subject) DO UPDATE SET folder_path=excluded.folder_path, updated_at=excluded.updated_at",
+        (clean_subj, str(validated), now_iso),
+    )
+    db.commit()
+    return str(validated)
+
+
+def get_subject_folder(db: sqlite3.Connection, subject: str) -> str | None:
+    """Retrieve the linked local folder path for a subject (accent/case-insensitive)."""
+    ensure_subject_notebook_tables(db)
+    s_norm = normalize_intent_text(str(subject or ""))
+    if not s_norm:
+        return None
+    rows = db.execute("SELECT subject, folder_path FROM subject_folders").fetchall()
+    for r in rows:
+        if normalize_intent_text(str(r["subject"])) == s_norm or s_norm in normalize_intent_text(str(r["subject"])):
+            return str(r["folder_path"])
+    return None
+
+
+def _match_known_subject_in_text(db: sqlite3.Connection, raw_text: str) -> str | None:
+    """Find a known subject name from classes or subject_notes inside raw_text."""
+    ensure_subject_notebook_tables(db)
+    low = normalize_intent_text(raw_text)
+    known = [str(r[0]).strip() for r in db.execute("SELECT DISTINCT name FROM classes WHERE name IS NOT NULL").fetchall()]
+    known += [str(r[0]).strip() for r in db.execute("SELECT DISTINCT subject FROM subject_notes WHERE subject IS NOT NULL").fetchall()]
+    known += [str(r[0]).strip() for r in db.execute("SELECT DISTINCT subject FROM subject_folders WHERE subject IS NOT NULL").fetchall()]
+    unique = sorted({k for k in known if k}, key=len, reverse=True)
+    for name in unique:
+        n_norm = normalize_intent_text(name)
+        if n_norm and len(n_norm) >= 3 and n_norm in low:
+            return name
+    return None
+
+
+def parse_and_execute_subject_notebook_from_chat(
+    db: sqlite3.Connection,
+    raw_text: str,
+    app_instance=None,
+) -> tuple[bool, str] | None:
+    """Handle natural chat commands for subject notes ('apunta en X que...', 'qué apuntes tengo de X') and linked subject folders."""
+    ensure_subject_notebook_tables(db)
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+
+    # 1. Open or link a subject's folder
+    open_folder_m = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:abre|abrir|muestrame|mostrar|ver)\s+(?:mi\s+|la\s+)?carpeta\s+(?:de\s+(?:la\s+materia\s+|la\s+clase\s+)?)(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if open_folder_m:
+        subj_cand = open_folder_m.group(1).strip(" .,;:")
+        matched_subj = _match_known_subject_in_text(db, subj_cand) or subj_cand
+        folder = get_subject_folder(db, matched_subj)
+        if not folder:
+            if app_instance is not None and hasattr(app_instance, "open_subject_notebook"):
+                app_instance.open_subject_notebook(initial_subject=matched_subj)
+            return (
+                False,
+                f"Aún no tienes una carpeta local vinculada a «{matched_subj}». "
+                "Puedes vincularla diciendo «vincula la carpeta de "
+                f"{matched_subj} a C:\\Ruta\\Carpeta» o desde el botón «📁 Vincular carpeta de materia…» en el Cuaderno de apuntes.",
+            )
+        if sys.platform == "win32":
+            try:
+                launch_selected_folder(Path(folder))
+                return (True, f"¡Listo! Abrí en el Explorador tu carpeta vinculada de «{matched_subj}»: {folder}")
+            except Exception as exc:
+                return (False, f"Encontré la carpeta vinculada de «{matched_subj}» ({folder}), pero no pude abrirla: {exc}")
+        return (True, f"Carpeta vinculada de «{matched_subj}»: {folder}")
+
+    link_folder_m = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:vincula(?:r)?|asocia(?:r)?|asigna(?:r)?|conecta(?:r)?)\s+(?:la\s+|mi\s+)?carpeta\s+(?:de\s+(?:la\s+materia\s+)?)?(.+?)\s+(?:a|con|en)\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if link_folder_m:
+        subj_cand = link_folder_m.group(1).strip(" .,;:")
+        path_cand = link_folder_m.group(2).strip(" \"'.,;:")
+        matched_subj = _match_known_subject_in_text(db, subj_cand) or subj_cand
+        try:
+            saved_path = set_subject_folder(db, matched_subj, path_cand)
+            return (True, f"¡Listo! Vinculé la materia «{matched_subj}» con la carpeta local: {saved_path}")
+        except Exception as exc:
+            return (False, f"No pude vincular la carpeta para «{matched_subj}»: {exc}")
+
+    # 2. Query notes for a subject or all notes
+    if re.search(
+        r"\b(?:que\s+apuntes\s+tengo|cuales\s+son\s+mis\s+apuntes|ver\s+(?:mis\s+)?apuntes|"
+        r"mostrar\s+(?:mis\s+)?apuntes|muestrame\s+(?:mis\s+)?apuntes|mis\s+apuntes\s+de|"
+        r"que\s+notas\s+tengo\s+(?:en|de)|ver\s+cuaderno(?:\s+de\s+apuntes)?|abrir\s+cuaderno(?:\s+de\s+apuntes)?)\b",
+        low,
+    ):
+        matched_subj = _match_known_subject_in_text(db, raw)
+        if not matched_subj:
+            m_de = re.search(r"\b(?:apuntes|notas|cuaderno)\s+de\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]+)$", raw, flags=re.IGNORECASE)
+            if m_de:
+                cand = m_de.group(1).strip(" .,;:?¿")
+                if cand.casefold() not in ("apuntes", "clase", "clases", "materias", "mi", "mis"):
+                    matched_subj = cand
+        rows = list_subject_notes(db, matched_subj)
+        if not rows:
+            if matched_subj:
+                return (
+                    True,
+                    f"No tienes apuntes guardados todavía para «{matched_subj}». "
+                    f"Puedes decirme: «apunta en {matched_subj} que el examen viene hasta el tema 3».",
+                )
+            return (
+                True,
+                "Tu cuaderno de apuntes por materia está vacío. "
+                "Puedes decirme: «apunta en Matemáticas Discretas que el examen parcial viene hasta grafos bipartitos».",
+            )
+        header = f"📓 Apuntes de «{matched_subj}»:" if matched_subj else "📓 Tus apuntes rápidos por materia:"
+        lines = [header]
+        for r in rows[:15]:
+            lines.append(f"• [{r['subject']}] {r['title']}: {r['content']}")
+        folder = get_subject_folder(db, matched_subj) if matched_subj else None
+        if folder:
+            lines.append(f"📁 Carpeta vinculada: {folder}")
+        return (True, "\n".join(lines))
+
+    # 3. Delete a subject note
+    del_note_m = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:borra(?:r)?|elimina(?:r)?|quita(?:r)?)\s+(?:el\s+|mi\s+)?apunte(?:\s+de|\s+sobre|\s+en)?\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if del_note_m:
+        query_str = del_note_m.group(1).strip(" .,;:")
+        q_norm = normalize_intent_text(query_str)
+        all_notes = db.execute("SELECT id, subject, title, content FROM subject_notes ORDER BY id DESC").fetchall()
+        target = None
+        for r in all_notes:
+            blob = normalize_intent_text(f"{r['subject']} {r['title']} {r['content']}")
+            if q_norm in blob or any(w in blob for w in q_norm.split() if len(w) >= 4):
+                target = r
+                break
+        if target is None:
+            return (False, f"No encontré ningún apunte que coincida con «{query_str}».")
+        delete_subject_note(db, int(target["id"]))
+        return (True, f"¡Listo! Eliminé el apunte «{target['title']}» de «{target['subject']}».")
+
+    # 4. Add a quick note to a subject ("apunta en X que Y", "anota en mi cuaderno de X que Y", "guarda un apunte de X: Y")
+    add_note_patterns = (
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:apunta(?:r)?|anota(?:r)?|escribe|escribir)\s+(?:en\s+(?:mi\s+|el\s+)?(?:cuaderno\s+de\s+|la\s+materia\s+de\s+|la\s+clase\s+de\s+)?)(?P<subj>.+?)\s+(?:que\s+|:\s*|-+\s*)(?P<body_text>.+)$",
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:guarda(?:r)?|agrega(?:r)?|crea(?:r)?|nuevo)\s+(?:un\s+)?apunte\s+(?:en|de|para)\s+(?P<subj>.+?)(?:\s+que\s+|\s*[:,-]\s*)(?P<body_text>.+)$",
+    )
+    for pat in add_note_patterns:
+        m = re.match(pat, raw, flags=re.IGNORECASE)
+        if m:
+            raw_subj = m.group("subj").strip(" .,;:")
+            body_text = m.group("body_text").strip(" .,;:")
+            if not body_text:
+                continue
+            matched_subj = _match_known_subject_in_text(db, raw_subj) or raw_subj
+            note = add_subject_note(db, matched_subj, body_text)
+            return (
+                True,
+                f"¡Listo! Guardé tu apunte en el cuaderno de «{note['subject']}»: «{note['content']}».",
+            )
+
+    return None
+
+
+def parse_pomodoro_command(raw_text: str, db: sqlite3.Connection | None = None) -> dict[str, object] | None:
+    """Parse natural Spanish requests to start, pause, resume, stop, or query a Pomodoro / Focus timer."""
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+
+    # Status query
+    if re.search(
+        r"\b(?:cuanto\s+(?:tiempo\s+)?(?:falta|queda)\s+del?\s+(?:pomodoro|temporizador|cronometro)|"
+        r"estado\s+del?\s+(?:pomodoro|temporizador|cronometro)|como\s+va\s+el\s+pomodoro)\b",
+        low,
+    ):
+        return {"action": "status"}
+
+    # Pause
+    if re.search(r"\b(?:pausa(?:r)?|deten\s+temporalmente)\s+(?:el\s+|mi\s+)?(?:pomodoro|temporizador|cronometro)\b", low):
+        return {"action": "pause"}
+
+    # Resume
+    if re.search(r"\b(?:reanuda(?:r)?|continua(?:r)?|sigue\s+con)\s+(?:el\s+|mi\s+)?(?:pomodoro|temporizador|cronometro)\b", low):
+        return {"action": "resume"}
+
+    # Stop / Cancel
+    if re.search(
+        r"\b(?:cancela(?:r)?|deten(?:er)?|apaga(?:r)?|termina(?:r)?|para(?:r)?)\s+(?:el\s+|mi\s+)?(?:pomodoro|temporizador|cronometro)\b",
+        low,
+    ):
+        return {"action": "stop"}
+
+    # Start Pomodoro / Timer / Countdown ("pon un pomodoro de 25 minutos para estudiar X", "avísame en 15 minutos")
+    has_pomo_word = bool(re.search(r"\b(?:pomodoro|temporizador|cronometro|cuenta\s+regresiva)\b", low))
+    avisame_m = re.search(r"\b(?:avisame|recuerdame)\s+en\s+(\d{1,3})\s*(?:minutos?|min|m)\b", low)
+    if not has_pomo_word and not avisame_m:
+        return None
+
+    mins = 25
+    min_m = re.search(r"\b(\d{1,3})\s*(?:minutos?|mins?|m)\b", low)
+    if min_m:
+        mins = max(1, min(240, int(min_m.group(1))))
+    elif avisame_m:
+        mins = max(1, min(240, int(avisame_m.group(1))))
+
+    matched_subj = _match_known_subject_in_text(db, raw) if db is not None else None
+    purpose_m = re.search(r"\b(?:para\s+(?:estudiar\s+|repasar\s+|avanzar\s+)?|de\s+|sobre\s+)(.+)$", raw, flags=re.IGNORECASE)
+    label = matched_subj or ""
+    if not label and purpose_m:
+        cand = purpose_m.group(1)
+        cand = re.sub(r"\b\d{1,3}\s*(?:minutos?|mins?|m)\b", "", cand, flags=re.IGNORECASE).strip(" .,;:")
+        if cand and cand.casefold() not in ("pomodoro", "temporizador", "cronómetro", "cronometro"):
+            label = cand[:80]
+    if not label:
+        label = f"Enfoque Pomodoro ({mins} min)"
+
+    return {
+        "action": "start",
+        "minutes": mins,
+        "subject": matched_subj,
+        "label": label,
+    }
+
+
+def is_weekly_grid_query(low_text: str) -> bool:
+    """Return True if the user is asking for the visual weekly schedule grid."""
+    if not low_text:
+        return False
+    return bool(
+        re.search(
+            r"\b(?:cuadricula(?:\s+semanal|\s+de\s+horario)?|horario\s+en\s+cuadricula|"
+            r"vista\s+semanal\s+(?:visual|en\s+cuadricula)|tabla\s+visual\s+de\s+horario|"
+            r"ver\s+horario\s+semanal\s+en\s+cuadricula|mostrar\s+cuadricula)\b",
+            low_text,
+        )
+    )
+
+
+def build_weekly_grid_data(db: sqlite3.Connection, ref_date: date | None = None) -> dict[str, object]:
+    """Assemble weekly classes, current-week study blocks, and timed routines with overlap flags for Monday–Sunday."""
+    repair_legacy_class_locations(db)
+    ref_date = ref_date or date.today()
+    monday = ref_date - timedelta(days=ref_date.weekday())
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    cells_by_day: dict[int, list[dict[str, object]]] = {wd: [] for wd in range(7)}
+
+    # 1. Weekly classes
+    class_rows = db.execute(
+        "SELECT id, name, weekday, start_time, end_time, location FROM classes ORDER BY weekday, start_time, id"
+    ).fetchall()
+    for r in class_rows:
+        wd = int(r["weekday"])
+        if not (0 <= wd <= 6):
+            continue
+        s_min = _time_to_minutes(r["start_time"])
+        if s_min is None:
+            continue
+        e_min = _time_to_minutes(r["end_time"])
+        if e_min is None or e_min <= s_min:
+            e_min = min(23 * 60 + 59, s_min + 60)
+        cells_by_day[wd].append(
+            {
+                "kind": "class",
+                "title": str(r["name"]),
+                "subtitle": str(r["location"] or ""),
+                "start_time": str(r["start_time"]),
+                "end_time": _minutes_to_time(e_min),
+                "start_min": s_min,
+                "end_min": e_min,
+                "has_conflict": False,
+            }
+        )
+
+    # 2. Study blocks falling in the current week
+    for wd in range(7):
+        d_iso = (monday + timedelta(days=wd)).isoformat()
+        b_rows = db.execute(
+            "SELECT id, title, start_time, end_time, notes FROM plan_blocks WHERE block_date=? ORDER BY start_time",
+            (d_iso,),
+        ).fetchall()
+        for b in b_rows:
+            s_min = _time_to_minutes(b["start_time"])
+            e_min = _time_to_minutes(b["end_time"])
+            if s_min is None or e_min is None or e_min <= s_min:
+                continue
+            cells_by_day[wd].append(
+                {
+                    "kind": "block",
+                    "title": str(b["title"]),
+                    "subtitle": "Bloque de estudio",
+                    "start_time": str(b["start_time"]),
+                    "end_time": str(b["end_time"]),
+                    "start_min": s_min,
+                    "end_min": e_min,
+                    "has_conflict": False,
+                }
+            )
+
+    # 3. Active routines with reminder_time
+    r_rows = db.execute(
+        "SELECT id, title, subject, weekdays, reminder_time FROM routines WHERE active=1 AND reminder_time IS NOT NULL"
+    ).fetchall()
+    for r in r_rows:
+        s_min = _time_to_minutes(r["reminder_time"])
+        if s_min is None:
+            continue
+        e_min = min(23 * 60 + 59, s_min + 30)
+        for d_tok in str(r["weekdays"] or "").split(","):
+            if d_tok.strip().isdigit():
+                wd = int(d_tok.strip())
+                if 0 <= wd <= 6:
+                    cells_by_day[wd].append(
+                        {
+                            "kind": "routine",
+                            "title": str(r["title"]),
+                            "subtitle": str(r["subject"] or "Rutina"),
+                            "start_time": str(r["reminder_time"]),
+                            "end_time": _minutes_to_time(e_min),
+                            "start_min": s_min,
+                            "end_min": e_min,
+                            "has_conflict": False,
+                        }
+                    )
+
+    # Mark conflicts on each day (among classes and study blocks)
+    conflict_count = 0
+    for wd in range(7):
+        day_items = cells_by_day[wd]
+        day_items.sort(key=lambda item: (int(item["start_min"]), int(item["end_min"])))
+        for i in range(len(day_items)):
+            if day_items[i]["kind"] not in ("class", "block"):
+                continue
+            for j in range(i + 1, len(day_items)):
+                if day_items[j]["kind"] not in ("class", "block"):
+                    continue
+                if int(day_items[i]["start_min"]) < int(day_items[j]["end_min"]) and int(day_items[j]["start_min"]) < int(day_items[i]["end_min"]):
+                    day_items[i]["has_conflict"] = True
+                    day_items[j]["has_conflict"] = True
+                    conflict_count += 1
+
+    return {
+        "monday": monday.isoformat(),
+        "days_labels": days_labels,
+        "cells_by_day": cells_by_day,
+        "conflict_count": conflict_count,
+    }
+
+
+def build_weekly_grid_summary(db: sqlite3.Connection, ref_date: date | None = None) -> str:
+    """Format a structured weekly grid summary (Lunes–Sábado/Domingo) for chat and voice."""
+    grid = build_weekly_grid_data(db, ref_date=ref_date)
+    days_labels = grid["days_labels"]
+    cells_by_day = grid["cells_by_day"]
+    lines = ["🗓 Vista semanal en cuadrícula (Lunes a Sábado):"]
+    any_entry = False
+    for wd in range(7):
+        items = cells_by_day[wd]
+        if not items and wd == 6:
+            continue
+        if not items:
+            lines.append(f"• {days_labels[wd]}: Libre (sin clases ni bloques)")
+            continue
+        any_entry = True
+        slots = []
+        for it in items:
+            tag = "CLASE" if it["kind"] == "class" else "BLOQUE" if it["kind"] == "block" else "RUTINA"
+            if it["has_conflict"]:
+                tag = "⚠️ EMPALME · " + tag
+            sub = f" ({it['subtitle']})" if it["subtitle"] else ""
+            slots.append(f"[{tag}] {it['start_time']}–{it['end_time']} {it['title']}{sub}")
+        lines.append(f"• {days_labels[wd]}: " + "  |  ".join(slots))
+    if not any_entry:
+        lines.append("Aún no tienes clases ni bloques registrados en la cuadrícula semanal.")
+    return "\n".join(lines)
 
 
 def build_local_analytical_schedule_answer(
@@ -4888,7 +5386,12 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
     if any(phrase in low_words for phrase in ("que sigue", "siguiente pendiente", "proximo compromiso", "proxima clase", "siguiente clase", "que toca ahora", "que tengo ahora")):
         return {"intent": "next_commitment"}
 
-    if is_analytical_schedule_question(low_words) or is_schedule_conflict_query(low_words):
+    if (
+        is_analytical_schedule_question(low_words)
+        or is_schedule_conflict_query(low_words)
+        or is_weekly_grid_query(low_words)
+        or parse_pomodoro_command(raw) is not None
+    ):
         return None
 
     is_mutation_verb = bool(
@@ -5039,6 +5542,186 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
     return None
 
 
+def resolve_vosk_model_path(base_dir: Path | None = None) -> Path:
+    """Locate the local Spanish Vosk model across CLARA_Unificada, Bienvenido_Señor, or CLARA_v1.27.4."""
+    base = Path(base_dir or APP_BASE_DIR)
+    candidates = (
+        base / "models" / "vosk-model-small-es-0.42",
+        base / "vosk-model-small-es-0.42",
+        base.parent / "Bienvenido_Señor" / "models" / "vosk-model-small-es-0.42",
+        base.parent / "Bienvenido_Señor" / "vosk-model-small-es-0.42",
+        base.parent / "CLARA_v1.27.4" / "models" / "vosk-model-small-es-0.42",
+    )
+    for cand in candidates:
+        try:
+            if cand.is_dir():
+                return cand
+        except OSError:
+            continue
+    return base / "models" / "vosk-model-small-es-0.42"
+
+
+def _boost_pcm16_gain(
+    raw_pcm: bytes,
+    target_peak: int = 24000,
+    max_gain: float = 12.0,
+) -> tuple[bytes, int, float]:
+    """Normalize quiet 16-bit mono PCM audio in RAM so low-volume Windows microphones are recognized accurately."""
+    if not raw_pcm or len(raw_pcm) < 4:
+        return (raw_pcm, 0, 1.0)
+    usable_len = len(raw_pcm) - (len(raw_pcm) % 2)
+    count = usable_len // 2
+    samples = struct.unpack(f"<{count}h", raw_pcm[:usable_len])
+    peak = max((abs(s) for s in samples), default=0)
+    if peak <= 30 or peak >= 18000:
+        return (raw_pcm[:usable_len], peak, 1.0)
+    gain = min(float(max_gain), float(target_peak) / float(peak))
+    if gain <= 1.05:
+        return (raw_pcm[:usable_len], peak, 1.0)
+    boosted = [max(-32767, min(32767, int(round(s * gain)))) for s in samples]
+    return (struct.pack(f"<{count}h", *boosted), peak, round(gain, 2))
+
+
+def _downsample_pcm16_mono(raw_pcm: bytes, src_rate: int, dst_rate: int = 16000) -> bytes:
+    """Resample 16-bit signed mono PCM from src_rate (e.g. 44100/48000 Hz) to dst_rate (16000 Hz)."""
+    if not raw_pcm or src_rate <= 0 or dst_rate <= 0 or int(src_rate) == int(dst_rate):
+        return raw_pcm
+    usable_len = len(raw_pcm) - (len(raw_pcm) % 2)
+    in_count = usable_len // 2
+    if in_count < 2:
+        return raw_pcm[:usable_len]
+    in_samples = struct.unpack(f"<{in_count}h", raw_pcm[:usable_len])
+    ratio = float(src_rate) / float(dst_rate)
+    out_count = max(1, int(in_count / ratio))
+    out_samples = []
+    for i in range(out_count):
+        src_pos = i * ratio
+        idx = int(src_pos)
+        if idx >= in_count - 1:
+            out_samples.append(in_samples[-1])
+        else:
+            frac = src_pos - idx
+            val = int(round(in_samples[idx] * (1.0 - frac) + in_samples[idx + 1] * frac))
+            out_samples.append(max(-32767, min(32767, val)))
+    return struct.pack(f"<{len(out_samples)}h", *out_samples)
+
+
+def accumulate_vosk_stream_chunk(
+    recognizer,
+    chunk: bytes,
+    segments: list[str],
+    last_partial_holder: list[str],
+) -> str | None:
+    """Feed a PCM chunk into Vosk and preserve every utterance Result() across pauses plus live PartialResult()."""
+    if not chunk:
+        return None
+    if recognizer.AcceptWaveform(chunk):
+        try:
+            data = json.loads(recognizer.Result() or "{}")
+        except Exception:
+            data = {}
+        seg = str(data.get("text") or "").strip()
+        if seg:
+            segments.append(seg)
+            if last_partial_holder:
+                last_partial_holder[0] = ""
+            return seg
+        return None
+    try:
+        pdata = json.loads(recognizer.PartialResult() or "{}")
+    except Exception:
+        pdata = {}
+    part = str(pdata.get("partial") or "").strip()
+    if part:
+        if last_partial_holder:
+            last_partial_holder[0] = part
+        return part
+    return None
+
+
+def finalize_vosk_recognition(
+    recognizer,
+    segments: list[str],
+    last_partial: str = "",
+) -> str:
+    """Combine all accumulated utterance Results with FinalResult() and fallback to PartialResult() if stopped mid-word."""
+    try:
+        fdata = json.loads(recognizer.FinalResult() or "{}")
+    except Exception:
+        fdata = {}
+    final_seg = str(fdata.get("text") or "").strip()
+    if final_seg:
+        segments.append(final_seg)
+    elif last_partial and last_partial.strip():
+        clean_part = last_partial.strip()
+        if not segments or clean_part.casefold() != segments[-1].strip().casefold():
+            segments.append(clean_part)
+    return " ".join(s.strip() for s in segments if s and s.strip()).strip()
+
+
+def recognize_pcm_with_vosk_second_pass(
+    vosk_model,
+    raw_pcm: bytes,
+    sample_rate: int = 16000,
+    recognizer_cls=None,
+) -> str:
+    """Re-run Vosk over gain-boosted PCM with trailing silence when the first live pass returned empty."""
+    if not raw_pcm or len(raw_pcm) < 800 or vosk_model is None:
+        return ""
+    boosted_pcm, _peak, _gain = _boost_pcm16_gain(raw_pcm)
+    padded_pcm = boosted_pcm + (b"\x00\x00" * int(sample_rate * 0.45))
+    if recognizer_cls is None:
+        from vosk import KaldiRecognizer as recognizer_cls
+    rec2 = recognizer_cls(vosk_model, sample_rate)
+    segs2: list[str] = []
+    partial2 = [""]
+    step = 4000
+    for offset in range(0, len(padded_pcm), step):
+        accumulate_vosk_stream_chunk(rec2, padded_pcm[offset : offset + step], segs2, partial2)
+    return finalize_vosk_recognition(rec2, segs2, partial2[0])
+
+
+def recognize_pcm_with_viernes_backends(
+    raw_pcm: bytes,
+    sample_rate: int = 16000,
+    sr_module=None,
+) -> str:
+    """Fallback speech recognition from Viernes (speech_input.py: Whisper -> Vosk -> Google es-MX) over captured PCM."""
+    if not raw_pcm or len(raw_pcm) < 800:
+        return ""
+    if sr_module is None:
+        if importlib.util.find_spec("speech_recognition") is None:
+            return ""
+        import speech_recognition as sr_module
+    boosted_pcm, _peak, _gain = _boost_pcm16_gain(raw_pcm)
+    try:
+        recognizer = sr_module.Recognizer()
+        audio_data = sr_module.AudioData(boosted_pcm, int(sample_rate), 2)
+    except Exception:
+        return ""
+    for method_name, kwargs in (
+        ("recognize_whisper", {"language": "spanish"}),
+        ("recognize_vosk", {"language": "es"}),
+        ("recognize_google", {"language": "es-MX"}),
+    ):
+        fn = getattr(recognizer, method_name, None)
+        if not callable(fn):
+            continue
+        try:
+            res = fn(audio_data, **kwargs)
+            if isinstance(res, str) and res.startswith("{"):
+                try:
+                    res = json.loads(res).get("text", "")
+                except Exception:
+                    pass
+            clean = str(res or "").strip()
+            if clean:
+                return clean
+        except Exception:
+            continue
+    return ""
+
+
 class AssistantApp(tk.Tk):
     def __init__(self) -> None:
         if sys.platform == "win32":
@@ -5085,6 +5768,12 @@ class AssistantApp(tk.Tk):
         self.current_auth_level: int = 0
         self._active_vault_passphrase: str = ""
         self._pending_protected_action: dict[str, object] | None = None
+        self.pomodoro_active: bool = False
+        self.pomodoro_paused: bool = False
+        self.pomodoro_remaining_seconds: int = 0
+        self.pomodoro_total_minutes: int = 0
+        self.pomodoro_label: str = ""
+        self.pomodoro_subject: str | None = None
         self._setup_style()
         self._build_ui()
         if sys.platform == "win32":
@@ -5171,6 +5860,9 @@ class AssistantApp(tk.Tk):
             ("☀ Rutina de mañana", self.show_morning_briefing, "Accent.TButton"),
             ("⏭ ¿Qué sigue?", self.show_next_commitment, "TButton"),
             ("Agenda semanal", self.open_week_agenda, "TButton"),
+            ("🗓 Cuadrícula semanal", self.open_weekly_grid_schedule, "TButton"),
+            ("⏱ Pomodoro", self.open_pomodoro_dialog, "TButton"),
+            ("📓 Apuntes", self.open_subject_notebook, "TButton"),
             ("🔐 Niveles y Bóveda", self.open_security_levels_vault, "TButton"),
             ("🔒 Bloquear sesión", self.lock_security_session, "TButton"),
             ("Historial de avisos", self.open_reminder_history, "TButton"),
@@ -7650,39 +8342,120 @@ class AssistantApp(tk.Tk):
             self.voice_status.configure(text="Deteniendo y preparando la transcripción…")
             return
         missing = [name for name in ("vosk", "sounddevice") if importlib.util.find_spec(name) is None]
-        model_path = APP_BASE_DIR / "models" / "vosk-model-small-es-0.42"
-        if missing:
-            messagebox.showinfo("Voz opcional no instalada", "Para activar el micrófono ejecuta primero .\\instalar_voz.bat para instalar vosk y sounddevice. La escritura sigue funcionando.")
+        has_sr = importlib.util.find_spec("speech_recognition") is not None
+        model_path = resolve_vosk_model_path(APP_BASE_DIR)
+        if missing and not has_sr:
+            messagebox.showinfo(
+                "Voz opcional no instalada",
+                "Para activar el micrófono ejecuta primero .\\instalar_voz.bat para instalar vosk, sounddevice y SpeechRecognition. La escritura sigue funcionando.",
+            )
             return
-        if not model_path.is_dir():
+        if not model_path.is_dir() and not has_sr:
             self.install_vosk_model_with_consent(parent_window=self)
             return
         self.voice_active = True
         self.voice_stop = threading.Event()
         self.set_sphere_state("listening")
         self.voice_button.configure(text="■ Detener micrófono")
-        self.voice_status.configure(text="Iniciando reconocimiento local…")
+        self.voice_status.configure(text="Iniciando reconocimiento de voz…")
         threading.Thread(target=self._voice_worker, args=(self.voice_stop, model_path), daemon=True).start()
 
     def _voice_worker(self, stop_event: threading.Event, model_path: Path) -> None:
         try:
-            import sounddevice as sd
-            from vosk import KaldiRecognizer, Model
-            if self.vosk_model is None:
-                self.ai_results.put(("voice_status", "Cargando modelo de español local…"))
-                self.vosk_model = Model(str(model_path))
-            recognizer = KaldiRecognizer(self.vosk_model, 16000)
+            has_vosk = importlib.util.find_spec("vosk") is not None and importlib.util.find_spec("sounddevice") is not None and model_path.is_dir()
+            if has_vosk:
+                import sounddevice as sd
+                from vosk import KaldiRecognizer, Model
 
-            def audio_callback(indata, _frames, _time, status):
-                if status:
-                    self.ai_results.put(("voice_status", f"Audio: {status}"))
-                recognizer.AcceptWaveform(bytes(indata))
+                if self.vosk_model is None:
+                    self.ai_results.put(("voice_status", "Cargando modelo de español local…"))
+                    self.vosk_model = Model(str(model_path))
+                target_rate = 16000
+                device_rate = target_rate
+                try:
+                    sd.check_input_settings(samplerate=target_rate, channels=1, dtype="int16")
+                except Exception:
+                    try:
+                        dev_info = sd.query_devices(kind="input")
+                        device_rate = int(dev_info.get("default_samplerate") or 44100)
+                    except Exception:
+                        device_rate = 44100
 
-            self.ai_results.put(("voice_status", "Micrófono activo. Pulsa Detener para terminar; no se guarda audio."))
-            with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype="int16", channels=1, callback=audio_callback):
-                while not stop_event.wait(0.1):
+                recognizer = KaldiRecognizer(self.vosk_model, target_rate)
+                try:
+                    recognizer.SetWords(True)
+                except Exception:
                     pass
-            text = json.loads(recognizer.FinalResult()).get("text", "").strip()
+                audio_queue: queue.Queue[bytes] = queue.Queue()
+                raw_pcm_chunks: list[bytes] = []
+                segments: list[str] = []
+                last_partial_holder = [""]
+
+                def audio_callback(indata, _frames, _time, status):
+                    if status:
+                        self.ai_results.put(("voice_status", f"Audio: {status}"))
+                    audio_queue.put(bytes(indata))
+
+                def drain_queue() -> None:
+                    while True:
+                        try:
+                            chunk = audio_queue.get_nowait()
+                        except queue.Empty:
+                            break
+                        if device_rate != target_rate:
+                            chunk = _downsample_pcm16_mono(chunk, device_rate, target_rate)
+                        raw_pcm_chunks.append(chunk)
+                        live_text = accumulate_vosk_stream_chunk(recognizer, chunk, segments, last_partial_holder)
+                        if live_text:
+                            preview = (" ".join(segments + ([last_partial_holder[0]] if last_partial_holder[0] else []))).strip()
+                            if preview:
+                                self.ai_results.put(("voice_status", f"🎙 Escuchando: «{preview[-72:]}» (pulsa Detener al terminar)"))
+
+                self.ai_results.put(("voice_status", "🎙 Micrófono activo · habla con naturalidad y pulsa Detener al terminar."))
+                block_frames = max(2000, int(device_rate * 0.25))
+                with sd.RawInputStream(samplerate=device_rate, blocksize=block_frames, dtype="int16", channels=1, callback=audio_callback):
+                    while not stop_event.wait(0.08):
+                        drain_queue()
+                drain_queue()
+
+                text = finalize_vosk_recognition(recognizer, segments, last_partial_holder[0])
+                raw_pcm = b"".join(raw_pcm_chunks)
+
+                # Pass 2: Automatic Gain Boost + trailing silence (fixes quiet microphones in Windows)
+                if not text and raw_pcm:
+                    self.ai_results.put(("voice_status", "Optimizando volumen de voz y reintentando reconocimiento…"))
+                    text = recognize_pcm_with_vosk_second_pass(self.vosk_model, raw_pcm, target_rate)
+
+                # Pass 3: Viernes multi-engine fallback (Whisper / Vosk / Google es-MX from speech_input.py)
+                if not text and raw_pcm:
+                    text = recognize_pcm_with_viernes_backends(raw_pcm, target_rate)
+
+                if text:
+                    self.ai_results.put(("voice_transcript", text))
+                else:
+                    _b, peak_amp, _g = _boost_pcm16_gain(raw_pcm)
+                    if peak_amp <= 30:
+                        self.ai_results.put(
+                            (
+                                "voice_empty",
+                                "El micrófono no recibió señal de audio (volumen en 0 o micrófono silenciado en Windows). Revisa tu dispositivo de entrada.",
+                            )
+                        )
+                    else:
+                        self.ai_results.put(("voice_empty", "No alcancé a reconocer palabras; puedes intentarlo otra vez o escribir."))
+                return
+
+            # Direct Viernes SpeechRecognition mode when Vosk is not yet installed
+            import speech_recognition as sr
+
+            r = sr.Recognizer()
+            r.dynamic_energy_threshold = True
+            self.ai_results.put(("voice_status", "🎙 Micrófono activo (modo Viernes SpeechRecognition)… habla ahora."))
+            with sr.Microphone() as source:
+                r.adjust_for_ambient_noise(source, duration=0.4)
+                audio = r.listen(source, timeout=6, phrase_time_limit=12)
+            raw_16k = audio.get_raw_data(convert_rate=16000, convert_width=2)
+            text = recognize_pcm_with_viernes_backends(raw_16k, 16000, sr_module=sr)
             if text:
                 self.ai_results.put(("voice_transcript", text))
             else:
@@ -8287,8 +9060,473 @@ class AssistantApp(tk.Tk):
         ttk.Button(actions, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
         ttk.Button(actions, text="Eliminar", command=delete).pack(side="left")
         ttk.Button(actions, text="🔍 Revisar empalmes", command=check_conflicts_ui).pack(side="left", padx=8)
+        ttk.Button(actions, text="🗓 Cuadrícula semanal", command=self.open_weekly_grid_schedule).pack(side="left")
+        ttk.Button(actions, text="📓 Apuntes", command=self.open_subject_notebook).pack(side="left", padx=6)
         ttk.Button(actions, text="Calendario escolar…", command=self.open_calendar_exceptions).pack(side="right")
         refresh()
+
+    # --- Punto 4: Temporizador Pomodoro y Cronómetro de Enfoque en la Esfera Viva ---
+
+    def start_pomodoro_timer(
+        self,
+        minutes: int = 25,
+        label: str = "Enfoque Pomodoro",
+        subject: str | None = None,
+    ) -> str:
+        """Start a countdown Pomodoro / Focus session integrated with the Living Sphere."""
+        mins = max(1, min(240, int(minutes or 25)))
+        clean_label = str(label or subject or f"Enfoque Pomodoro ({mins} min)").strip()[:90]
+        self.pomodoro_active = True
+        self.pomodoro_paused = False
+        self.pomodoro_total_minutes = mins
+        self.pomodoro_remaining_seconds = mins * 60
+        self.pomodoro_label = clean_label
+        self.pomodoro_subject = str(subject).strip() if subject else None
+        self.set_sphere_state("listening")
+        if hasattr(self, "sphere_state_label") and self.sphere_state_label is not None:
+            try:
+                self.sphere_state_label.configure(
+                    text=f"⏱ Pomodoro en curso: {mins:02d}:00 · {clean_label}"
+                )
+            except Exception:
+                pass
+        if hasattr(self, "after"):
+            try:
+                self.after(1000, self._tick_pomodoro)
+            except Exception:
+                pass
+        return (
+            f"⏱ ¡Pomodoro iniciado! Cuenta regresiva de {mins} minuto(s) para «{clean_label}». "
+            "Verás el tiempo restante junto a la esfera viva y te avisaré por voz y en pantalla en cuanto termine."
+        )
+
+    def pause_pomodoro_timer(self) -> str:
+        if not getattr(self, "pomodoro_active", False):
+            return "No hay ningún temporizador Pomodoro activo en este momento."
+        if getattr(self, "pomodoro_paused", False):
+            return "El temporizador Pomodoro ya está en pausa."
+        self.pomodoro_paused = True
+        rem = max(0, int(getattr(self, "pomodoro_remaining_seconds", 0)))
+        mm, ss = divmod(rem, 60)
+        lbl = str(getattr(self, "pomodoro_label", "Enfoque"))
+        if hasattr(self, "sphere_state_label") and self.sphere_state_label is not None:
+            try:
+                self.sphere_state_label.configure(text=f"⏸ Pomodoro en pausa: {mm:02d}:{ss:02d} · {lbl}")
+            except Exception:
+                pass
+        return f"⏸ Puse en pausa tu Pomodoro de «{lbl}» con {mm:02d}:{ss:02d} restantes."
+
+    def resume_pomodoro_timer(self) -> str:
+        if not getattr(self, "pomodoro_active", False):
+            return "No hay ningún temporizador Pomodoro activo para reanudar."
+        if not getattr(self, "pomodoro_paused", False):
+            return "Tu Pomodoro ya está corriendo."
+        self.pomodoro_paused = False
+        rem = max(0, int(getattr(self, "pomodoro_remaining_seconds", 0)))
+        mm, ss = divmod(rem, 60)
+        lbl = str(getattr(self, "pomodoro_label", "Enfoque"))
+        if hasattr(self, "after"):
+            try:
+                self.after(1000, self._tick_pomodoro)
+            except Exception:
+                pass
+        return f"▶ Reanudé tu Pomodoro de «{lbl}» ({mm:02d}:{ss:02d} restantes)."
+
+    def stop_pomodoro_timer(self) -> str:
+        if not getattr(self, "pomodoro_active", False):
+            return "No hay ningún temporizador Pomodoro activo."
+        lbl = str(getattr(self, "pomodoro_label", "Enfoque"))
+        self.pomodoro_active = False
+        self.pomodoro_paused = False
+        self.pomodoro_remaining_seconds = 0
+        self.set_sphere_state("idle")
+        return f"⏹ Detuve y cancelé el temporizador Pomodoro de «{lbl}»."
+
+    def pomodoro_status_summary(self) -> str:
+        if not getattr(self, "pomodoro_active", False):
+            return "No tienes ningún Pomodoro activo ahora mismo. Puedes decirme «pon un Pomodoro de 25 minutos para estudiar Matemáticas»."
+        rem = max(0, int(getattr(self, "pomodoro_remaining_seconds", 0)))
+        mm, ss = divmod(rem, 60)
+        lbl = str(getattr(self, "pomodoro_label", "Enfoque"))
+        state_str = "en pausa" if getattr(self, "pomodoro_paused", False) else "en curso"
+        return f"⏱ Tu Pomodoro de «{lbl}» está {state_str}: quedan {mm:02d}:{ss:02d} (de {getattr(self, 'pomodoro_total_minutes', 25)} min)."
+
+    def _tick_pomodoro(self) -> None:
+        if not getattr(self, "pomodoro_active", False) or getattr(self, "pomodoro_paused", False):
+            return
+        rem = max(0, int(getattr(self, "pomodoro_remaining_seconds", 0)) - 1)
+        self.pomodoro_remaining_seconds = rem
+        lbl = str(getattr(self, "pomodoro_label", "Enfoque Pomodoro"))
+        mm, ss = divmod(rem, 60)
+        if rem > 0:
+            if hasattr(self, "sphere_state_label") and self.sphere_state_label is not None:
+                try:
+                    self.sphere_state_label.configure(
+                        text=f"⏱ Pomodoro en curso: {mm:02d}:{ss:02d} · {lbl}"
+                    )
+                except Exception:
+                    pass
+            if hasattr(self, "after"):
+                try:
+                    self.after(1000, self._tick_pomodoro)
+                except Exception:
+                    pass
+            return
+        # Completed!
+        self.pomodoro_active = False
+        self.pomodoro_paused = False
+        mins = int(getattr(self, "pomodoro_total_minutes", 25) or 25)
+        try:
+            self.db.execute(
+                "INSERT INTO action_events(action,outcome,created_at) VALUES(?,?,?)",
+                ("Sesión Pomodoro completada", f"{mins} min · {lbl}"[:120], datetime.now().isoformat(timespec="seconds")),
+            )
+            self.db.commit()
+        except Exception:
+            pass
+        self.set_sphere_state("idle")
+        done_msg = (
+            f"⏱ ¡Tiempo cumplido! Terminaste tu sesión de enfoque de {mins} minuto(s) sobre «{lbl}». "
+            "Tómate 5 minutos de descanso para estirar y despejar la mente."
+        )
+        self.append_chat("Asistente", done_msg)
+
+    def open_pomodoro_dialog(self) -> None:
+        window = tk.Toplevel(self)
+        window.title("⏱ Temporizador Pomodoro y Enfoque")
+        window.geometry("620x360")
+        window.transient(self)
+        outer = ttk.Frame(window, padding=18)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="⏱ Temporizador Pomodoro y sesiones de enfoque", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="Inicia bloques de concentración con cuenta regresiva en vivo junto a la esfera de CLARA-V y aviso hablado al terminar. También puedes pedirlo por voz o chat: «pon un Pomodoro de 25 minutos para estudiar Matemáticas».",
+            wraplength=570,
+        ).pack(anchor="w", pady=(4, 10))
+
+        top_actions = ttk.Frame(outer)
+        top_actions.pack(side="top", fill="x", pady=(0, 12))
+
+        form = ttk.Frame(outer, style="Card.TFrame", padding=12)
+        form.pack(fill="x", pady=(0, 12))
+        subjects = [str(r[0]) for r in self.db.execute("SELECT DISTINCT name FROM classes ORDER BY name").fetchall()]
+        subj_var = tk.StringVar(value=getattr(self, "pomodoro_label", "") or (subjects[0] if subjects else "Estudio enfocado"))
+        mins_var = tk.StringVar(value=str(getattr(self, "pomodoro_total_minutes", 25) or 25))
+        ttk.Label(form, text="Materia o actividad:").grid(row=0, column=0, sticky="w")
+        ttk.Combobox(form, textvariable=subj_var, values=tuple(subjects) if subjects else ("Estudio enfocado",), width=30).grid(row=0, column=1, padx=(8, 14), sticky="w")
+        ttk.Label(form, text="Minutos:").grid(row=0, column=2, sticky="w")
+        ttk.Entry(form, textvariable=mins_var, width=8).grid(row=0, column=3, padx=(6, 0), sticky="w")
+
+        status_lbl = ttk.Label(outer, text=self.pomodoro_status_summary(), font=("Segoe UI", 11, "bold"))
+        status_lbl.pack(anchor="w", pady=(4, 8))
+
+        def refresh_status() -> None:
+            try:
+                status_lbl.configure(text=self.pomodoro_status_summary())
+            except Exception:
+                return
+
+        def start_custom(preset_mins: int | None = None, preset_label: str | None = None) -> None:
+            try:
+                m_val = preset_mins if preset_mins is not None else int(mins_var.get().strip())
+            except ValueError:
+                messagebox.showwarning("Minutos inválidos", "Escribe un número de minutos entre 1 y 240.", parent=window)
+                return
+            lbl_val = preset_label or subj_var.get().strip() or f"Enfoque ({m_val} min)"
+            msg = self.start_pomodoro_timer(minutes=m_val, label=lbl_val)
+            refresh_status()
+            self.append_chat("Asistente", msg)
+
+        def toggle_pause() -> None:
+            if getattr(self, "pomodoro_paused", False):
+                msg = self.resume_pomodoro_timer()
+            else:
+                msg = self.pause_pomodoro_timer()
+            refresh_status()
+            self.append_chat("Asistente", msg)
+
+        def stop_now() -> None:
+            msg = self.stop_pomodoro_timer()
+            refresh_status()
+            self.append_chat("Asistente", msg)
+
+        ttk.Button(top_actions, text="▶ Pomodoro 25 min", style="Accent.TButton", command=lambda: start_custom(25)).pack(side="left")
+        ttk.Button(top_actions, text="☕ Descanso 5 min", command=lambda: start_custom(5, "Descanso corto")).pack(side="left", padx=6)
+        ttk.Button(top_actions, text="▶ Iniciar personalizado", command=lambda: start_custom()).pack(side="left")
+        ttk.Button(top_actions, text="⏸ Pausar / Reanudar", command=toggle_pause).pack(side="left", padx=6)
+        ttk.Button(top_actions, text="⏹ Detener", command=stop_now).pack(side="left")
+
+    # --- Punto 5: Cuaderno de apuntes rápidos y carpeta vinculada por Materia ---
+
+    def open_subject_notebook(self, initial_subject: str | None = None) -> None:
+        ensure_subject_notebook_tables(self.db)
+        window = tk.Toplevel(self)
+        window.title("📓 Cuaderno de apuntes rápidos y carpetas por materia")
+        window.geometry("940x540")
+        window.minsize(760, 420)
+        window.transient(self)
+        outer = ttk.Frame(window, padding=18)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="📓 Cuaderno de apuntes y carpetas por materia", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="Guarda apuntes rápidos de clase, vincúlalos con la carpeta local de cada materia y consúltalos desde el chat o con Llama 3.2 («apunta en Matemáticas Discretas que el examen viene hasta grafos»).",
+            wraplength=880,
+        ).pack(anchor="w", pady=(4, 8))
+
+        actions = ttk.Frame(outer)
+        actions.pack(side="top", fill="x", pady=(0, 8))
+
+        filter_bar = ttk.Frame(outer, style="Card.TFrame", padding=10)
+        filter_bar.pack(side="top", fill="x", pady=(0, 8))
+        all_subjects = sorted(
+            {
+                str(r[0]).strip()
+                for r in (
+                    list(self.db.execute("SELECT DISTINCT name FROM classes WHERE name IS NOT NULL").fetchall())
+                    + list(self.db.execute("SELECT DISTINCT subject FROM subject_notes WHERE subject IS NOT NULL").fetchall())
+                    + list(self.db.execute("SELECT DISTINCT subject FROM subject_folders WHERE subject IS NOT NULL").fetchall())
+                )
+                if str(r[0]).strip()
+            }
+        )
+        filter_values = ("Todas las materias", *all_subjects)
+        filter_var = tk.StringVar(value=initial_subject if initial_subject in all_subjects else "Todas las materias")
+        folder_status_var = tk.StringVar(value="📁 Selecciona una materia para ver o abrir su carpeta vinculada.")
+        ttk.Label(filter_bar, text="Filtrar por materia:").pack(side="left")
+        filter_combo = ttk.Combobox(filter_bar, textvariable=filter_var, values=filter_values, state="readonly", width=28)
+        filter_combo.pack(side="left", padx=(8, 14))
+        ttk.Label(filter_bar, textvariable=folder_status_var, foreground="#91aabd").pack(side="left", fill="x", expand=True)
+
+        tree = ttk.Treeview(outer, columns=("subject", "title", "created", "content"), show="headings", selectmode="browse", height=8)
+        for col, label, width in (("subject", "Materia", 170), ("title", "Título", 190), ("created", "Fecha", 115), ("content", "Apunte", 410)):
+            tree.heading(col, text=label)
+            tree.column(col, width=width, anchor="w")
+        tree.pack(fill="both", expand=True)
+
+        def refresh(*_args) -> None:
+            tree.delete(*tree.get_children())
+            chosen_subj = filter_var.get().strip()
+            rows = list_subject_notes(self.db, None if chosen_subj == "Todas las materias" else chosen_subj)
+            for row in rows:
+                tree.insert(
+                    "",
+                    "end",
+                    iid=str(row["id"]),
+                    values=(row["subject"], row["title"], str(row["created_at"])[:16].replace("T", " "), str(row["content"]).replace("\n", " ")),
+                )
+            if chosen_subj and chosen_subj != "Todas las materias":
+                linked = get_subject_folder(self.db, chosen_subj)
+                folder_status_var.set(f"📁 Carpeta de «{chosen_subj}»: {linked}" if linked else f"📁 «{chosen_subj}» aún no tiene carpeta vinculada.")
+            else:
+                folder_status_var.set("📁 Elige una materia o un apunte para vincular o abrir su carpeta local.")
+
+        def edit_note(note_id: int | None = None) -> None:
+            existing = self.db.execute("SELECT * FROM subject_notes WHERE id=?", (note_id,)).fetchone() if note_id else None
+            dialog = tk.Toplevel(window)
+            dialog.title("Editar apunte" if existing else "Nuevo apunte de materia")
+            dialog.transient(window)
+            dialog.grab_set()
+            form = ttk.Frame(dialog, padding=18)
+            form.pack(fill="both", expand=True)
+            default_subj = existing["subject"] if existing else (filter_var.get() if filter_var.get() != "Todas las materias" else (all_subjects[0] if all_subjects else "General"))
+            s_var = tk.StringVar(value=default_subj)
+            t_var = tk.StringVar(value=existing["title"] if existing else "")
+            ttk.Label(form, text="Materia").grid(row=0, column=0, sticky="w")
+            ttk.Combobox(form, textvariable=s_var, values=tuple(all_subjects) if all_subjects else ("General",), width=36).grid(row=1, column=0, sticky="ew", pady=(3, 9))
+            ttk.Label(form, text="Título corto (opcional)").grid(row=2, column=0, sticky="w")
+            ttk.Entry(form, textvariable=t_var, width=48).grid(row=3, column=0, sticky="ew", pady=(3, 9))
+            ttk.Label(form, text="Contenido del apunte").grid(row=4, column=0, sticky="w")
+            body_box = tk.Text(form, width=56, height=6, wrap="word", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff")
+            body_box.grid(row=5, column=0, sticky="nsew", pady=(3, 10))
+            if existing:
+                body_box.insert("1.0", existing["content"])
+
+            def save_note() -> None:
+                subj_txt = s_var.get().strip() or "General"
+                title_txt = t_var.get().strip()
+                content_txt = body_box.get("1.0", "end-1c").strip()
+                if not content_txt:
+                    messagebox.showwarning("Falta el apunte", "Escribe el contenido del apunte.", parent=dialog)
+                    return
+                if existing:
+                    update_subject_note(self.db, int(note_id), subj_txt, title_txt or existing["title"], content_txt)
+                else:
+                    add_subject_note(self.db, subj_txt, content_txt, title=title_txt or None)
+                refresh()
+                dialog.destroy()
+
+            ttk.Button(form, text="Guardar apunte", style="Accent.TButton", command=save_note).grid(row=6, column=0, sticky="e")
+
+        def edit_selected() -> None:
+            sel = tree.selection()
+            if not sel:
+                messagebox.showinfo("Selecciona un apunte", "Elige un apunte de la lista para editarlo.", parent=window)
+                return
+            edit_note(int(sel[0]))
+
+        def delete_selected() -> None:
+            sel = tree.selection()
+            if not sel:
+                messagebox.showinfo("Selecciona un apunte", "Elige un apunte para eliminarlo.", parent=window)
+                return
+            if messagebox.askyesno("Eliminar apunte", "¿Eliminar este apunte del cuaderno?", parent=window):
+                delete_subject_note(self.db, int(sel[0]))
+                refresh()
+
+        def _active_subject_for_folder() -> str | None:
+            sel = tree.selection()
+            if sel:
+                row = self.db.execute("SELECT subject FROM subject_notes WHERE id=?", (int(sel[0]),)).fetchone()
+                if row and row["subject"]:
+                    return str(row["subject"])
+            if filter_var.get() and filter_var.get() != "Todas las materias":
+                return filter_var.get()
+            return all_subjects[0] if all_subjects else None
+
+        def link_folder_ui() -> None:
+            subj = _active_subject_for_folder()
+            if not subj:
+                messagebox.showinfo("Materia requerida", "Primero registra una materia o un apunte para vincularle una carpeta.", parent=window)
+                return
+            chosen_dir = filedialog.askdirectory(parent=window, title=f"Selecciona la carpeta local para {subj}", mustexist=True)
+            if not chosen_dir:
+                return
+            try:
+                saved = set_subject_folder(self.db, subj, chosen_dir)
+                refresh()
+                messagebox.showinfo("Carpeta vinculada", f"La materia «{subj}» quedó vinculada con:\n{saved}", parent=window)
+            except Exception as exc:
+                messagebox.showerror("Error al vincular carpeta", str(exc), parent=window)
+
+        def open_folder_ui() -> None:
+            subj = _active_subject_for_folder()
+            if not subj:
+                messagebox.showinfo("Selecciona una materia", "Elige una materia en el filtro o selecciona un apunte.", parent=window)
+                return
+            folder = get_subject_folder(self.db, subj)
+            if not folder:
+                messagebox.showinfo("Sin carpeta vinculada", f"La materia «{subj}» aún no tiene carpeta vinculada. Usa «📁 Vincular carpeta de materia…».", parent=window)
+                return
+            if sys.platform == "win32":
+                try:
+                    launch_selected_folder(Path(folder))
+                except Exception as exc:
+                    messagebox.showerror("No se pudo abrir", str(exc), parent=window)
+            else:
+                messagebox.showinfo("Carpeta vinculada", f"Carpeta de «{subj}»:\n{folder}", parent=window)
+
+        filter_combo.bind("<<ComboboxSelected>>", refresh)
+        tree.bind("<Double-1>", lambda _event: edit_selected())
+        ttk.Button(actions, text="➕ Nuevo apunte", style="Accent.TButton", command=lambda: edit_note(None)).pack(side="left")
+        ttk.Button(actions, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
+        ttk.Button(actions, text="🗑 Eliminar", command=delete_selected).pack(side="left")
+        ttk.Button(actions, text="📁 Vincular carpeta de materia…", command=link_folder_ui).pack(side="left", padx=8)
+        ttk.Button(actions, text="📂 Abrir carpeta vinculada", command=open_folder_ui).pack(side="left")
+        refresh()
+
+    # --- Punto 6: Vista semanal visual en cuadrícula (Horario Lunes–Sábado con colores y empalmes en rojo) ---
+
+    def open_weekly_grid_schedule(self) -> None:
+        window = tk.Toplevel(self)
+        window.title("🗓 Horario semanal en cuadrícula · Lunes a Sábado")
+        window.geometry("1080x660")
+        window.minsize(820, 480)
+        window.transient(self)
+        outer = ttk.Frame(window, padding=16)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="🗓 Vista semanal en cuadrícula (07:00 – 21:00)", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="🟦 Clase semanal   ·   🟩 Bloque de estudio   ·   🟪 Rutina con hora   ·   🟥 ⚠️ Empalme / choque de horario",
+            foreground="#60e2df",
+        ).pack(anchor="w", pady=(2, 8))
+
+        top_actions = ttk.Frame(outer)
+        top_actions.pack(side="top", fill="x", pady=(0, 8))
+
+        canvas_frame = ttk.Frame(outer)
+        canvas_frame.pack(fill="both", expand=True)
+        canvas = tk.Canvas(canvas_frame, bg="#07111f", highlightthickness=0)
+        v_scroll = ttk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+        h_scroll = ttk.Scrollbar(canvas_frame, orient="horizontal", command=canvas.xview)
+        canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+        v_scroll.pack(side="right", fill="y")
+        h_scroll.pack(side="bottom", fill="x")
+        canvas.pack(side="left", fill="both", expand=True)
+
+        def draw_grid() -> None:
+            canvas.delete("all")
+            grid = build_weekly_grid_data(self.db)
+            days_labels = grid["days_labels"]
+            cells_by_day = grid["cells_by_day"]
+            show_days = 7 if cells_by_day.get(6) else 6
+            left_margin = 68
+            top_margin = 38
+            col_w = 152
+            hour_h = 42
+            start_hour = 7
+            end_hour = 21
+            total_w = left_margin + show_days * col_w + 24
+            total_h = top_margin + (end_hour - start_hour) * hour_h + 28
+
+            # Header background & day labels
+            canvas.create_rectangle(0, 0, total_w, top_margin, fill="#10243a", outline="#29445a")
+            canvas.create_text(left_margin // 2, top_margin // 2, text="Hora", fill="#91aabd", font=("Segoe UI", 9, "bold"))
+            for wd in range(show_days):
+                x0 = left_margin + wd * col_w
+                canvas.create_line(x0, 0, x0, total_h, fill="#29445a")
+                canvas.create_text(x0 + col_w // 2, top_margin // 2, text=days_labels[wd], fill="#eff8ff", font=("Segoe UI", 10, "bold"))
+
+            # Hour rows (07:00 to 21:00)
+            for hr in range(start_hour, end_hour + 1):
+                y = top_margin + (hr - start_hour) * hour_h
+                canvas.create_line(0, y, total_w, y, fill="#1b3348")
+                if hr < end_hour:
+                    canvas.create_text(left_margin // 2, y + 12, text=f"{hr:02d}:00", fill="#91aabd", font=("Segoe UI", 9))
+
+            # Render blocks per day
+            palette = {
+                "class": ("#154c68", "#58d6d8"),
+                "block": ("#1b5e3c", "#66e39a"),
+                "routine": ("#46306b", "#b99aff"),
+                "conflict": ("#7a1c24", "#ff5c6c"),
+            }
+            for wd in range(show_days):
+                x0 = left_margin + wd * col_w + 4
+                x1 = left_margin + (wd + 1) * col_w - 4
+                for item in cells_by_day.get(wd, []):
+                    s_min = max(start_hour * 60, min(end_hour * 60, int(item["start_min"])))
+                    e_min = max(s_min + 25, min(end_hour * 60, int(item["end_min"])))
+                    y0 = top_margin + ((s_min - start_hour * 60) / 60.0) * hour_h + 1
+                    y1 = top_margin + ((e_min - start_hour * 60) / 60.0) * hour_h - 1
+                    fill_col, border_col = palette["conflict"] if item["has_conflict"] else palette.get(str(item["kind"]), palette["class"])
+                    canvas.create_rectangle(x0, y0, x1, y1, fill=fill_col, outline=border_col, width=2)
+                    prefix = "⚠️ " if item["has_conflict"] else ""
+                    sub = f"\n{item['subtitle']}" if item["subtitle"] else ""
+                    label_txt = f"{prefix}{item['start_time']}–{item['end_time']}\n{item['title'][:22]}{sub[:24]}"
+                    canvas.create_text(
+                        x0 + 6,
+                        y0 + 4,
+                        anchor="nw",
+                        text=label_txt,
+                        fill="#ffffff",
+                        font=("Segoe UI", 8, "bold"),
+                        width=col_w - 16,
+                    )
+
+            canvas.configure(scrollregion=(0, 0, total_w, total_h))
+
+        ttk.Button(top_actions, text="🔄 Actualizar cuadrícula", style="Accent.TButton", command=draw_grid).pack(side="left")
+        ttk.Button(top_actions, text="📚 Mis clases…", command=self.open_classes).pack(side="left", padx=8)
+        ttk.Button(top_actions, text="➕ Agenda / bloques…", command=self.open_week_agenda).pack(side="left")
+        ttk.Button(
+            top_actions,
+            text="🔍 Revisar empalmes",
+            command=lambda: messagebox.showinfo("Revisión de empalmes", build_schedule_conflicts_report(self.db), parent=window),
+        ).pack(side="left", padx=8)
+        draw_grid()
 
     def open_calendar_exceptions(self) -> None:
         window = tk.Toplevel(self)
@@ -9103,7 +10341,7 @@ class AssistantApp(tk.Tk):
                     self.set_sphere_state("idle")
                     self.voice_button.configure(text="🎙 Pulsar para hablar")
                     current_status = self.voice_status.cget("text")
-                    if current_status.startswith(("Micrófono activo", "Deteniendo", "Iniciando", "Cargando")):
+                    if current_status.startswith(("Micrófono activo", "Deteniendo", "Iniciando", "Cargando", "🎙", "Optimizando")):
                         self.voice_status.configure(text=payload)
                 elif kind == "tts_started":
                     if self.tts_active and not self.tts_cancel_event.is_set():
@@ -9908,6 +11146,38 @@ class AssistantApp(tk.Tk):
 
         if is_schedule_conflict_query(low_action):
             self.append_chat("Asistente", build_schedule_conflicts_report(self.db))
+            return
+
+        if is_weekly_grid_query(low_action):
+            self.append_chat("Asistente", build_weekly_grid_summary(self.db))
+            if hasattr(self, "open_weekly_grid_schedule") and getattr(self, "tk", None) is not None:
+                self.open_weekly_grid_schedule()
+            return
+
+        pomo_cmd = parse_pomodoro_command(text_action, db=self.db)
+        if pomo_cmd is not None:
+            action = str(pomo_cmd.get("action") or "status")
+            if action == "start":
+                msg = AssistantApp.start_pomodoro_timer(
+                    self,
+                    minutes=int(pomo_cmd.get("minutes") or 25),
+                    label=str(pomo_cmd.get("label") or "Enfoque Pomodoro"),
+                    subject=str(pomo_cmd.get("subject")) if pomo_cmd.get("subject") else None,
+                )
+            elif action == "pause":
+                msg = AssistantApp.pause_pomodoro_timer(self)
+            elif action == "resume":
+                msg = AssistantApp.resume_pomodoro_timer(self)
+            elif action == "stop":
+                msg = AssistantApp.stop_pomodoro_timer(self)
+            else:
+                msg = AssistantApp.pomodoro_status_summary(self)
+            self.append_chat("Asistente", msg)
+            return
+
+        notebook_res = parse_and_execute_subject_notebook_from_chat(self.db, text_action, app_instance=self)
+        if notebook_res is not None:
+            self.append_chat("Asistente", notebook_res[1])
             return
 
         if is_class_delete_command(low_action):

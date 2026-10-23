@@ -28,7 +28,13 @@ echo     Version:        ^>=0.4.6
 echo     Tamano aprox.:  ~1.5 MB
 echo     Licencia:       MIT
 echo.
-echo  4. Modelo local de espanol para el microfono Vosk:
+echo  4. Recurso:        SpeechRecognition ^(motor de respaldo de Viernes^)
+echo     Fuente oficial: https://pypi.org/project/SpeechRecognition/
+echo     Version:        ^>=3.10.0
+echo     Tamano aprox.:  ~30 MB
+echo     Licencia:       BSD-3-Clause
+echo.
+echo  5. Modelo local de espanol para el microfono Vosk:
 echo     Recurso:        vosk-model-small-es-0.42.zip
 echo     Fuente oficial: https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
 echo     Version:        0.42  ^|  Tamano: 39 MB  ^|  Licencia: Apache-2.0
@@ -41,7 +47,7 @@ if errorlevel 2 (
   exit /b 0
 )
 
-py -3 -m pip install "vosk>=0.3.45" "sounddevice>=0.4.6" "pyttsx3>=2.90"
+py -3 -m pip install "vosk>=0.3.45" "sounddevice>=0.4.6" "pyttsx3>=2.90" "SpeechRecognition>=3.10.0"
 if errorlevel 1 (
   echo.
   echo La instalacion opcional de paquetes de voz fallo. Clara seguira funcionando por texto.
