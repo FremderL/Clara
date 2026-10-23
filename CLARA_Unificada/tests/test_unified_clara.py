@@ -2206,6 +2206,42 @@ END:VCALENDAR\r
         self.assertEqual(consolidated[0]["role"], "system")
         self.assertIn("Prompt base\n\nContexto de agenda", consolidated[0]["content"])
 
+        # --- Calculadora Matemática Segura (100% local sin Ollama) ---
+        self.assertIn("118", send("¿cuánto es 25 por 4 más 18?"))
+        self.assertIn("12", send("calcula la raíz cuadrada de 144"))
+        self.assertIn("126", send("cuánto es el 15% de 840"))
+        self.assertIn("1024", send("calcula 2 elevado a la 10"))
+        self.assertIn("40", send("resuelve (120 + 80) entre 5"))
+        self.assertIn("dividir entre cero", send("calcula 10 / 0"))
+        with self.assertRaises(ValueError):
+            app.evaluate_safe_math_expression("__import__('os').system('echo pwn')")
+
+        # --- Investigación en Internet (Wikipedia ES + DuckDuckGo) ---
+        def _fake_web_urlopen(req, timeout=8):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            if "w/api.php" in url:
+                payload = {"query": {"search": [{"title": "Algoritmo de Dijkstra", "snippet": "Camino más corto en grafos"}]}}
+            elif "page/summary" in url:
+                payload = {"extract": "El algoritmo de Dijkstra determina el camino más corto desde un vértice origen hacia el resto de vértices en un grafo con pesos positivos."}
+            else:
+                payload = {"Heading": "Dijkstra", "AbstractText": "Algoritmo clásico de caminos mínimos en teoría de grafos.", "RelatedTopics": []}
+
+            class _Resp:
+                def __enter__(self_inner):
+                    return self_inner
+                def __exit__(self_inner, *_a):
+                    return False
+                def read(self_inner):
+                    return json.dumps(payload).encode("utf-8")
+
+            return _Resp()
+
+        with mock.patch.object(app.urllib.request, "urlopen", side_effect=_fake_web_urlopen):
+            r_web = send("investiga en internet sobre el algoritmo de Dijkstra")
+        self.assertIn("Investigación en internet", r_web)
+        self.assertIn("Algoritmo de Dijkstra", r_web)
+        self.assertIn("camino más corto", r_web)
+
 
 if __name__ == "__main__":
     unittest.main()

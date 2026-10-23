@@ -1,6 +1,7 @@
 """CLARA Unificada 2.0.0: asistente local-first que combina lo mejor de CLARA y Viernes."""
 from __future__ import annotations
 
+import ast
 import base64
 import hashlib
 import hmac
@@ -11,6 +12,7 @@ import html
 import importlib.util
 import json
 import math
+import operator
 import time
 import os
 import queue
@@ -5137,6 +5139,345 @@ def build_weekly_grid_summary(db: sqlite3.Connection, ref_date: date | None = No
     return "\n".join(lines)
 
 
+# --- Calculadora matemática segura (AST sin eval) e Investigación en Internet (Viernes + Wikipedia) ---
+
+_SAFE_MATH_BIN_OPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+}
+_SAFE_MATH_UNARY_OPS = {
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
+}
+_SAFE_MATH_FUNCS: dict[str, object] = {
+    "sqrt": math.sqrt,
+    "raiz": math.sqrt,
+    "cbrt": lambda x: math.copysign(abs(float(x)) ** (1.0 / 3.0), float(x)),
+    "sin": math.sin,
+    "sen": math.sin,
+    "cos": math.cos,
+    "tan": math.tan,
+    "asin": math.asin,
+    "acos": math.acos,
+    "atan": math.atan,
+    "log": math.log,
+    "ln": math.log,
+    "log10": math.log10,
+    "exp": math.exp,
+    "abs": abs,
+    "round": round,
+    "ceil": math.ceil,
+    "floor": math.floor,
+    "radians": math.radians,
+    "degrees": math.degrees,
+    "factorial": lambda n: math.factorial(int(n)) if 0 <= int(n) <= 170 else (_ for _ in ()).throw(ValueError("Factorial fuera de rango seguro (0–170).")),
+    "gcd": lambda a, b: math.gcd(int(a), int(b)),
+}
+_SAFE_MATH_CONSTS: dict[str, float] = {
+    "pi": math.pi,
+    "e": math.e,
+    "tau": math.tau,
+}
+
+
+def normalize_spanish_math_expression(raw_expr: str) -> str:
+    """Convert natural Spanish math expressions ('raíz cuadrada de 144', '15% de 840', '25 por 4') into AST-valid formulas."""
+    expr = normalize_intent_text(str(raw_expr or ""))
+    expr = re.sub(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+        r"(?:calcula(?:r)?|cuanto\s+es|cuanto\s+da|resuelve|resolver|operacion|haz\s+la\s+cuenta(?:\s+de)?|dime\s+cuanto\s+es)\s+",
+        "",
+        expr,
+        count=1,
+    ).strip(" ?=.,;:")
+    expr = expr.replace("×", "*").replace("÷", "/").replace("^", "**")
+    # Convert decimal commas like 3,14 -> 3.14 when surrounded by digits
+    expr = re.sub(r"(?<=\d),(?=\d)", ".", expr)
+    # "el 15% de 840" / "15 por ciento de 840" -> "((15 / 100) * 840)"
+    expr = re.sub(
+        r"(?:el\s+)?(\d+(?:\.\d+)?)\s*(?:%|por\s+ciento)\s+de\s+(\d+(?:\.\d+)?)",
+        r"((\1 / 100) * \2)",
+        expr,
+    )
+    # "15%" -> "(15 / 100)"
+    expr = re.sub(r"(\d+(?:\.\d+)?)\s*(?:%|por\s+ciento)\b", r"(\1 / 100)", expr)
+    # "raiz cuadrada de X" -> "sqrt(X)"
+    expr = re.sub(r"\b(?:la\s+)?raiz\s+cuadrada\s+de\s+(\d+(?:\.\d+)?|\([^)]+\))", r"sqrt(\1)", expr)
+    expr = re.sub(r"\b(?:la\s+)?raiz\s+cubica\s+de\s+(\d+(?:\.\d+)?|\([^)]+\))", r"cbrt(\1)", expr)
+    expr = re.sub(r"\b(?:la\s+)?raiz\s+de\s+(\d+(?:\.\d+)?|\([^)]+\))", r"sqrt(\1)", expr)
+    replacements = (
+        (" elevado a la ", " ** "),
+        (" elevado a ", " ** "),
+        (" a la potencia ", " ** "),
+        (" al cuadrado", " ** 2"),
+        (" al cubo", " ** 3"),
+        (" dividido entre ", " / "),
+        (" dividido por ", " / "),
+        (" entre ", " / "),
+        (" multiplicado por ", " * "),
+        (" por ", " * "),
+        (" mas ", " + "),
+        (" menos ", " - "),
+    )
+    padded = f" {expr} "
+    for src, dst in replacements:
+        padded = padded.replace(src, dst)
+    # Only replace standalone 'x' between numbers/parens as multiplication
+    padded = re.sub(r"(?<=[\d)])\s+x\s+(?=[\d(])", " * ", padded)
+    padded = re.sub(r"\b(?:el|la|del|de)\b", " ", padded)
+    return re.sub(r"\s+", " ", padded).strip()
+
+
+def evaluate_safe_math_expression(raw_expr: str) -> float | int:
+    """Safely evaluate a mathematical expression via AST whitelist without eval()."""
+    norm = normalize_spanish_math_expression(raw_expr)
+    if not norm or len(norm) > 240:
+        raise ValueError("Expresión matemática vacía o demasiado larga.")
+    tree = ast.parse(norm, mode="eval")
+
+    def _eval_node(node: ast.AST) -> float | int:
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
+            return node.value
+        if isinstance(node, ast.UnaryOp) and type(node.op) in _SAFE_MATH_UNARY_OPS:
+            return _SAFE_MATH_UNARY_OPS[type(node.op)](_eval_node(node.operand))
+        if isinstance(node, ast.BinOp):
+            left = _eval_node(node.left)
+            right = _eval_node(node.right)
+            if isinstance(node.op, ast.Pow):
+                if abs(float(right)) > 1000 or (abs(float(left)) > 1e6 and abs(float(right)) > 20):
+                    raise ValueError("Exponente demasiado grande para evaluación segura.")
+                return left ** right
+            if type(node.op) in _SAFE_MATH_BIN_OPS:
+                return _SAFE_MATH_BIN_OPS[type(node.op)](left, right)
+            raise ValueError("Operador no permitido.")
+        if isinstance(node, ast.Name):
+            if node.id in _SAFE_MATH_CONSTS:
+                return _SAFE_MATH_CONSTS[node.id]
+            raise ValueError(f"Constante desconocida: {node.id}")
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            fname = node.func.id.casefold()
+            fn = _SAFE_MATH_FUNCS.get(fname)
+            if fn is None or node.keywords:
+                raise ValueError(f"Función no permitida: {fname}")
+            args = [_eval_node(a) for a in node.args]
+            return fn(*args)  # type: ignore[misc]
+        raise ValueError("Elemento de expresión no permitido.")
+
+    val = _eval_node(tree)
+    if isinstance(val, float) and val.is_integer() and abs(val) < 1e15:
+        return int(val)
+    if isinstance(val, float):
+        return round(val, 8)
+    return val
+
+
+def parse_and_execute_math_from_chat(raw_text: str) -> tuple[bool, str] | None:
+    """Detect and solve mathematical calculations directly and safely without requiring Ollama."""
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+    # Avoid intercepting agenda/time/date/pomodoro commands
+    if re.search(
+        r"\b(?:clase|clases|materia|tarea|pendiente|rutina|bloque|pomodoro|temporizador|"
+        r"cronometro|carpeta|archivo|documento|apunte|secreto|usuario|nivel|alarma|recordatorio|"
+        r"lunes|martes|miercoles|jueves|viernes|sabado|domingo|manana|hoy|ayer|enero|febrero|"
+        r"marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\b",
+        low,
+    ):
+        return None
+    if re.search(r"\b\d{1,2}:\d{2}\b", low) or re.search(r"\b20\d{2}-\d{2}-\d{2}\b", low):
+        return None
+
+    has_math_prefix = bool(
+        re.match(
+            r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+            r"(?:calcula(?:r)?|cuanto\s+es|cuanto\s+da|resuelve|resolver|haz\s+la\s+cuenta(?:\s+de)?|dime\s+cuanto\s+es)\b",
+            low,
+        )
+    )
+    norm_expr = normalize_spanish_math_expression(raw)
+    has_digit = bool(re.search(r"\d", norm_expr))
+    has_op_or_fn = bool(
+        re.search(r"(\*\*|[+\-*/%])", norm_expr)
+        or re.search(r"\b(?:sqrt|cbrt|sin|sen|cos|tan|log|ln|log10|exp|factorial|gcd|pi)\b", norm_expr)
+    )
+    if not (has_digit and has_op_or_fn):
+        return None
+    # If there is no explicit math prefix, require the normalized expression to consist strictly of math tokens
+    if not has_math_prefix:
+        stripped_tokens = re.sub(
+            r"\b(?:sqrt|cbrt|sin|sen|cos|tan|asin|acos|atan|log|ln|log10|exp|abs|round|ceil|floor|radians|degrees|factorial|gcd|pi|e|tau)\b",
+            "",
+            norm_expr,
+        )
+        if re.search(r"[a-zA-Z]", stripped_tokens):
+            return None
+    try:
+        result = evaluate_safe_math_expression(raw)
+        return (True, f"🧮 Resultado de `{norm_expr}` = **{result}**")
+    except ZeroDivisionError:
+        return (False, "🧮 No se puede dividir entre cero.")
+    except Exception as exc:
+        if has_math_prefix:
+            return (False, f"🧮 No pude resolver esa expresión matemática ({exc}). Ejemplo válido: «calcula (120 + 80) / 5» o «cuánto es la raíz cuadrada de 144».")
+        return None
+
+
+def _clean_web_search_text(value: str) -> str:
+    value = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", str(value or ""), flags=re.IGNORECASE | re.DOTALL)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = html.unescape(value)
+    return re.sub(r"\s+", " ", value).strip(" -\t\r\n")
+
+
+def _wikipedia_es_summary(query: str, urlopen=None) -> str | None:
+    """Query Spanish Wikipedia REST/Search API for an authoritative encyclopedia summary."""
+    opener = urlopen or urllib.request.urlopen
+    clean_q = re.sub(r"\s+", " ", str(query or "")).strip(" ?¿!¡.,;:")
+    if not clean_q:
+        return None
+    search_url = (
+        "https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch="
+        + urllib.parse.quote_plus(clean_q)
+        + "&utf8=1&format=json&srlimit=2"
+    )
+    req = urllib.request.Request(search_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+    with opener(req, timeout=8) as resp:
+        data = json.loads(resp.read().decode("utf-8", errors="replace"))
+    hits = data.get("query", {}).get("search", [])
+    if not hits:
+        return None
+    top_title = str(hits[0].get("title") or "").strip()
+    if not top_title:
+        return None
+    sum_url = "https://es.wikipedia.org/api/rest_v1/page/summary/" + urllib.parse.quote(top_title.replace(" ", "_"))
+    req_sum = urllib.request.Request(sum_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+    with opener(req_sum, timeout=8) as resp_sum:
+        sum_data = json.loads(resp_sum.read().decode("utf-8", errors="replace"))
+    extract = _clean_web_search_text(str(sum_data.get("extract") or ""))
+    if extract:
+        return f"Wikipedia ({top_title}): {extract[:560]}"
+    snippet = _clean_web_search_text(str(hits[0].get("snippet") or ""))
+    if snippet:
+        return f"Wikipedia ({top_title}): {snippet[:420]}"
+    return None
+
+
+def _duckduckgo_instant_and_html(query: str, urlopen=None) -> list[str]:
+    """Query DuckDuckGo Instant Answer JSON + HTML snippets (ported from Viernes services/tools.py)."""
+    opener = urlopen or urllib.request.urlopen
+    q_enc = urllib.parse.quote_plus(str(query or "").strip())
+    results: list[str] = []
+    if not q_enc:
+        return results
+    try:
+        ia_url = f"https://api.duckduckgo.com/?q={q_enc}&format=json&no_redirect=1&no_html=1&kl=mx-es"
+        req = urllib.request.Request(ia_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+        with opener(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        abstract = _clean_web_search_text(str(data.get("AbstractText") or ""))
+        heading = _clean_web_search_text(str(data.get("Heading") or ""))
+        if abstract:
+            results.append(f"{heading + ': ' if heading else ''}{abstract[:480]}")
+        for item in (data.get("RelatedTopics") or [])[:2]:
+            if isinstance(item, dict) and item.get("Text"):
+                results.append(_clean_web_search_text(str(item["Text"]))[:360])
+    except Exception:
+        pass
+    if len(results) < 2:
+        try:
+            html_url = f"https://html.duckduckgo.com/html/?q={q_enc}"
+            req_h = urllib.request.Request(html_url, headers={"User-Agent": "CLARA-V/2.0 (+local-assistant)"})
+            with opener(req_h, timeout=9) as resp_h:
+                raw_html = resp_h.read().decode("utf-8", errors="replace")
+            pattern = re.compile(
+                r'<a[^>]+class="[^"]*result__a[^"]*"[^>]*>(.*?)</a>'
+                r'.{0,2500}?'
+                r'(?:<a[^>]+class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</a>|'
+                r'<div[^>]+class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</div>)',
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            seen = {r.casefold() for r in results}
+            for m in pattern.finditer(raw_html):
+                title = _clean_web_search_text(m.group(1))
+                snip = _clean_web_search_text(m.group(2) or m.group(3) or "")
+                if not snip:
+                    continue
+                entry = f"{title}: {snip}" if title else snip
+                if entry.casefold() not in seen:
+                    seen.add(entry.casefold())
+                    results.append(entry[:380])
+                if len(results) >= 3:
+                    break
+        except Exception:
+            pass
+    return results
+
+
+def search_web_summary(query: str, urlopen=None) -> str:
+    """Research a topic on the internet using Spanish Wikipedia + DuckDuckGo (from Viernes)."""
+    clean_q = re.sub(
+        r"^(?:que\s+es(?:\s+un|\s+una|\s+el|\s+la)?|quien\s+(?:es|fue)|cual\s+es|como\s+funciona|definicion\s+de|significado\s+de)\s+",
+        "",
+        str(query or "").strip(" ?¿!¡.,;:"),
+        count=1,
+        flags=re.IGNORECASE,
+    ).strip() or str(query or "").strip(" ?¿!¡.,;:")
+    if not clean_q:
+        return "Indica qué tema deseas que investigue en internet."
+    sections: list[str] = []
+    try:
+        wiki = _wikipedia_es_summary(clean_q, urlopen=urlopen)
+        if wiki:
+            sections.append(wiki)
+    except Exception:
+        pass
+    try:
+        ddg = _duckduckgo_instant_and_html(clean_q, urlopen=urlopen)
+        for item in ddg:
+            if item and all(item[:60].casefold() not in s.casefold() for s in sections):
+                sections.append(item)
+    except Exception:
+        pass
+    if not sections:
+        return f"🌐 Busqué «{clean_q}» en internet, pero no obtuve fragmentos directos en este momento. Verifica tu conexión o intenta con términos más específicos."
+    bullets = "\n".join(f"• {sec}" for sec in sections[:3])
+    return f"🌐 Investigación en internet sobre «{clean_q}»:\n{bullets}"
+
+
+def extract_web_research_query(raw_text: str) -> str | None:
+    """If the user is explicitly asking to search/research on the internet/web/Wikipedia, return the query."""
+    raw = str(raw_text or "").strip()
+    if not raw:
+        return None
+    low = normalize_intent_text(raw)
+    # Do not confuse with local file search ("busca mi archivo pdf...")
+    if re.search(r"\b(?:mi|mis)\s+(?:documento|documentos|archivo|archivos|carpeta|clase|tarea|apunte)\b", low):
+        return None
+    if re.search(r"\.(?:pdf|docx|xlsx|pptx|txt|md)\b", low):
+        return None
+    m = re.match(
+        r"^(?:hola[,.;:\s-]*)?(?:por\s+favor\s+)?(?:clara(?:-v|\s+v)?[,.;:\s-]*)?"
+        r"(?:investiga(?:r)?(?:\s+en\s+(?:internet|la\s+web|linea|wikipedia))?(?:\s+sobre|\s+acerca\s+de|\s+que\s+es)?|"
+        r"busca(?:r)?\s+en\s+(?:internet|la\s+web|google|duckduckgo|wikipedia|linea)(?:\s+sobre|\s+acerca\s+de)?|"
+        r"consulta(?:r)?\s+en\s+(?:internet|la\s+web|wikipedia)(?:\s+sobre)?|"
+        r"que\s+dice\s+(?:internet|wikipedia|la\s+web)\s+(?:sobre|acerca\s+de|de))\s+(.+)$",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if m:
+        q = m.group(1).strip(" ?¿!¡.,;:")
+        return q if q else None
+    return None
+
+
 def build_local_analytical_schedule_answer(
     db: sqlite3.Connection,
     query_text: str,
@@ -5457,6 +5798,8 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
         or is_schedule_conflict_query(low_words)
         or is_weekly_grid_query(low_words)
         or parse_pomodoro_command(raw) is not None
+        or parse_and_execute_math_from_chat(raw) is not None
+        or extract_web_research_query(raw) is not None
     ):
         return None
 
@@ -5929,6 +6272,7 @@ class AssistantApp(tk.Tk):
             ("🗓 Cuadrícula semanal", self.open_weekly_grid_schedule, "TButton"),
             ("⏱ Pomodoro", self.open_pomodoro_dialog, "TButton"),
             ("📓 Apuntes", self.open_subject_notebook, "TButton"),
+            ("🧮 Calculadora / 🌐 Web", self.open_math_and_web_tools, "TButton"),
             ("🔐 Niveles y Bóveda", self.open_security_levels_vault, "TButton"),
             ("🔒 Bloquear sesión", self.lock_security_session, "TButton"),
             ("Historial de avisos", self.open_reminder_history, "TButton"),
@@ -9594,6 +9938,86 @@ class AssistantApp(tk.Tk):
         ).pack(side="left", padx=8)
         draw_grid()
 
+    def run_web_research_async(self, query: str) -> None:
+        """Run internet research (Wikipedia ES + DuckDuckGo) in a background thread and post results to chat."""
+        clean_q = str(query or "").strip()
+        if not clean_q:
+            return
+        self.append_chat("Asistente", f"🌐 Investigando en internet sobre «{clean_q}»…", speak=False)
+
+        def _worker() -> None:
+            summary = search_web_summary(clean_q)
+            self.ai_results.put(("online_summary", ("Asistente", summary)))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def open_math_and_web_tools(self) -> None:
+        window = tk.Toplevel(self)
+        window.title("🧮 Calculadora Matemática y 🌐 Buscador en Internet")
+        window.geometry("760x480")
+        window.minsize(640, 380)
+        window.transient(self)
+        outer = ttk.Frame(window, padding=18)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, text="🧮 Calculadora Científica Segura y 🌐 Investigación en Internet", style="CardTitle.TLabel").pack(anchor="w")
+        ttk.Label(
+            outer,
+            text="Resuelve operaciones matemáticas al instante sin conexión (raíces, potencias, porcentajes, trigonometría) o investiga cualquier tema en Wikipedia y DuckDuckGo.",
+            wraplength=710,
+        ).pack(anchor="w", pady=(4, 10))
+
+        top_actions = ttk.Frame(outer)
+        top_actions.pack(side="top", fill="x", pady=(0, 10))
+
+        input_frame = ttk.Frame(outer, style="Card.TFrame", padding=12)
+        input_frame.pack(fill="x", pady=(0, 10))
+        query_var = tk.StringVar(value="")
+        ttk.Label(input_frame, text="Operación o tema a investigar:").pack(anchor="w")
+        entry = ttk.Entry(input_frame, textvariable=query_var, width=72)
+        entry.pack(fill="x", pady=(4, 0))
+
+        output_box = tk.Text(outer, height=11, wrap="word", bg="#081624", fg="#eff8ff", insertbackground="#eff8ff", padx=10, pady=8, font=("Segoe UI", 10))
+        output_box.pack(fill="both", expand=True)
+
+        def _write_result(txt: str) -> None:
+            output_box.configure(state="normal")
+            output_box.delete("1.0", "end")
+            output_box.insert("1.0", txt)
+            output_box.configure(state="disabled")
+
+        def do_math() -> None:
+            raw = query_var.get().strip()
+            if not raw:
+                messagebox.showinfo("Escribe una expresión", "Ejemplo: (120 + 80) / 5, sqrt(144) + 18, o 15% de 840", parent=window)
+                return
+            try:
+                val = evaluate_safe_math_expression(raw)
+                msg = f"🧮 Expresión: {normalize_spanish_math_expression(raw)}\nResultado exacto: {val}"
+                _write_result(msg)
+                self.append_chat("Asistente", f"🧮 Resultado de `{normalize_spanish_math_expression(raw)}` = **{val}**")
+            except Exception as exc:
+                _write_result(f"No pude calcular la expresión: {exc}")
+
+        def do_web() -> None:
+            raw = query_var.get().strip()
+            if not raw:
+                messagebox.showinfo("Escribe un tema", "Ejemplo: Algoritmo de Dijkstra, Ley de Ohm, o Historia de Colima", parent=window)
+                return
+            _write_result(f"🌐 Investigando «{raw}» en Wikipedia y DuckDuckGo…")
+            def _bg() -> None:
+                res = search_web_summary(raw)
+                self.ai_results.put(("online_summary", ("Asistente", res)))
+                try:
+                    window.after(0, lambda: _write_result(res))
+                except Exception:
+                    pass
+            threading.Thread(target=_bg, daemon=True).start()
+
+        ttk.Button(top_actions, text="🧮 Calcular operación", style="Accent.TButton", command=do_math).pack(side="left")
+        ttk.Button(top_actions, text="🌐 Investigar en Internet", command=do_web).pack(side="left", padx=8)
+        ttk.Button(top_actions, text="🧹 Limpiar", command=lambda: (query_var.set(""), _write_result(""))).pack(side="left")
+        entry.focus_set()
+
     def open_calendar_exceptions(self) -> None:
         window = tk.Toplevel(self)
         window.title("Calendario escolar · excepciones")
@@ -11244,6 +11668,19 @@ class AssistantApp(tk.Tk):
         notebook_res = parse_and_execute_subject_notebook_from_chat(self.db, text_action, app_instance=self)
         if notebook_res is not None:
             self.append_chat("Asistente", notebook_res[1])
+            return
+
+        math_res = parse_and_execute_math_from_chat(text_action)
+        if math_res is not None:
+            self.append_chat("Asistente", math_res[1])
+            return
+
+        web_q = extract_web_research_query(text_action)
+        if web_q is not None:
+            if hasattr(self, "run_web_research_async") and getattr(self, "tk", None) is not None:
+                self.run_web_research_async(web_q)
+            else:
+                self.append_chat("Asistente", search_web_summary(web_q))
             return
 
         if is_class_delete_command(low_action):
