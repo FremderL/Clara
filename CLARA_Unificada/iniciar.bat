@@ -21,6 +21,16 @@ if errorlevel 1 (
   exit /b 1
 )
 rem Inicio sencillo y directo: no realiza descargas, instalaciones silenciosas ni elevacion.
+rem Si Ollama esta instalado localmente y aun no esta activo, lo inicia en segundo plano.
+py -3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:11434/api/tags', timeout=1)" >nul 2>nul
+if errorlevel 1 (
+  where ollama >nul 2>nul
+  if not errorlevel 1 (
+    start "" /B ollama serve >nul 2>nul
+  ) else if exist "%LOCALAPPDATA%\Programs\Ollama\ollama.exe" (
+    start "" /B "%LOCALAPPDATA%\Programs\Ollama\ollama.exe" serve >nul 2>nul
+  )
+)
 py -3 app.py
 if errorlevel 1 (
   echo.

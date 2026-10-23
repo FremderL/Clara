@@ -1231,8 +1231,21 @@ END:VCALENDAR\r
             content = (base_dir / launcher_name).read_text(encoding="utf-8")
             low = content.casefold()
             self.assertIn("py -3 app.py", low)
+            self.assertIn("ollama serve", low)
             for forbidden in ("pip install", "ollama pull", "invoke-webrequest", "curl ", "wget ", "runas"):
                 self.assertNotIn(forbidden, low)
+
+        with tempfile.TemporaryDirectory() as tmp_ollama:
+            fake_ollama = Path(tmp_ollama) / "ollama.exe"
+            fake_ollama.write_bytes(b"MZ")
+            launched_cmds = []
+            with mock.patch.object(app, "find_installed_ollama_executable", return_value=fake_ollama):
+                started = app.ensure_local_ollama_running(
+                    platform_name="win32",
+                    popen=lambda cmd, **kw: launched_cmds.append((cmd, kw.get("shell"))),
+                )
+            self.assertTrue(started)
+            self.assertEqual(launched_cmds, [([str(fake_ollama), "serve"], False)])
 
         # Scripts de instalación opcional exigen confirmación manual (choice /c SN) y divulgan licencia/fuente
         for opt_script in ("instalar_voz.bat", "instalar_opciones_windows.bat", "build_windows.bat"):

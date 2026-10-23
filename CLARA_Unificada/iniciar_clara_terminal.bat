@@ -32,7 +32,20 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [2/4] Comprobando estado de Ollama local ^(opcional, solo lectura^)...
+echo [2/4] Comprobando o iniciando servidor local de Ollama ^(opcional^)...
+powershell -NoProfile -Command "try { $null = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2; exit 0 } catch { exit 1 }" >nul 2>nul
+if errorlevel 1 (
+  where ollama >nul 2>nul
+  if not errorlevel 1 (
+    echo       Iniciando servidor local de Ollama instalado en el equipo...
+    start "" /B ollama serve >nul 2>nul
+    timeout /t 2 /nobreak >nul
+  ) else if exist "%LOCALAPPDATA%\Programs\Ollama\ollama.exe" (
+    echo       Iniciando servidor local de Ollama instalado en el equipo...
+    start "" /B "%LOCALAPPDATA%\Programs\Ollama\ollama.exe" serve >nul 2>nul
+    timeout /t 2 /nobreak >nul
+  )
+)
 powershell -NoProfile -Command "try { $null = Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2; exit 0 } catch { exit 1 }" >nul 2>nul
 if errorlevel 1 (
   echo       [OPCIONAL] Ollama no responde en 127.0.0.1:11434.

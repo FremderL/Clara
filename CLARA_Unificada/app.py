@@ -1315,26 +1315,36 @@ def show_windows_private_toast() -> bool:
         return False
 
 
-def present_reminder(parent: tk.Misc, alert: dict[str, str], db: sqlite3.Connection, close_callback=None) -> tk.Toplevel:
+def present_reminder(
+    parent: tk.Misc,
+    alert: dict[str, str],
+    db: sqlite3.Connection,
+    close_callback=None,
+    open_app_callback=None,
+) -> tk.Toplevel:
     window = tk.Toplevel(parent)
-    window.title("Recordatorio local · Clara")
+    window.title("Recordatorio local · CLARA-V")
     window.transient(parent)
     window.resizable(False, False)
     frame = ttk.Frame(window, padding=18)
     frame.pack(fill="both", expand=True)
-    ttk.Label(frame, text="Recordatorio", style="CardTitle.TLabel").pack(anchor="w")
+    ttk.Label(frame, text="Recordatorio · CLARA-V", style="CardTitle.TLabel").pack(anchor="w")
     ttk.Label(frame, text=alert["message"], wraplength=430, justify="left").pack(anchor="w", pady=(10, 8))
     ttk.Label(frame, text=f"Hora local del equipo · {local_timezone_label()} · si se cierra sin descartar, volverá a avisar.", wraplength=430, foreground="#91aabd").pack(anchor="w", pady=(0, 14))
 
-    def finish(action: str | None = None) -> None:
+    def finish(action: str | None = None, launch_full_app: bool = False) -> None:
         if action:
             record_alert_action(db, alert["alert_key"], action, datetime.now())
         window.destroy()
-        if close_callback:
+        if launch_full_app and open_app_callback:
+            open_app_callback()
+        elif close_callback:
             close_callback()
 
     ttk.Button(frame, text="Posponer 10 min", command=lambda: finish("snoozed")).pack(side="left")
     ttk.Button(frame, text="Descartar este aviso", command=lambda: finish("dismissed")).pack(side="left", padx=8)
+    if open_app_callback is not None:
+        ttk.Button(frame, text="Abrir CLARA-V", command=lambda: finish(None, launch_full_app=True)).pack(side="left")
     window.protocol("WM_DELETE_WINDOW", lambda: finish(None))
     window.grab_set()
     return window
@@ -5495,16 +5505,32 @@ class AssistantApp(tk.Tk):
         ttk.Button(controls, text="Borrar historial guardado…", command=clear_history).pack(side="left", padx=8)
 
     def refresh_ollama_models(self) -> None:
-        self.ollama_status.configure(text="Buscando servidor local de Ollama…")
+        self.ollama_status.configure(text="Buscando o iniciando servidor local de Ollama…")
+
+        def _fetch_models() -> list[str]:
+            request = urllib.request.Request("http://127.0.0.1:11434/api/tags")
+            with urllib.request.urlopen(request, timeout=2.5) as response:
+                models = json.loads(response.read().decode("utf-8")).get("models", [])
+            return [item.get("name", "") for item in models if item.get("name")]
 
         def worker() -> None:
             try:
-                request = urllib.request.Request("http://127.0.0.1:11434/api/tags")
-                with urllib.request.urlopen(request, timeout=3) as response:
-                    models = json.loads(response.read().decode("utf-8")).get("models", [])
-                self.ai_results.put(("models", [item.get("name", "") for item in models if item.get("name")]))
-            except Exception as exc:
-                self.ai_results.put(("models_error", str(exc)))
+                self.ai_results.put(("models", _fetch_models()))
+                return
+            except Exception as first_exc:
+                started = ensure_local_ollama_running()
+                if not started:
+                    self.ai_results.put(("models_error", str(first_exc)))
+                    return
+                last_exc: Exception = first_exc
+                for _attempt in range(10):
+                    time.sleep(0.6)
+                    try:
+                        self.ai_results.put(("models", _fetch_models()))
+                        return
+                    except Exception as retry_exc:
+                        last_exc = retry_exc
+                self.ai_results.put(("models_error", str(last_exc)))
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -5599,6 +5625,7 @@ class AssistantApp(tk.Tk):
                         self.model_var.set(selected)
                         self.ollama_status.configure(text=f"Ollama conectado · {len(models)} modelo(s) local(es) disponible(s)")
                         self.append_chat("Sistema", "Modelos detectados: " + ", ".join(models))
+                        warmup_local_ollama_model(selected)
                     else:
                         self.model_var.set("")
                         self.ollama_status.configure(text="Ollama responde, pero no hay modelos descargados.")
@@ -6212,9 +6239,79 @@ Para operaciones de archivos, no devuelvas rutas, ni selecciones una carpeta/doc
         self.destroy()
 
 
+def find_installed_ollama_executable(platform_name: str | None = None) -> Path | None:
+    """Locate an already-installed local Ollama binary without downloading or installing anything."""
+    platform_name = platform_name or sys.platform
+    candidates: list[Path] = []
+    which_path = shutil.which("ollama")
+    if which_path:
+        candidates.append(Path(which_path))
+    if platform_name == "win32":
+        local_appdata = os.environ.get("LOCALAPPDATA", "")
+        if local_appdata:
+            candidates.append(Path(local_appdata) / "Programs" / "Ollama" / "ollama.exe")
+        for env_key in ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"):
+            prog = os.environ.get(env_key, "")
+            if prog:
+                candidates.append(Path(prog) / "Ollama" / "ollama.exe")
+    for candidate in candidates:
+        try:
+            if candidate.exists() and candidate.is_file() and not candidate.is_symlink():
+                return candidate.resolve(strict=True)
+        except OSError:
+            continue
+    return None
+
+
+def ensure_local_ollama_running(platform_name: str | None = None, popen=None) -> bool:
+    """Start local 'ollama serve' in background if Ollama is installed on the machine."""
+    exe = find_installed_ollama_executable(platform_name=platform_name)
+    if exe is None:
+        return False
+    start_proc = popen or subprocess.Popen
+    kwargs: dict = {
+        "shell": False,
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "close_fds": True,
+    }
+    if (platform_name or sys.platform) == "win32":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        start_proc([str(exe), "serve"], **kwargs)
+        return True
+    except OSError:
+        return False
+
+
+def warmup_local_ollama_model(model_name: str) -> None:
+    """Preload the selected local Ollama model into RAM/VRAM in a background thread so the first query is fast."""
+    clean_model = str(model_name or "").strip()
+    if not clean_model:
+        return
+
+    def _warm() -> None:
+        try:
+            payload = json.dumps({"model": clean_model, "messages": [], "keep_alive": "30m"}).encode("utf-8")
+            req = urllib.request.Request(
+                "http://127.0.0.1:11434/api/chat",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read(256)
+        except Exception:
+            pass
+
+    threading.Thread(target=_warm, daemon=True).start()
+
+
 def run_reminder_check() -> None:
     """Scheduled-task entry point; requires an interactive signed-in Windows session."""
     db = connect_db()
+    open_full_app = False
     try:
         alerts = collect_due_alerts(db, datetime.now())
         if not alerts:
@@ -6224,13 +6321,39 @@ def run_reminder_check() -> None:
             return
         if settings.get("native_notifications_enabled") == "true" and show_windows_private_toast():
             return
+        alert = alerts[0]
+        if settings.get("auto_speak_responses", "true") == "true":
+            def _speak_alert() -> None:
+                try:
+                    import pyttsx3
+                    engine = pyttsx3.init()
+                    voices = list(engine.getProperty("voices") or [])
+                    voice_id = select_spanish_voice_id(voices)
+                    if voice_id:
+                        engine.setProperty("voice", voice_id)
+                    engine.setProperty("rate", 172)
+                    engine.say(prepare_text_for_speech("Recordatorio de CLARA-V: " + str(alert.get("message", ""))))
+                    engine.runAndWait()
+                except Exception:
+                    pass
+            threading.Thread(target=_speak_alert, daemon=True).start()
         root = tk.Tk()
         root.withdraw()
-        present_reminder(root, alerts[0], db, close_callback=root.quit)
+
+        def _request_open_app() -> None:
+            nonlocal open_full_app
+            open_full_app = True
+            root.quit()
+
+        present_reminder(root, alert, db, close_callback=root.quit, open_app_callback=_request_open_app)
         root.mainloop()
         root.destroy()
     finally:
         db.close()
+    if open_full_app:
+        full_app = AssistantApp()
+        full_app.protocol("WM_DELETE_WINDOW", full_app.on_close)
+        full_app.mainloop()
 
 
 if __name__ == "__main__":
