@@ -28,6 +28,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -3330,6 +3331,207 @@ def parse_class_proposal(text: str) -> dict | None:
     }
 
 
+def _time_to_minutes(hhmm: str | None) -> int | None:
+    if not hhmm:
+        return None
+    m = re.match(r"^\s*(\d{1,2}):(\d{2})\s*$", str(hhmm))
+    if not m:
+        return None
+    h, mins = int(m.group(1)), int(m.group(2))
+    if not (0 <= h <= 23 and 0 <= mins <= 59):
+        return None
+    return h * 60 + mins
+
+
+def _minutes_to_time(total_mins: int) -> str:
+    clamped = max(0, min(23 * 60 + 59, int(total_mins)))
+    return f"{clamped // 60:02d}:{clamped % 60:02d}"
+
+
+def detect_class_schedule_conflicts(
+    db: sqlite3.Connection,
+    weekdays: list[int],
+    start_time: str | None,
+    end_time: str | None = None,
+    *,
+    exclude_class_ids: set[int] | None = None,
+    exclude_class_name: str | None = None,
+) -> list[dict[str, object]]:
+    """Detect time overlaps against existing weekly classes on the given weekday(s)."""
+    start_min = _time_to_minutes(start_time)
+    if start_min is None or not weekdays:
+        return []
+    end_min = _time_to_minutes(end_time)
+    if end_min is None or end_min <= start_min:
+        end_min = min(23 * 60 + 59, start_min + 60)
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    excluded_ids = {int(x) for x in (exclude_class_ids or set())}
+    excl_name_norm = normalize_intent_text(exclude_class_name) if exclude_class_name else ""
+    conflicts: list[dict[str, object]] = []
+    for wd in sorted({int(d) for d in weekdays if 0 <= int(d) <= 6}):
+        rows = db.execute(
+            "SELECT id, name, weekday, start_time, end_time, location FROM classes WHERE weekday=? ORDER BY start_time, id",
+            (wd,),
+        ).fetchall()
+        for row in rows:
+            rid = int(row["id"])
+            if rid in excluded_ids:
+                continue
+            rname = str(row["name"] or "").strip()
+            if excl_name_norm and normalize_intent_text(rname) == excl_name_norm:
+                continue
+            other_start = _time_to_minutes(row["start_time"])
+            if other_start is None:
+                continue
+            other_end = _time_to_minutes(row["end_time"])
+            if other_end is None or other_end <= other_start:
+                other_end = min(23 * 60 + 59, other_start + 60)
+            ov_start = max(start_min, other_start)
+            ov_end = min(end_min, other_end)
+            if ov_start < ov_end:
+                conflicts.append(
+                    {
+                        "id": rid,
+                        "weekday": wd,
+                        "day_label": days_labels[wd],
+                        "name": rname,
+                        "start_time": str(row["start_time"]),
+                        "end_time": str(row["end_time"] or _minutes_to_time(other_end)),
+                        "location": str(row["location"] or "").strip(),
+                        "overlap_start": _minutes_to_time(ov_start),
+                        "overlap_end": _minutes_to_time(ov_end),
+                    }
+                )
+    return conflicts
+
+
+def format_schedule_conflict_warning(conflicts: list[dict[str, object]]) -> str:
+    """Build a friendly Spanish warning describing all detected class schedule overlaps."""
+    if not conflicts:
+        return ""
+    parts: list[str] = []
+    for item in conflicts:
+        loc_part = f", {item['location']}" if item.get("location") else ""
+        parts.append(
+            f"{item['day_label']} de {item['overlap_start']} a {item['overlap_end']} con tu clase «{item['name']}» ({item['start_time']}–{item['end_time']}{loc_part})"
+        )
+    joined = "; ".join(parts)
+    return (
+        f"⚠️ Atención: se empalma el {joined}. "
+        "¿Quieres cambiarla de hora o eliminar la anterior?"
+    )
+
+
+def detect_date_schedule_conflicts(
+    db: sqlite3.Connection,
+    target_date: date,
+    start_time: str,
+    end_time: str,
+    *,
+    exclude_block_id: int | None = None,
+) -> list[str]:
+    """Detect overlaps on a specific calendar date against effective classes and study blocks."""
+    start_min = _time_to_minutes(start_time)
+    end_min = _time_to_minutes(end_time)
+    if start_min is None or end_min is None or end_min <= start_min:
+        return []
+    conflicts: list[str] = []
+    for meeting in classes_for_date(db, target_date):
+        m_start = _time_to_minutes(str(meeting.get("start_time") or ""))
+        if m_start is None:
+            continue
+        m_end = _time_to_minutes(str(meeting.get("end_time") or ""))
+        if m_end is None or m_end <= m_start:
+            m_end = min(23 * 60 + 59, m_start + 60)
+        ov_s = max(start_min, m_start)
+        ov_e = min(end_min, m_end)
+        if ov_s < ov_e:
+            loc = f", {meeting['location']}" if meeting.get("location") else ""
+            conflicts.append(
+                f"de {_minutes_to_time(ov_s)} a {_minutes_to_time(ov_e)} con tu clase «{meeting['name']}» ({meeting['start_time']}–{meeting.get('end_time') or _minutes_to_time(m_end)}{loc})"
+            )
+    rows = db.execute(
+        "SELECT id, title, start_time, end_time FROM plan_blocks WHERE block_date=? ORDER BY start_time",
+        (target_date.isoformat(),),
+    ).fetchall()
+    for row in rows:
+        if exclude_block_id is not None and int(row["id"]) == int(exclude_block_id):
+            continue
+        b_start = _time_to_minutes(row["start_time"])
+        b_end = _time_to_minutes(row["end_time"])
+        if b_start is None or b_end is None or b_end <= b_start:
+            continue
+        ov_s = max(start_min, b_start)
+        ov_e = min(end_min, b_end)
+        if ov_s < ov_e:
+            conflicts.append(
+                f"de {_minutes_to_time(ov_s)} a {_minutes_to_time(ov_e)} con tu bloque «{row['title']}» ({row['start_time']}–{row['end_time']})"
+            )
+    return conflicts
+
+
+def audit_all_schedule_conflicts(db: sqlite3.Connection, ref_date: date | None = None) -> list[str]:
+    """Audit the entire weekly class schedule and upcoming 7 days of study blocks for overlaps."""
+    repair_legacy_class_locations(db)
+    ref_date = ref_date or date.today()
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    issues: list[str] = []
+    for wd in range(7):
+        rows = db.execute(
+            "SELECT id, name, start_time, end_time, location FROM classes WHERE weekday=? ORDER BY start_time, id",
+            (wd,),
+        ).fetchall()
+        for i in range(len(rows)):
+            s1 = _time_to_minutes(rows[i]["start_time"])
+            if s1 is None:
+                continue
+            e1 = _time_to_minutes(rows[i]["end_time"])
+            if e1 is None or e1 <= s1:
+                e1 = min(23 * 60 + 59, s1 + 60)
+            for j in range(i + 1, len(rows)):
+                s2 = _time_to_minutes(rows[j]["start_time"])
+                if s2 is None:
+                    continue
+                e2 = _time_to_minutes(rows[j]["end_time"])
+                if e2 is None or e2 <= s2:
+                    e2 = min(23 * 60 + 59, s2 + 60)
+                ov_s = max(s1, s2)
+                ov_e = min(e1, e2)
+                if ov_s < ov_e:
+                    loc1 = f" ({rows[i]['location']})" if rows[i]["location"] else ""
+                    loc2 = f" ({rows[j]['location']})" if rows[j]["location"] else ""
+                    issues.append(
+                        f"{days_labels[wd]} {_minutes_to_time(ov_s)}–{_minutes_to_time(ov_e)}: «{rows[i]['name']}»{loc1} se empalma con «{rows[j]['name']}»{loc2}"
+                    )
+    for offset in range(7):
+        d = ref_date + timedelta(days=offset)
+        blocks = db.execute(
+            "SELECT id, title, start_time, end_time FROM plan_blocks WHERE block_date=? ORDER BY start_time",
+            (d.isoformat(),),
+        ).fetchall()
+        for b in blocks:
+            b_conflicts = detect_date_schedule_conflicts(
+                db, d, str(b["start_time"]), str(b["end_time"]), exclude_block_id=int(b["id"])
+            )
+            for desc in b_conflicts:
+                entry = f"{days_labels[d.weekday()]} {d.isoformat()}: el bloque «{b['title']}» ({b['start_time']}–{b['end_time']}) se empalma {desc}"
+                if entry not in issues:
+                    issues.append(entry)
+    return issues
+
+
+def build_schedule_conflicts_report(db: sqlite3.Connection, ref_date: date | None = None) -> str:
+    """Return a user-facing summary of any schedule overlaps across weekly classes and study blocks."""
+    issues = audit_all_schedule_conflicts(db, ref_date=ref_date)
+    if not issues:
+        return "✅ Revisé tu horario semanal de clases y tus bloques de estudio: no tienes ningún choque ni empalme de horario."
+    return (
+        "⚠️ Detecté los siguientes choques de horario (empalmes) en tu agenda:\n"
+        + "\n".join(f"• {item}" for item in issues)
+        + "\n¿Quieres que cambie alguna clase o bloque de hora?"
+    )
+
+
 def execute_add_class_from_chat(db: sqlite3.Connection, proposal: dict) -> tuple[bool, str]:
     """Save a class directly into SQLite (avoiding duplicates) when name, weekday(s), and start_time are provided."""
     repair_legacy_class_locations(db)
@@ -3358,6 +3560,14 @@ def execute_add_class_from_chat(db: sqlite3.Connection, proposal: dict) -> tuple
             "o usar la ventana de Mis clases que acabo de abrirte.",
         )
 
+    conflicts = detect_class_schedule_conflicts(
+        db,
+        weekdays,
+        start_time,
+        end_time,
+        exclude_class_name=name,
+    )
+
     saved_days: list[str] = []
     for wd in weekdays:
         existing = db.execute(
@@ -3378,10 +3588,409 @@ def execute_add_class_from_chat(db: sqlite3.Connection, proposal: dict) -> tuple
     db.commit()
     slot = start_time + (f"–{end_time}" if end_time else "")
     loc_text = f" ({location})" if location else ""
+    base_msg = f"¡Listo! Guardé tu clase «{name}» para {', '.join(saved_days)} en horario {slot}{loc_text}."
+    warning_msg = format_schedule_conflict_warning(conflicts)
+    if warning_msg:
+        base_msg = f"{base_msg}\n{warning_msg}"
+    return (True, base_msg)
+
+
+def execute_edit_class_from_chat(db: sqlite3.Connection, raw_text: str) -> tuple[bool, str]:
+    """Modify an existing class's location, schedule time, or weekday(s) from natural Spanish without duplicating rows."""
+    repair_legacy_class_locations(db)
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    weekday_map = {
+        "lunes": 0,
+        "martes": 1,
+        "miercoles": 2,
+        "jueves": 3,
+        "viernes": 4,
+        "sabado": 5,
+        "domingo": 6,
+    }
+
+    all_classes = db.execute("SELECT id, name, weekday, start_time, end_time, location FROM classes ORDER BY id").fetchall()
+    if not all_classes:
+        return (False, "Aún no tienes clases registradas en tu horario semanal para editar.")
+
+    # 1. Identify which existing class subject the user is referring to
+    distinct_names = sorted({str(r["name"]).strip() for r in all_classes if r["name"]}, key=len, reverse=True)
+    matched_name: str | None = None
+    for cname in distinct_names:
+        cname_norm = normalize_intent_text(cname)
+        if cname_norm and cname_norm in low:
+            matched_name = cname
+            break
+
+    if not matched_name:
+        # Try extracting candidate subject name after "clase de" / "materia de" / "salón de" / "horario de"
+        m_sub = re.search(
+            r"\b(?:clase|clases|materia|asignatura|curso|horario|sal[oó]n|aula|lugar)\s+de\s+([A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]{2,60})",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if m_sub:
+            cand = m_sub.group(1)
+            cand = re.sub(
+                rf"\b(?:al|a\s+la|a\s+el|en\s+el|en\s+la|en|a|del|de\s+los|los|el|para|de\s+\d{{1,2}}|\d{{1,2}}:\d{{2}}|{_CLASS_LOCATION_NOUN_PATTERN}|lunes|martes|mi[eé]rcoles|miercoles|jueves|viernes|s[aá]bado|sabado|domingo)\b.*$",
+                "",
+                cand,
+                flags=re.IGNORECASE,
+            ).strip(" .,;:")
+            cand_norm = normalize_intent_text(cand)
+            if cand_norm:
+                for cname in distinct_names:
+                    if cand_norm in normalize_intent_text(cname) or normalize_intent_text(cname) in cand_norm:
+                        matched_name = cname
+                        break
+
+    if not matched_name:
+        return (
+            False,
+            "No identifiqué qué materia quieres modificar. Dime el nombre de la clase, por ejemplo: "
+            "«cambia mi clase de Matematicas Discretas al Laboratorio 3» o «cambia el horario de Bases de Datos de 14:00 a 16:00».",
+        )
+
+    target_rows = [r for r in all_classes if normalize_intent_text(str(r["name"])) == normalize_intent_text(matched_name)]
+
+    # 2. Extract new location if requested
+    new_location: str | None = None
+    loc_match = re.search(
+        rf"\b(?:al|a\s+la|a\s+el|a|en\s+el|en\s+la|en)\s+({_CLASS_LOCATION_NOUN_PATTERN}(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ._-]+){{0,3}})",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    if loc_match:
+        new_location = loc_match.group(1).strip(" .,;:")
+    else:
+        explicit_room = re.search(
+            r"\b(?:sal[oó]n|aula|lugar|ubicaci[oó]n|auditorio|laboratorio)\b.*?\b(?:a|al|en|por)\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ][A-Za-z0-9ÁÉÍÓÚáéíóúñÑ\s._-]{0,35}?)\s*[.,;:]*$",
+            raw,
+            flags=re.IGNORECASE,
+        )
+        if explicit_room:
+            new_location = explicit_room.group(1).strip(" .,;:")
+
+    # 3. Extract new time range or start_time if requested
+    new_start_time: str | None = None
+    new_end_time: str | None = None
+    time_span_match = re.search(
+        r"\b(?:de\s+(?:las\s+)?|a\s+las\s+)?(\d{1,2})(?::(\d{2}))?\s*(?:a(?:\s+las)?|-|–|hasta(?:\s+las)?)\s*(\d{1,2})(?::(\d{2}))?\b",
+        raw,
+        re.IGNORECASE,
+    )
+    if time_span_match:
+        h1, m1, h2, m2 = time_span_match.groups()
+        new_start_time = _normalize_hour_token(h1, m1)
+        new_end_time = _normalize_hour_token(h2, m2)
+        if new_start_time and new_end_time and new_end_time <= new_start_time:
+            try:
+                eh = int(h2)
+                if 1 <= eh <= 9 and int(h1) >= 7:
+                    new_end_time = _normalize_hour_token(str(eh + 12), m2)
+            except ValueError:
+                pass
+    else:
+        single_time_match = re.search(r"\b(?:a\s+las\s+)(\d{1,2})(?::(\d{2}))?\b|\b(\d{1,2}):(\d{2})\b", raw, re.IGNORECASE)
+        if single_time_match:
+            h_s = single_time_match.group(1) or single_time_match.group(3)
+            m_s = single_time_match.group(2) or single_time_match.group(4)
+            new_start_time = _normalize_hour_token(h_s, m_s)
+
+    # 4. Extract weekday transitions ("del viernes al jueves") or weekday filters ("de los viernes")
+    day_move_match = re.search(
+        r"\b(?:del|de\s+los|de\s+el|de)\s+(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\s+(?:al|a\s+los|a\s+el|a|para\s+el|para\s+los)\s+(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b",
+        low,
+    )
+    from_weekday: int | None = None
+    to_weekday: int | None = None
+    filter_weekdays: list[int] = []
+    if day_move_match:
+        from_weekday = weekday_map[day_move_match.group(1)]
+        to_weekday = weekday_map[day_move_match.group(2)]
+    else:
+        for d_word, d_idx in weekday_map.items():
+            if re.search(r"\b" + d_word + r"\b", low) and d_idx not in filter_weekdays:
+                filter_weekdays.append(d_idx)
+
+    if not any((new_location, new_start_time, from_weekday is not None, filter_weekdays)):
+        return (
+            False,
+            f"Indica qué cambio quieres hacer en «{matched_name}» (por ejemplo: «cambia mi clase de {matched_name} al Laboratorio 3» o «mueve {matched_name} de 15:00 a 17:00»).",
+        )
+
+    rows_to_update = list(target_rows)
+    if from_weekday is not None:
+        subset = [r for r in target_rows if int(r["weekday"]) == from_weekday]
+        if subset:
+            rows_to_update = subset
+    elif filter_weekdays and (new_location or new_start_time):
+        subset = [r for r in target_rows if int(r["weekday"]) in filter_weekdays]
+        if subset:
+            rows_to_update = subset
+        elif len(target_rows) == 1:
+            to_weekday = filter_weekdays[0]
+    elif filter_weekdays and not new_location and not new_start_time and len(filter_weekdays) == 1 and len(target_rows) == 1:
+        to_weekday = filter_weekdays[0]
+
+    updated_ids: set[int] = set()
+    updated_weekdays: list[int] = []
+    final_start = new_start_time or str(rows_to_update[0]["start_time"])
+    final_end = new_end_time or (str(rows_to_update[0]["end_time"]) if rows_to_update[0]["end_time"] else None)
+    final_loc = new_location or (str(rows_to_update[0]["location"]) if rows_to_update[0]["location"] else None)
+
+    for r in rows_to_update:
+        rid = int(r["id"])
+        updated_ids.add(rid)
+        wd = to_weekday if to_weekday is not None else int(r["weekday"])
+        st = new_start_time or str(r["start_time"])
+        et = new_end_time if new_start_time else (new_end_time or r["end_time"])
+        if new_start_time and not new_end_time and r["end_time"]:
+            old_s = _time_to_minutes(r["start_time"])
+            old_e = _time_to_minutes(r["end_time"])
+            new_s = _time_to_minutes(new_start_time)
+            if old_s is not None and old_e is not None and old_e > old_s and new_s is not None:
+                et = _minutes_to_time(new_s + (old_e - old_s))
+        loc = new_location if new_location is not None else r["location"]
+        db.execute(
+            "UPDATE classes SET weekday=?, start_time=?, end_time=?, location=?, reminded_on=NULL WHERE id=?",
+            (wd, st, et, loc, rid),
+        )
+        updated_weekdays.append(wd)
+        final_start, final_end, final_loc = st, et, loc
+
+    db.commit()
+    conflicts = detect_class_schedule_conflicts(
+        db,
+        updated_weekdays,
+        final_start,
+        final_end,
+        exclude_class_ids=updated_ids,
+        exclude_class_name=matched_name,
+    )
+    days_str = ", ".join(days_labels[d] for d in sorted(set(updated_weekdays)))
+    slot_str = final_start + (f"–{final_end}" if final_end else "")
+    loc_str = f" en {final_loc}" if final_loc else ""
+    msg = f"¡Listo! Actualicé tu clase «{matched_name}»: ahora queda en {days_str} de {slot_str}{loc_str}."
+    warn = format_schedule_conflict_warning(conflicts)
+    if warn:
+        msg = f"{msg}\n{warn}"
+    return (True, msg)
+
+
+def execute_edit_task_from_chat(
+    db: sqlite3.Connection,
+    raw_text: str,
+    today: date | None = None,
+) -> tuple[bool, str]:
+    """Reschedule or edit an existing pending task (due_date, due_time) from natural Spanish."""
+    today = today or date.today()
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+
+    rows = db.execute(
+        "SELECT id, title, subject, due_date, due_time, priority, done FROM tasks ORDER BY done ASC, id DESC"
+    ).fetchall()
+    if not rows:
+        return (False, "No tienes tareas registradas en tu lista para modificar.")
+
+    # Parse target date and time from the command using a lightweight helper
+    dummy = SimpleNamespace(db=db)
+    parsed = AssistantApp.parse_task_proposal(dummy, raw, today=today)
+    new_date = parsed.get("due_date")
+    new_time = parsed.get("due_time")
+
+    # Match the task by title or subject
+    matched_row = None
+    for r in rows:
+        t_norm = normalize_intent_text(str(r["title"] or ""))
+        s_norm = normalize_intent_text(str(r["subject"] or ""))
+        if (t_norm and len(t_norm) >= 3 and t_norm in low) or (s_norm and len(s_norm) >= 3 and s_norm in low):
+            matched_row = r
+            break
+
+    if matched_row is None and parsed.get("subject"):
+        subj_norm = normalize_intent_text(str(parsed["subject"]))
+        for r in rows:
+            if normalize_intent_text(str(r["subject"] or "")) == subj_norm or subj_norm in normalize_intent_text(str(r["title"] or "")):
+                matched_row = r
+                break
+
+    if matched_row is None:
+        # Fallback: if there is only 1 pending task, or match significant words
+        pending = [r for r in rows if not r["done"]]
+        for r in pending:
+            words = [w for w in normalize_intent_text(str(r["title"] or "")).split() if len(w) >= 4]
+            if words and any(w in low for w in words):
+                matched_row = r
+                break
+        if matched_row is None and len(pending) == 1:
+            matched_row = pending[0]
+
+    if matched_row is None:
+        return (
+            False,
+            "No encontré qué tarea quieres reprogramar. Dime el nombre o la materia de la tarea, por ejemplo: "
+            "«pasa la tarea de Bases de Datos para el viernes a las 18:00».",
+        )
+
+    if not new_date and not new_time:
+        return (
+            False,
+            f"Indica para qué fecha u hora quieres mover la tarea «{matched_row['title']}» (por ejemplo: «mañana a las 18:00» o «el viernes a las 16:00»).",
+        )
+
+    final_date = new_date or matched_row["due_date"]
+    final_time = new_time or matched_row["due_time"]
+    db.execute(
+        "UPDATE tasks SET due_date=?, due_time=?, reminded=0 WHERE id=?",
+        (final_date, final_time, int(matched_row["id"])),
+    )
+    db.commit()
+    subj_info = f" ({matched_row['subject']})" if matched_row["subject"] else ""
+    when_parts = []
+    if final_date:
+        when_parts.append(f"fecha {final_date}")
+    if final_time:
+        when_parts.append(f"a las {final_time}")
+    when_str = " ".join(when_parts) if when_parts else "sin fecha fija"
     return (
         True,
-        f"¡Listo! Guardé tu clase «{name}» para {', '.join(saved_days)} en horario {slot}{loc_text}.",
+        f"¡Listo! Reprogramé tu tarea «{matched_row['title']}»{subj_info} para {when_str}.",
     )
+
+
+def execute_edit_routine_from_chat(db: sqlite3.Connection, raw_text: str) -> tuple[bool, str]:
+    """Modify an existing routine's reminder_time or weekdays from natural chat."""
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+    rows = db.execute("SELECT id, title, subject, weekdays, reminder_time, active FROM routines ORDER BY id DESC").fetchall()
+    if not rows:
+        return (False, "No tienes rutinas registradas para editar.")
+
+    matched = None
+    for r in rows:
+        t_norm = normalize_intent_text(str(r["title"] or ""))
+        if t_norm and t_norm in low:
+            matched = r
+            break
+    if matched is None:
+        for r in rows:
+            words = [w for w in normalize_intent_text(str(r["title"] or "")).split() if len(w) >= 4]
+            if words and any(w in low for w in words):
+                matched = r
+                break
+    if matched is None and len(rows) == 1:
+        matched = rows[0]
+    if matched is None:
+        return (False, "No encontré qué rutina quieres cambiar. Indica su nombre, por ejemplo: «cambia la rutina de repasar inglés a las 20:00».")
+
+    weekday_map = {"lunes": 0, "martes": 1, "miercoles": 2, "jueves": 3, "viernes": 4, "sabado": 5, "domingo": 6}
+    new_days: list[int] = []
+    if re.search(r"\blunes\s+a\s+viernes\b|\btodos\s+los\s+dias\b|\bdiario\b", low):
+        new_days = [0, 1, 2, 3, 4]
+    else:
+        for w_name, idx in weekday_map.items():
+            if re.search(r"\b" + w_name + r"\b", low) and idx not in new_days:
+                new_days.append(idx)
+
+    new_time: str | None = None
+    t_match = re.search(r"\b(?:a\s+las\s+)?(\d{1,2})(?::(\d{2}))\b|\ba\s+las\s+(\d{1,2})\b", raw, re.IGNORECASE)
+    if t_match:
+        new_time = _normalize_hour_token(t_match.group(1) or t_match.group(3), t_match.group(2))
+
+    if not new_days and not new_time:
+        return (False, f"Dime la nueva hora o días para la rutina «{matched['title']}» (por ejemplo: «a las 20:00»).")
+
+    final_weekdays = ",".join(str(d) for d in sorted(new_days)) if new_days else str(matched["weekdays"])
+    final_time = new_time if new_time is not None else matched["reminder_time"]
+    db.execute(
+        "UPDATE routines SET weekdays=?, reminder_time=?, active=1 WHERE id=?",
+        (final_weekdays, final_time, int(matched["id"])),
+    )
+    db.commit()
+    day_names = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+    days_label = ", ".join(day_names[int(d)] for d in final_weekdays.split(",") if d.isdigit() and 0 <= int(d) < 7)
+    rem_label = f" a las {final_time}" if final_time else ""
+    return (True, f"¡Listo! Actualicé tu rutina «{matched['title']}» ({days_label}{rem_label}).")
+
+
+def execute_edit_block_from_chat(
+    db: sqlite3.Connection,
+    raw_text: str,
+    today: date | None = None,
+) -> tuple[bool, str]:
+    """Move or edit an existing study block in plan_blocks from natural chat, checking for overlaps."""
+    today = today or date.today()
+    raw = str(raw_text or "").strip()
+    low = normalize_intent_text(raw)
+    rows = db.execute("SELECT id, title, block_date, start_time, end_time, notes FROM plan_blocks ORDER BY block_date DESC, id DESC").fetchall()
+    if not rows:
+        return (False, "No tienes bloques de estudio agendados para modificar.")
+
+    matched = None
+    for r in rows:
+        t_norm = normalize_intent_text(str(r["title"] or ""))
+        if t_norm and t_norm in low:
+            matched = r
+            break
+    if matched is None:
+        for r in rows:
+            words = [w for w in normalize_intent_text(str(r["title"] or "")).split() if len(w) >= 4]
+            if words and any(w in low for w in words):
+                matched = r
+                break
+    if matched is None and len(rows) == 1:
+        matched = rows[0]
+    if matched is None:
+        return (False, "No identifiqué qué bloque de estudio quieres mover. Indica su título, por ejemplo: «mueve el bloque de estudiar Física de 17:00 a 18:00».")
+
+    range_match = re.search(
+        r"\b(?:de\s+(?:las\s+)?)?([01]?\d|2[0-3])(?::([0-5]\d))?\s*(?:a(?:\s+las)?|hasta(?:\s+las)?|[-–])\s*([01]?\d|2[0-3])(?::([0-5]\d))?\b",
+        raw,
+        re.IGNORECASE,
+    )
+    new_start = _normalize_hour_token(range_match.group(1), range_match.group(2)) if range_match else None
+    new_end = _normalize_hour_token(range_match.group(3), range_match.group(4)) if range_match else None
+
+    target_day = None
+    iso_match = re.search(r"\b20\d{2}-\d{2}-\d{2}\b", raw)
+    if iso_match:
+        try:
+            target_day = date.fromisoformat(iso_match.group())
+        except ValueError:
+            target_day = None
+    elif "pasado manana" in low:
+        target_day = today + timedelta(days=2)
+    elif "manana" in low:
+        target_day = today + timedelta(days=1)
+    elif "hoy" in low:
+        target_day = today
+
+    final_date = target_day.isoformat() if target_day else str(matched["block_date"])
+    final_start = new_start or str(matched["start_time"])
+    final_end = new_end or str(matched["end_time"])
+    if not (final_start and final_end and final_end > final_start):
+        return (False, "Indica un rango de horas válido de inicio y fin (por ejemplo: «de 17:00 a 18:30»).")
+
+    db.execute(
+        "UPDATE plan_blocks SET block_date=?, start_time=?, end_time=? WHERE id=?",
+        (final_date, final_start, final_end, int(matched["id"])),
+    )
+    db.commit()
+    conflicts = detect_date_schedule_conflicts(
+        db,
+        date.fromisoformat(final_date),
+        final_start,
+        final_end,
+        exclude_block_id=int(matched["id"]),
+    )
+    msg = f"¡Listo! Actualicé el bloque «{matched['title']}» para el {final_date} de {final_start} a {final_end}."
+    if conflicts:
+        msg += f"\n⚠️ Atención: se empalma {'; '.join(conflicts)}. ¿Quieres moverlo a otra hora?"
+    return (True, msg)
 
 
 def execute_delete_class_from_chat(db: sqlite3.Connection, query_text: str) -> tuple[bool, str]:
@@ -3473,7 +4082,7 @@ def execute_complete_or_delete_task_from_chat(db: sqlite3.Connection, raw_text: 
 
 
 def execute_add_block_from_chat(db: sqlite3.Connection, block: dict) -> tuple[bool, str]:
-    """Save a study/agenda block directly into SQLite plan_blocks (avoiding exact duplicates)."""
+    """Save a study/agenda block directly into SQLite plan_blocks (avoiding exact duplicates) and warn on overlaps."""
     title = str(block.get("title") or "").strip()
     block_date = str(block.get("block_date") or "").strip()
     start_time = str(block.get("start_time") or "").strip()
@@ -3485,13 +4094,29 @@ def execute_add_block_from_chat(db: sqlite3.Connection, block: dict) -> tuple[bo
         "SELECT id FROM plan_blocks WHERE block_date=? AND start_time=? AND end_time=? AND LOWER(TRIM(title))=LOWER(TRIM(?)) LIMIT 1",
         (block_date, start_time, end_time, title),
     ).fetchone()
-    if not existing:
-        db.execute(
+    if existing:
+        block_id = int(existing["id"])
+    else:
+        cur = db.execute(
             "INSERT INTO plan_blocks(title, block_date, start_time, end_time, notes, created_at) VALUES(?,?,?,?,?,?)",
             (title, block_date, start_time, end_time, notes, datetime.now().isoformat(timespec="seconds")),
         )
         db.commit()
-    return (True, f"¡Listo! Agendé el bloque «{title}» para el {block_date} de {start_time} a {end_time}.")
+        block_id = int(cur.lastrowid or 0)
+    msg = f"¡Listo! Agendé el bloque «{title}» para el {block_date} de {start_time} a {end_time}."
+    try:
+        conflicts = detect_date_schedule_conflicts(
+            db,
+            date.fromisoformat(block_date),
+            start_time,
+            end_time,
+            exclude_block_id=block_id,
+        )
+        if conflicts:
+            msg += f"\n⚠️ Atención: se empalma {'; '.join(conflicts)}. ¿Quieres cambiarlo de hora?"
+    except Exception:
+        pass
+    return (True, msg)
 
 
 def parse_routine_proposal(text: str) -> dict | None:
@@ -3767,6 +4392,240 @@ def parse_and_execute_settings_from_chat(settings: dict[str, str], raw_text: str
     return None
 
 
+_EDIT_AGENDA_VERB_PATTERN = (
+    r"\b(?:cambia(?:r)?|modifica(?:r)?|actualiza(?:r)?|mueve|mover|pasa(?:r)?|"
+    r"reprograma(?:r)?|edita(?:r)?|corrige|corregir|pospon(?:er)?|aplaza(?:r)?|recorre(?:r)?)\b"
+)
+
+
+def is_schedule_conflict_query(low_text: str) -> bool:
+    """Return True if the user is asking whether any classes or blocks overlap."""
+    if not low_text:
+        return False
+    return bool(
+        re.search(
+            r"\b(?:choque(?:s)?(?:\s+de\s+horario)?|empalme(?:s)?|se\s+empalma(?:n)?|"
+            r"se\s+cruza(?:n)?\s+(?:mis\s+)?(?:clases|materias|horarios)|"
+            r"traslape(?:s)?|se\s+traslapa(?:n)?|conflicto(?:s)?\s+de\s+horario)\b",
+            low_text,
+        )
+    )
+
+
+def is_analytical_schedule_question(low_text: str) -> bool:
+    """Return True for analytical/strategic questions about the user's schedule, free time, or tasks that should go to llama3.2 + RAG."""
+    if not low_text:
+        return False
+    if re.search(
+        r"\b(?:mas\s+libre|menos\s+ocupad[oa]|mas\s+despejad[oa]|horas?\s+libres?|tiempo\s+libre|"
+        r"huecos?\s+(?:libres?|para\s+estudiar)|estrategia|plan\s+de\s+estudio|"
+        r"sacar\s+adelante\s+(?:mis\s+)?tareas|como\s+me\s+recomiendas|que\s+me\s+recomiendas|"
+        r"segun\s+mi\s+horario|segun\s+mis\s+clases|cuando\s+puedo\s+estudiar|"
+        r"que\s+dia\s+.*?\b(?:libre|estudiar)|en\s+que\s+horario\s+puedo\s+estudiar)\b",
+        low_text,
+    ):
+        return True
+    return False
+
+
+def compute_weekly_free_windows(
+    db: sqlite3.Connection,
+    day_start_hour: int = 8,
+    day_end_hour: int = 20,
+) -> dict[int, dict[str, object]]:
+    """Compute occupied hours and free study windows (08:00–20:00) for each weekday (0=Monday..6=Sunday)."""
+    repair_legacy_class_locations(db)
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    win_start = day_start_hour * 60
+    win_end = day_end_hour * 60
+    result: dict[int, dict[str, object]] = {}
+    for wd in range(7):
+        rows = db.execute(
+            "SELECT name, start_time, end_time, location FROM classes WHERE weekday=? ORDER BY start_time, id",
+            (wd,),
+        ).fetchall()
+        intervals: list[tuple[int, int]] = []
+        classes_list: list[str] = []
+        for r in rows:
+            s_min = _time_to_minutes(r["start_time"])
+            if s_min is None:
+                continue
+            e_min = _time_to_minutes(r["end_time"])
+            if e_min is None or e_min <= s_min:
+                e_min = min(23 * 60 + 59, s_min + 60)
+            loc = f" ({r['location']})" if r["location"] else ""
+            classes_list.append(f"{r['start_time']}–{_minutes_to_time(e_min)} {r['name']}{loc}")
+            cs = max(win_start, s_min)
+            ce = min(win_end, e_min)
+            if cs < ce:
+                intervals.append((cs, ce))
+        intervals.sort()
+        merged: list[tuple[int, int]] = []
+        for s_iv, e_iv in intervals:
+            if not merged or s_iv > merged[-1][1]:
+                merged.append((s_iv, e_iv))
+            else:
+                merged[-1] = (merged[-1][0], max(merged[-1][1], e_iv))
+        occupied_mins = sum(e_iv - s_iv for s_iv, e_iv in merged)
+        free_mins = max(0, (win_end - win_start) - occupied_mins)
+        free_slots: list[str] = []
+        cursor = win_start
+        for s_iv, e_iv in merged:
+            if s_iv > cursor:
+                free_slots.append(f"{_minutes_to_time(cursor)}–{_minutes_to_time(s_iv)}")
+            cursor = max(cursor, e_iv)
+        if cursor < win_end:
+            free_slots.append(f"{_minutes_to_time(cursor)}–{_minutes_to_time(win_end)}")
+        result[wd] = {
+            "weekday": wd,
+            "day_label": days_labels[wd],
+            "classes": classes_list,
+            "occupied_hours": round(occupied_mins / 60.0, 1),
+            "free_hours": round(free_mins / 60.0, 1),
+            "free_slots": free_slots,
+        }
+    return result
+
+
+def build_private_agenda_rag_context(
+    db: sqlite3.Connection,
+    today: date | None = None,
+    now: datetime | None = None,
+) -> str:
+    """Build a compact 100% local RAG context of classes, free windows, conflicts, tasks, blocks, and routines for llama3.2.
+    Never accesses security_secrets, security_users, or API keys.
+    """
+    today = today or date.today()
+    now = now or datetime.now()
+    days_labels = ("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
+    weekly = compute_weekly_free_windows(db)
+
+    lines: list[str] = [
+        f"CONTEXTO REAL DE LA AGENDA LOCAL DEL USUARIO (Fecha actual: {days_labels[today.weekday()]} {today.isoformat()}, hora: {now.strftime('%H:%M')}):",
+        "1) Horario semanal de clases y huecos libres (08:00 a 20:00):",
+    ]
+    any_classes = any(bool(weekly[wd]["classes"]) for wd in range(7))
+    if not any_classes:
+        lines.append("   - El usuario aún no tiene clases registradas en su horario semanal.")
+    else:
+        for wd in range(7):
+            info = weekly[wd]
+            if not info["classes"] and wd >= 5:
+                continue
+            cls_str = "; ".join(info["classes"]) if info["classes"] else "Sin clases"
+            slots_str = ", ".join(info["free_slots"]) if info["free_slots"] else "Sin huecos"
+            lines.append(
+                f"   - {info['day_label']}: Clases=[{cls_str}] · Libre={info['free_hours']}h (huecos: {slots_str})"
+            )
+        weekday_free_ranking = sorted(
+            (weekly[wd] for wd in range(5)),
+            key=lambda item: (-float(item["free_hours"]), int(item["weekday"])),
+        )
+        best_days = [
+            f"{item['day_label']} ({item['free_hours']}h libres)"
+            for item in weekday_free_ranking
+            if float(item["free_hours"]) == float(weekday_free_ranking[0]["free_hours"])
+        ]
+        lines.append(f"   - Día(s) entre semana (Lunes–Viernes) con más tiempo libre: {', '.join(best_days)}.")
+
+    conflicts = audit_all_schedule_conflicts(db, ref_date=today)
+    if conflicts:
+        lines.append("2) Choques de horario detectados:")
+        for c in conflicts[:6]:
+            lines.append(f"   - ⚠️ {c}")
+    else:
+        lines.append("2) Choques de horario: Ninguno (horario sin empalmes).")
+
+    pending_tasks = db.execute(
+        "SELECT title, subject, due_date, due_time, priority FROM tasks WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31'), COALESCE(due_time,'23:59'), id LIMIT 15"
+    ).fetchall()
+    lines.append("3) Tareas pendientes (done=0):")
+    if not pending_tasks:
+        lines.append("   - No hay tareas pendientes registradas.")
+    else:
+        for t in pending_tasks:
+            subj = f" [{t['subject']}]" if t["subject"] else ""
+            when = f" · entrega: {t['due_date']}" + (f" a las {t['due_time']}" if t["due_time"] else "") if t["due_date"] else " · sin fecha límite"
+            prio = f" (Prioridad: {t['priority']})" if t["priority"] and t["priority"] != "Normal" else ""
+            lines.append(f"   - {t['title']}{subj}{when}{prio}")
+
+    upcoming_blocks = db.execute(
+        "SELECT title, block_date, start_time, end_time FROM plan_blocks WHERE block_date>=? ORDER BY block_date, start_time LIMIT 10",
+        (today.isoformat(),),
+    ).fetchall()
+    if upcoming_blocks:
+        lines.append("4) Bloques de estudio programados:")
+        for b in upcoming_blocks:
+            lines.append(f"   - {b['block_date']} {b['start_time']}–{b['end_time']}: {b['title']}")
+
+    active_routines = db.execute(
+        "SELECT title, subject, weekdays, reminder_time FROM routines WHERE active=1 ORDER BY title LIMIT 10"
+    ).fetchall()
+    if active_routines:
+        day_short = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+        lines.append("5) Rutinas activas:")
+        for r in active_routines:
+            d_str = ", ".join(day_short[int(d)] for d in str(r["weekdays"]).split(",") if d.isdigit() and 0 <= int(d) < 7)
+            t_str = f" a las {r['reminder_time']}" if r["reminder_time"] else ""
+            lines.append(f"   - {r['title']} ({d_str}{t_str})")
+
+    safe_lines = [ln for ln in lines if not contains_potential_api_key(ln)]
+    return "\n".join(safe_lines)[:3200]
+
+
+def build_local_analytical_schedule_answer(
+    db: sqlite3.Connection,
+    query_text: str,
+    today: date | None = None,
+) -> str:
+    """Provide a deterministic local schedule & task strategy analysis when Ollama is offline or for direct verification."""
+    today = today or date.today()
+    weekly = compute_weekly_free_windows(db)
+    ranking = sorted(
+        (weekly[wd] for wd in range(5)),
+        key=lambda item: (-float(item["free_hours"]), int(item["weekday"])),
+    )
+    top_day = ranking[0]
+    top_days = [
+        str(item["day_label"])
+        for item in ranking
+        if float(item["free_hours"]) == float(top_day["free_hours"])
+    ]
+    busy_days = [
+        f"{ weekly[wd]['day_label'] } ({ ', '.join(weekly[wd]['classes']) })"
+        for wd in range(5)
+        if weekly[wd]["classes"]
+    ]
+    pending_tasks = db.execute(
+        "SELECT title, subject, due_date, due_time FROM tasks WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31'), COALESCE(due_time,'23:59'), id LIMIT 8"
+    ).fetchall()
+
+    out = [
+        "📊 Análisis local de tu horario y tareas pendientes:",
+        f"• Día(s) más libre(s) entre semana (08:00–20:00): {', '.join(top_days)} con {top_day['free_hours']} h disponibles (huecos: {', '.join(top_day['free_slots'])}).",
+    ]
+    if busy_days:
+        out.append("• Días con clases registradas: " + " | ".join(busy_days) + ".")
+    for wd in range(5):
+        info = weekly[wd]
+        if info["classes"]:
+            out.append(
+                f"  - {info['day_label']}: {info['free_hours']} h libres → ventanas recomendadas para estudiar: {', '.join(info['free_slots'])}."
+            )
+    if pending_tasks:
+        out.append("• Estrategia sugerida para tus tareas pendientes (ordenadas por entrega más próxima):")
+        for idx, t in enumerate(pending_tasks, 1):
+            subj = f" ({t['subject']})" if t["subject"] else ""
+            due = f" — vence el {t['due_date']}" + (f" a las {t['due_time']}" if t["due_time"] else "") if t["due_date"] else ""
+            rec_day = top_days[(idx - 1) % len(top_days)]
+            rec_slot = weekly[next(w for w in range(5) if weekly[w]["day_label"] == rec_day)]["free_slots"][0]
+            out.append(f"  {idx}. «{t['title']}»{subj}{due} → te recomiendo avanzar el {rec_day} en el hueco {rec_slot}.")
+    conflicts = audit_all_schedule_conflicts(db, ref_date=today)
+    if conflicts:
+        out.append("⚠️ Choques de horario detectados: " + "; ".join(conflicts))
+    return "\n".join(out)
+
+
 def is_class_delete_command(low_text: str) -> bool:
     """Return True if the normalized text is a request to remove a class/subject from the weekly schedule."""
     return bool(
@@ -3775,20 +4634,51 @@ def is_class_delete_command(low_text: str) -> bool:
     )
 
 
+def is_class_edit_command(low_text: str, db: sqlite3.Connection | None = None) -> bool:
+    """Return True if the user is asking to modify/move/reschedule an existing class or change its classroom."""
+    if not low_text or is_class_delete_command(low_text):
+        return False
+    if re.search(r"\b(?:no\s+hay\s+clases|sin\s+clases|no\s+tengo\s+clases|cancela(?:r)?\s+(?:la\s+|mi\s+)?clase|se\s+cancelo\s+la\s+clase)\b", low_text):
+        return False
+    if re.search(r"\b(?:modelo|llama|ollama|qwen|clima|nivel\s+de|rutina|tarea|entrega|bloque|documento|archivo|pdf|docx)\b", low_text):
+        return False
+    has_edit_verb = bool(re.search(_EDIT_AGENDA_VERB_PATTERN, low_text))
+    has_class_noun = bool(
+        re.search(
+            r"\b(?:clase|clases|materia|materias|asignatura|curso|sal[oó]n\s+de|aula\s+de|horario\s+de)\b",
+            low_text,
+        )
+    )
+    if has_edit_verb and has_class_noun:
+        return True
+    if re.search(r"\b(?:clase|materia)\s+de\s+.+\s+ahora\s+(?:es|sera|esta)\s+en\b", low_text):
+        return True
+    if has_edit_verb and db is not None:
+        try:
+            names = [normalize_intent_text(str(r[0])) for r in db.execute("SELECT DISTINCT name FROM classes").fetchall() if r[0]]
+            if any(n and len(n) >= 4 and n in low_text for n in names):
+                return True
+        except Exception:
+            pass
+    return False
+
+
 def is_class_add_command(low_text: str) -> bool:
     """Return True for any natural Spanish phrasing requesting to add/register/schedule a class or subject."""
-    if not low_text or is_class_delete_command(low_text):
+    if not low_text or is_class_delete_command(low_text) or is_class_edit_command(low_text):
         return False
     if re.search(r"\b(?:no\s+hay\s+clases|sin\s+clases|no\s+tengo\s+clases|cancela(?:r)?\s+(?:la\s+|mi\s+)?clase|se\s+cancelo\s+la\s+clase)\b", low_text):
         return False
     if not re.search(r"\b(?:clase|clases|materia|materias|asignatura|curso)\b", low_text):
         return False
-    # Exclude pure read queries ("¿qué clases tengo hoy?", "mis clases", "ver mis clases", "horario de clases")
-    if re.match(r"^(?:que|cuales|cual|como|cuando|donde|a\s+que\s+hora|ver|mostrar|muestrame|dime|consulta(?:r)?|revisa(?:r)?|mis|mi\s+horario)\b", low_text):
+    # Exclude pure read or analytical queries
+    if re.match(r"^(?:que|cuales|cual|como|cuando|donde|a\s+que\s+hora|ver|mostrar|muestrame|dime|consulta(?:r)?|revisa(?:r)?|mis|mi\s+horario|hazme)\b", low_text):
+        return False
+    if is_analytical_schedule_question(low_text) or is_schedule_conflict_query(low_text):
         return False
     has_add_verb = bool(
         re.search(
-            r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|edita(?:r)?|programa(?:r)?)\b",
+            r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|incluir|incluye|mete(?:r)?|programa(?:r)?)\b",
             low_text,
         )
     )
@@ -3815,10 +4705,24 @@ def is_task_delete_command(low_text: str) -> bool:
     )
 
 
-def is_task_add_command(low_text: str) -> bool:
-    if not low_text or is_task_complete_command(low_text) or is_task_delete_command(low_text) or is_class_add_command(low_text):
+def is_task_edit_command(low_text: str) -> bool:
+    """Return True if the user is asking to reschedule/postpone/modify an existing task."""
+    if not low_text or is_task_complete_command(low_text) or is_task_delete_command(low_text):
         return False
-    if re.match(r"^(?:que|cuales|cual|ver|mostrar|muestrame|dime|mis\s+tareas)\b", low_text):
+    if re.search(r"\b(?:clase|clases|rutina|bloque|documento|archivo|pdf|docx)\b", low_text):
+        return False
+    return bool(
+        re.search(_EDIT_AGENDA_VERB_PATTERN, low_text)
+        and re.search(r"\b(?:tarea|tareas|pendiente|entrega|proyecto|trabajo|encargo|actividad)\b", low_text)
+    )
+
+
+def is_task_add_command(low_text: str) -> bool:
+    if not low_text or is_task_complete_command(low_text) or is_task_delete_command(low_text) or is_task_edit_command(low_text) or is_class_add_command(low_text):
+        return False
+    if re.match(r"^(?:que|cuales|cual|como|ver|mostrar|muestrame|dime|mis\s+tareas|hazme)\b", low_text):
+        return False
+    if is_analytical_schedule_question(low_text):
         return False
     if re.search(
         r"\b(?:agrega(?:r)?|anad(?:e|ir)|registra(?:r)?|crea(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|apunta(?:r)?|mete(?:r)?)\b.*\b(?:tarea|tareas|pendiente|entrega|trabajo|encargo|actividad)\b",
@@ -3845,8 +4749,20 @@ def is_routine_delete_command(low_text: str) -> bool:
     )
 
 
-def is_routine_add_command(low_text: str) -> bool:
+def is_routine_edit_command(low_text: str) -> bool:
+    """Return True if the user is asking to edit/change an existing recurring routine."""
     if not low_text or is_routine_delete_command(low_text):
+        return False
+    if re.search(r"\brutina\s+(?:matutina|de\s+manana)\b", low_text):
+        return False
+    return bool(
+        re.search(_EDIT_AGENDA_VERB_PATTERN, low_text)
+        and re.search(r"\brutinas?\b", low_text)
+    )
+
+
+def is_routine_add_command(low_text: str) -> bool:
+    if not low_text or is_routine_delete_command(low_text) or is_routine_edit_command(low_text):
         return False
     if re.match(r"^(?:que|cuales|ver|mostrar|mis\s+rutinas|rutina\s+matutina|rutina\s+de\s+manana)\b", low_text):
         return False
@@ -3860,8 +4776,20 @@ def is_routine_add_command(low_text: str) -> bool:
     )
 
 
+def is_block_edit_command(low_text: str) -> bool:
+    """Return True if the user is asking to move/reschedule an existing study block."""
+    if not low_text or is_class_edit_command(low_text):
+        return False
+    if re.search(r"\b(?:documento|archivo|pdf|docx)\b", low_text):
+        return False
+    return bool(
+        re.search(_EDIT_AGENDA_VERB_PATTERN, low_text)
+        and re.search(r"\b(?:bloque|bloques|tiempo\s+de\s+estudio|espacio\s+de\s+estudio)\b", low_text)
+    )
+
+
 def is_block_add_command(low_text: str) -> bool:
-    if not low_text or is_class_add_command(low_text):
+    if not low_text or is_class_add_command(low_text) or is_block_edit_command(low_text):
         return False
     if re.match(r"^(?:reserva(?:r)?|bloquea(?:r)?|aparta(?:r)?)\b", low_text):
         return True
@@ -3960,9 +4888,12 @@ def classify_local_natural_intent(text: str, today: date | None = None) -> dict 
     if any(phrase in low_words for phrase in ("que sigue", "siguiente pendiente", "proximo compromiso", "proxima clase", "siguiente clase", "que toca ahora", "que tengo ahora")):
         return {"intent": "next_commitment"}
 
+    if is_analytical_schedule_question(low_words) or is_schedule_conflict_query(low_words):
+        return None
+
     is_mutation_verb = bool(
         re.search(
-            r"\b(?:agrega|agregar|anade|anadir|crea|crear|edita|editar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|nueva|nuevo|configura|configurar|modificar|modifica|cambiar|cambia|pon|poner|ponme|guarda|guardar|anota|anotar|apunta|apuntar|recuerda|memoriza|olvida|autoriza|autorizar)\b",
+            r"\b(?:agrega|agregar|anade|anadir|crea|crear|edita|editar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|nueva|nuevo|configura|configurar|modificar|modifica|cambiar|cambia|mueve|mover|pasa|pasar|pospon|posponer|aplaza|aplazar|reprograma|reprogramar|actualiza|actualizar|corrige|corregir|pon|poner|ponme|guarda|guardar|anota|anotar|apunta|apuntar|recuerda|memoriza|olvida|autoriza|autorizar)\b",
             low_words,
         )
     )
@@ -7017,8 +7948,9 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
 
+        tree.bind("<Double-1>", lambda _event: edit_selected())
         ttk.Button(actions, text="+ Agregar rutina", style="Accent.TButton", command=edit).pack(side="left")
-        ttk.Button(actions, text="Editar seleccionada", command=edit_selected).pack(side="left", padx=8)
+        ttk.Button(actions, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
         ttk.Button(actions, text="Eliminar", command=delete_selected).pack(side="left")
         refresh()
 
@@ -7176,8 +8108,9 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
 
+        tree.bind("<Double-1>", lambda _event: edit_selected())
         ttk.Button(actions, text="+ Agregar recuerdo", style="Accent.TButton", command=edit).pack(side="left")
-        ttk.Button(actions, text="Editar", command=edit_selected).pack(side="left", padx=8)
+        ttk.Button(actions, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
         ttk.Button(actions, text="Eliminar", command=delete_selected).pack(side="left")
         refresh()
 
@@ -7242,7 +8175,7 @@ class AssistantApp(tk.Tk):
             except ValueError:
                 messagebox.showwarning("Formato de hora", "Usa HH:MM, por ejemplo 08:00.", parent=window)
                 return
-            execute_add_class_from_chat(
+            _ok, q_msg = execute_add_class_from_chat(
                 self.db,
                 {
                     "name": name,
@@ -7255,6 +8188,8 @@ class AssistantApp(tk.Tk):
             q_name_var.set("")
             q_place_var.set("")
             refresh()
+            if "⚠️ Atención:" in q_msg:
+                messagebox.showwarning("Choque de horario detectado", q_msg, parent=window)
 
         ttk.Button(quick_bar, text="+ Guardar rápido", style="Accent.TButton", command=quick_save).grid(row=0, column=10, padx=(4, 0))
 
@@ -7297,7 +8232,16 @@ class AssistantApp(tk.Tk):
                 except ValueError:
                     messagebox.showwarning("Formato de hora", "Usa HH:MM, por ejemplo 08:30.", parent=dialog)
                     return
-                values = (name, days.index(day_var.get()), start, end or None, place_var.get().strip() or None)
+                wd_idx = days.index(day_var.get())
+                conflicts = detect_class_schedule_conflicts(
+                    self.db,
+                    [wd_idx],
+                    start,
+                    end or None,
+                    exclude_class_ids={int(class_id)} if class_id else None,
+                    exclude_class_name=name,
+                )
+                values = (name, wd_idx, start, end or None, place_var.get().strip() or None)
                 if existing:
                     self.db.execute("UPDATE classes SET name=?, weekday=?, start_time=?, end_time=?, location=?, reminded_on=NULL WHERE id=?", (*values, class_id))
                     self.db.execute("UPDATE class_exceptions SET class_name=? WHERE class_id=?", (name, class_id))
@@ -7306,6 +8250,12 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
                 dialog.destroy()
+                if conflicts:
+                    messagebox.showwarning(
+                        "Choque de horario detectado",
+                        format_schedule_conflict_warning(conflicts),
+                        parent=window,
+                    )
 
             ttk.Button(form, text="Guardar clase", style="Accent.TButton", command=save).grid(row=8, column=1, sticky="e")
 
@@ -7329,9 +8279,14 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
 
+        def check_conflicts_ui() -> None:
+            report_text = build_schedule_conflicts_report(self.db)
+            messagebox.showinfo("Revisión de empalmes de horario", report_text, parent=window)
+
         ttk.Button(actions, text="+ Agregar clase", style="Accent.TButton", command=add).pack(side="left")
-        ttk.Button(actions, text="Editar seleccionada", command=edit_selected).pack(side="left", padx=8)
+        ttk.Button(actions, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
         ttk.Button(actions, text="Eliminar", command=delete).pack(side="left")
+        ttk.Button(actions, text="🔍 Revisar empalmes", command=check_conflicts_ui).pack(side="left", padx=8)
         ttk.Button(actions, text="Calendario escolar…", command=self.open_calendar_exceptions).pack(side="right")
         refresh()
 
@@ -7499,8 +8454,9 @@ class AssistantApp(tk.Tk):
                 self.db.commit()
                 refresh()
 
+        tree.bind("<Double-1>", lambda _event: edit_selected())
         ttk.Button(buttons, text="+ Agregar excepción", style="Accent.TButton", command=edit).pack(side="left")
-        ttk.Button(buttons, text="Editar", command=edit_selected).pack(side="left", padx=8)
+        ttk.Button(buttons, text="✏ Editar seleccionado", command=edit_selected).pack(side="left", padx=8)
         ttk.Button(buttons, text="Eliminar", command=delete_selected).pack(side="left")
         refresh()
 
@@ -8271,7 +9227,15 @@ class AssistantApp(tk.Tk):
                         self.chat_log.see("end")
                         self.chat_log.configure(state="disabled")
                     else:
-                        self.append_chat("Asistente", build_ollama_unavailable_message(str(payload)))
+                        user_q = str(getattr(self, "stream_user_text", "") or "")
+                        if is_analytical_schedule_question(normalize_intent_text(user_q)):
+                            local_analysis = build_local_analytical_schedule_answer(self.db, user_q)
+                            self.append_chat(
+                                "Asistente",
+                                f"{local_analysis}\n\n{build_ollama_unavailable_message(str(payload))}",
+                            )
+                        else:
+                            self.append_chat("Asistente", build_ollama_unavailable_message(str(payload)))
                     self.stream_started = False
                     self.structured_intent_mode = False
         except queue.Empty:
@@ -8332,9 +9296,16 @@ class AssistantApp(tk.Tk):
         system_prompt = (
             f"Eres CLARA-V (Clara Viernes), asistente personal local en español (fecha local: {date.today().isoformat()}). "
             "Responde siempre en español de forma clara, natural, útil y directa. "
+            "Tienes acceso al contexto real y actualizado de la agenda local del usuario (clases semanales, huecos libres, tareas pendientes, bloques y rutinas): úsalo cuando el usuario te haga preguntas sobre sus materias, días libres o estrategias de estudio. "
             "No afirmes haber ejecutado acciones sobre archivos o sistema por tu cuenta."
         )
         messages = [{"role": "system", "content": system_prompt}]
+        try:
+            agenda_rag = build_private_agenda_rag_context(self.db)
+            if agenda_rag:
+                messages.append({"role": "system", "content": agenda_rag})
+        except Exception:
+            pass
         memories = active_memories_for(self.db)
         if memories:
             memory_text = "Preferencias y recuerdos autorizados por el usuario:\n" + "\n".join(
@@ -8935,12 +9906,23 @@ class AssistantApp(tk.Tk):
                 self.append_chat("Asistente", cal_exc_res[1])
             return
 
+        if is_schedule_conflict_query(low_action):
+            self.append_chat("Asistente", build_schedule_conflicts_report(self.db))
+            return
+
         if is_class_delete_command(low_action):
             def _do_del_class() -> None:
                 _ok, msg = execute_delete_class_from_chat(self.db, text_action)
                 self.append_chat("Asistente", msg)
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_del_class):
                 _do_del_class()
+            return
+        if is_class_edit_command(low_action, self.db):
+            def _do_edit_class() -> None:
+                _ok, msg = execute_edit_class_from_chat(self.db, text_action)
+                self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_edit_class):
+                _do_edit_class()
             return
         if is_class_add_command(low_action):
             def _do_add_class() -> None:
@@ -8970,12 +9952,28 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_delete_task):
                 _do_delete_task()
             return
+        if is_task_edit_command(low_action):
+            def _do_edit_task() -> None:
+                ok, msg = execute_edit_task_from_chat(self.db, text_action)
+                if ok and hasattr(self, "refresh_tasks"):
+                    self.refresh_tasks()
+                self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_edit_task):
+                _do_edit_task()
+            return
         if is_routine_delete_command(low_action):
             def _do_del_routine() -> None:
                 _ok, msg = execute_delete_routine_from_chat(self.db, text_action)
                 self.append_chat("Asistente", msg)
             if AssistantApp.require_permission(self, "delete_agenda_item", pending_callable=_do_del_routine):
                 _do_del_routine()
+            return
+        if is_routine_edit_command(low_action):
+            def _do_edit_routine() -> None:
+                _ok, msg = execute_edit_routine_from_chat(self.db, text_action)
+                self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_edit_routine):
+                _do_edit_routine()
             return
         if is_routine_add_command(low_action):
             def _do_add_routine() -> None:
@@ -9006,6 +10004,13 @@ class AssistantApp(tk.Tk):
             if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_add_task):
                 _do_add_task()
             return
+        if is_block_edit_command(low_action):
+            def _do_edit_block() -> None:
+                _ok, msg = execute_edit_block_from_chat(self.db, text_action)
+                self.append_chat("Asistente", msg)
+            if AssistantApp.require_permission(self, "modify_agenda", pending_callable=_do_edit_block):
+                _do_edit_block()
+            return
         if is_block_add_command(low_action):
             def _do_add_block() -> None:
                 block = self.parse_block_request(text_action)
@@ -9028,11 +10033,12 @@ class AssistantApp(tk.Tk):
 
         starts_with_mutation = bool(
             re.match(
-                r"^(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|elimina(?:r)?|borra(?:r)?|quita(?:r)?|cambia(?:r)?|configura(?:r)?|autoriza(?:r)?)\b",
+                r"^(?:agrega(?:r)?|anad(?:e|ir)|crea(?:r)?|registra(?:r)?|anota(?:r)?|pon(?:er|me)?|guarda(?:r)?|elimina(?:r)?|borra(?:r)?|quita(?:r)?|cambia(?:r)?|modifica(?:r)?|actualiza(?:r)?|mueve|mover|pasa(?:r)?|pospon(?:er)?|reprograma(?:r)?|configura(?:r)?|autoriza(?:r)?)\b",
                 low_action,
             )
         )
-        if not starts_with_mutation and ("agenda" in low or "horario" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low):
+        is_analytical_q = is_analytical_schedule_question(low)
+        if not starts_with_mutation and not is_analytical_q and ("agenda" in low or "horario" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low):
             target=None
             if "manana" in low: target=date.today()+timedelta(days=1)
             elif "hoy" in low or "que tengo" in low or "que hay" in low or "mis tareas pendientes" in low: target=date.today()
@@ -9049,6 +10055,9 @@ class AssistantApp(tk.Tk):
                 self.open_week_agenda()
         elif self.model_var.get().strip() or hasattr(self, "ask_ollama"):
             self.ask_ollama(text)
+        elif is_analytical_q:
+            local_analysis = build_local_analytical_schedule_answer(self.db, text)
+            self.append_chat("Asistente", f"{local_analysis}\n\n{build_ollama_unavailable_message()}")
         else:
             self.append_chat("Asistente", build_ollama_unavailable_message())
 

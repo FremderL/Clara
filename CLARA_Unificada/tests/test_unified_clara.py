@@ -1768,8 +1768,201 @@ END:VCALENDAR\r
         self.assertIn("llama3.2", msg_pull)
         self.assertTrue(any("Corte TLS temporal de Cloudflare R2; reanudando" in p for p in progress_notes))
 
+    def test_natural_edit_reschedule_conflict_detection_and_private_rag_context(self) -> None:
+        db = create_test_db()
+        app.ensure_security_tables(db)
+        chat_messages: list[tuple[str, str]] = []
+        ollama_prompts: list[str] = []
+
+        class _FakeEntry:
+            def __init__(self, text: str = "") -> None:
+                self._text = text
+
+            def get(self) -> str:
+                return self._text
+
+            def delete(self, _a, _b=None) -> None:
+                self._text = ""
+
+        class _FakeVar:
+            def __init__(self, value: str = "llama3.2") -> None:
+                self._val = value
+
+            def get(self) -> str:
+                return self._val
+
+            def set(self, value: str) -> None:
+                self._val = value
+
+        fake_app = SimpleNamespace(
+            db=db,
+            settings=dict(app.DEFAULT_SETTINGS),
+            ai_busy=False,
+            current_auth_user="Luis",
+            current_auth_level=3,
+            _pending_protected_action=None,
+            chat_input=_FakeEntry(""),
+            model_var=_FakeVar("llama3.2"),
+            append_chat=lambda speaker, text, **_kw: chat_messages.append((speaker, text)),
+            apply_chat_intent=lambda user_text, intent: app.AssistantApp.apply_chat_intent(fake_app, user_text, intent),
+            parse_task_proposal=lambda text_in: app.AssistantApp.parse_task_proposal(fake_app, text_in),
+            parse_block_request=lambda text_in: app.AssistantApp.parse_block_request(fake_app, text_in),
+            refresh_tasks=lambda: None,
+            apply_routines=lambda _day: 0,
+            open_classes=lambda: None,
+            open_routines=lambda: None,
+            add_task=lambda **_kw: None,
+            open_plan_block_form=lambda *_a, **_kw: None,
+            day_agenda_summary=lambda target: app.AssistantApp.day_agenda_summary(fake_app, target),
+            open_week_agenda=lambda: None,
+            ask_ollama=lambda q: ollama_prompts.append(q),
+        )
+
+        # 1. Agregar clase base: Matematicas Discretas miércoles y viernes de 13:00 a 15:00 en Auditorio 2
+        fake_app.chat_input = _FakeEntry("agrega mi clase de Matematicas Discretas los miércoles y viernes de 13:00 a 15:00 en Auditorio 2.")
+        app.AssistantApp.send_chat(fake_app)
+
+        # 2. Incremento 1: Editar aula/lugar por chat natural sin duplicar registros
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Cambia mi clase de Matematicas Discretas al Laboratorio 3")
+        app.AssistantApp.send_chat(fake_app)
+        rows = db.execute("SELECT weekday, start_time, end_time, location FROM classes WHERE name='Matematicas Discretas' ORDER BY weekday").fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([(r["weekday"], r["start_time"], r["end_time"], r["location"]) for r in rows], [(2, "13:00", "15:00", "Laboratorio 3"), (4, "13:00", "15:00", "Laboratorio 3")])
+        self.assertTrue(any("Actualicé tu clase «Matematicas Discretas»" in msg and "Laboratorio 3" in msg for _s, msg in chat_messages))
+
+        # 3. Incremento 1: Editar horario de un día específico (viernes de 15:00 a 17:00)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Cambia el horario de mi clase de Matematicas Discretas del viernes de 15:00 a 17:00")
+        app.AssistantApp.send_chat(fake_app)
+        rows = db.execute("SELECT weekday, start_time, end_time, location FROM classes WHERE name='Matematicas Discretas' ORDER BY weekday").fetchall()
+        self.assertEqual([(r["weekday"], r["start_time"], r["end_time"]) for r in rows], [(2, "13:00", "15:00"), (4, "15:00", "17:00")])
+
+        # 4. Incremento 2: Detector inteligente de choques de horario (Empalmes) al agregar una clase que se cruza
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Agrega mi clase de Redes de Computadoras los miércoles de 14:00 a 16:00 en Aula 7")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("⚠️ Atención: se empalma el Miércoles de 14:00 a 15:00 con tu clase «Matematicas Discretas»" in msg for _s, msg in chat_messages))
+
+        # Consultar choques de horario por chat
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("¿Tengo algún choque de horario en mis clases?")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("Miércoles 14:00–15:00: «Matematicas Discretas» (Laboratorio 3) se empalma con «Redes de Computadoras» (Aula 7)" in msg for _s, msg in chat_messages))
+
+        # Resolver el choque moviendo Redes de Computadoras de 16:00 a 18:00 por chat
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Mueve mi clase de Redes de Computadoras de 16:00 a 18:00")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertFalse(any("⚠️ Atención:" in msg for _s, msg in chat_messages))
+
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("¿Hay empalmes en mis clases?")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertTrue(any("no tienes ningún choque ni empalme de horario" in msg for _s, msg in chat_messages))
+
+        # 5. Incremento 1: Reprogramar tarea, rutina y bloque de estudio por chat natural
+        fake_app.chat_input = _FakeEntry("Agrega tarea de Matematicas Discretas entregar guía de grafos hoy a las 14:00")
+        app.AssistantApp.send_chat(fake_app)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Pasa la tarea de Matematicas Discretas para mañana a las 18:30")
+        app.AssistantApp.send_chat(fake_app)
+        t_row = db.execute("SELECT due_date, due_time FROM tasks ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(t_row["due_date"], (date.today() + timedelta(days=1)).isoformat())
+        self.assertEqual(t_row["due_time"], "18:30")
+        self.assertTrue(any("Reprogramé tu tarea" in msg and "18:30" in msg for _s, msg in chat_messages))
+
+        fake_app.chat_input = _FakeEntry("Agrega rutina de repasar inglés los lunes y miércoles a las 19:00")
+        app.AssistantApp.send_chat(fake_app)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Cambia la rutina de repasar inglés a las 20:30")
+        app.AssistantApp.send_chat(fake_app)
+        r_row = db.execute("SELECT reminder_time FROM routines ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(r_row["reminder_time"], "20:30")
+
+        fake_app.chat_input = _FakeEntry("Reserva de 10:00 a 11:00 mañana para estudiar grafos")
+        app.AssistantApp.send_chat(fake_app)
+        chat_messages.clear()
+        fake_app.chat_input = _FakeEntry("Mueve el bloque de estudiar grafos de 11:30 a 13:00")
+        app.AssistantApp.send_chat(fake_app)
+        b_row = db.execute("SELECT start_time, end_time FROM plan_blocks ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual((b_row["start_time"], b_row["end_time"]), ("11:30", "13:00"))
+
+        # 6. Incremento 3: RAG Local Privado conectado a llama3.2 (sin exponer bóveda de secretos)
+        app.save_encrypted_secret(db, "TokenPrivadoBanco", "ClaveUltraSecreta999", "ju89yt56rf", "Luis")
+        rag_ctx = app.build_private_agenda_rag_context(db)
+        self.assertIn("Matematicas Discretas", rag_ctx)
+        self.assertIn("Laboratorio 3", rag_ctx)
+        self.assertIn("Redes de Computadoras", rag_ctx)
+        self.assertIn("guía de grafos", rag_ctx)
+        self.assertIn("Día(s) entre semana (Lunes–Viernes) con más tiempo libre", rag_ctx)
+        self.assertNotIn("ClaveUltraSecreta999", rag_ctx)
+        self.assertNotIn("TokenPrivadoBanco", rag_ctx)
+
+        # Pregunta analítica de estudio va a llama3.2 (con el contexto RAG) en vez de abrir solo una tabla estática
+        ollama_prompts.clear()
+        fake_app.chat_input = _FakeEntry("¿Qué día de mi semana tengo más libre para estudiar 2 horas de Matemáticas Discretas?")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(len(ollama_prompts), 1)
+
+        local_strategy = app.build_local_analytical_schedule_answer(
+            db,
+            "Hazme una estrategia para sacar adelante mis tareas pendientes de esta semana según mi horario",
+        )
+        self.assertIn("Día(s) más libre(s) entre semana", local_strategy)
+        self.assertIn("guía de grafos", local_strategy)
+
+        # 7. Verificar que ask_ollama inyecta el RAG Local Privado en los mensajes enviados a llama3.2
+        captured_messages: list[list[dict]] = []
+
+        def _fake_stream(model_name, msgs, **_kw):
+            captured_messages.append(list(msgs))
+            yield ("Te recomiendo estudiar el lunes de 08:00 a 10:00.", True)
+
+        real_ask_app = SimpleNamespace(
+            db=db,
+            model_var=_FakeVar("llama3.2"),
+            ollama_request_id=0,
+            ai_busy=False,
+            cancel_event=threading.Event(),
+            stream_text="",
+            stream_user_text="",
+            stream_started=False,
+            structured_intent_mode=False,
+            ollama_status=SimpleNamespace(configure=lambda **_kw: None),
+            ai_history=[],
+            ai_results=app.queue.Queue(),
+            response_lock=threading.Lock(),
+            active_response=None,
+        )
+        with mock.patch.object(app, "stream_ollama_chat_direct", side_effect=_fake_stream):
+            app.AssistantApp.ask_ollama(real_ask_app, "¿Qué día de mi semana tengo más libre para estudiar 2 horas de Matemáticas Discretas?")
+            for _ in range(30):
+                if captured_messages:
+                    break
+                app.time.sleep(0.02)
+        self.assertEqual(len(captured_messages), 1)
+        system_blobs = "\n".join(m["content"] for m in captured_messages[0] if m["role"] == "system")
+        self.assertIn("CONTEXTO REAL DE LA AGENDA LOCAL DEL USUARIO", system_blobs)
+        self.assertIn("Matematicas Discretas", system_blobs)
+        self.assertIn("Laboratorio 3", system_blobs)
+        self.assertNotIn("ClaveUltraSecreta999", system_blobs)
+
+        # 8. Verificar que los diálogos muestran el botón "✏ Editar seleccionado" y "🔍 Revisar empalmes"
+        import inspect
+        for method in (
+            app.AssistantApp.open_classes,
+            app.AssistantApp.open_routines,
+            app.AssistantApp.open_memories,
+            app.AssistantApp.open_calendar_exceptions,
+        ):
+            src = inspect.getsource(method)
+            self.assertIn("✏ Editar seleccionado", src)
+        self.assertIn("🔍 Revisar empalmes", inspect.getsource(app.AssistantApp.open_classes))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
