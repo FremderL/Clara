@@ -937,7 +937,7 @@ END:VCALENDAR\r
         fake_app.apply_chat_intent("diagnóstico", {"intent": "voice_diagnostics"})
         self.assertIn(("open_voice_diagnostics", None), actions_called)
 
-        # 3. Flujo completo de send_chat: bloqueo de clave API y borrador de tarea sin autoguardado
+        # 3. Flujo completo de send_chat: bloqueo de clave API y ejecución directa de tareas, clases, bloques y rutinas
         fake_vt_key = "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0"
         fake_app.chat_input = _FakeEntry(f"mi clave virustotal es {fake_vt_key}")
         app.AssistantApp.send_chat(fake_app)
@@ -945,8 +945,23 @@ END:VCALENDAR\r
 
         fake_app.chat_input = _FakeEntry("me dejaron una tarea de Química entregar práctica mañana a las 16:00")
         app.AssistantApp.send_chat(fake_app)
-        self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0], 0)
-        self.assertTrue(any(kind == "add_task" for kind, _payload in actions_called))
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE done=0").fetchone()[0], 1)
+
+        fake_app.chat_input = _FakeEntry("marca como hecha la tarea entregar práctica")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM tasks WHERE done=1").fetchone()[0], 1)
+
+        fake_app.chat_input = _FakeEntry("agrega mi clase de Cálculo los lunes y miércoles de 08:00 a 10:00 en Aula 4")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM classes WHERE name='Cálculo'").fetchone()[0], 2)
+
+        fake_app.chat_input = _FakeEntry("reserva de 15:00 a 16:00 mañana para estudiar Física")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM plan_blocks").fetchone()[0], 1)
+
+        fake_app.chat_input = _FakeEntry("agrega rutina repasar inglés lunes y miércoles a las 19:00")
+        app.AssistantApp.send_chat(fake_app)
+        self.assertEqual(db.execute("SELECT COUNT(*) FROM routines").fetchone()[0], 1)
 
         # 4. Si Ollama está ocupado (ai_busy=True), enviar un nuevo mensaje cancela la espera previa y responde de inmediato
         fake_app.ai_busy = True

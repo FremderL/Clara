@@ -4,7 +4,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo ======================================================================
-echo  Instalacion manual de paquetes opcionales de voz para CLARA Unificada
+echo  Instalacion manual de paquetes opcionales de voz para CLARA-V
 echo  ^(Descargas automaticas desactivadas por defecto^)
 echo ======================================================================
 echo.
@@ -28,13 +28,13 @@ echo     Version:        ^>=0.4.6
 echo     Tamano aprox.:  ~1.5 MB
 echo     Licencia:       MIT
 echo.
-echo  Nota sobre el modelo de espanol Vosk ^(no se descarga automaticamente aqui^):
+echo  4. Modelo local de espanol para el microfono Vosk:
 echo     Recurso:        vosk-model-small-es-0.42.zip
 echo     Fuente oficial: https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
 echo     Version:        0.42  ^|  Tamano: 39 MB  ^|  Licencia: Apache-2.0
-echo     Extraccion manual en: models\vosk-model-small-es-0.42
+echo     Destino local:  %~dp0models\vosk-model-small-es-0.42
 echo.
-choice /c SN /m "¿Autorizas descargar e instalar desde PyPI oficial (vosk, sounddevice, pyttsx3)?"
+choice /c SN /m "¿Autorizas instalar los paquetes de voz y que este instalador cree la carpeta 'models' e instale vosk-model-small-es-0.42?"
 if errorlevel 2 (
   echo Operacion cancelada por el usuario. No se descargo ni instalo nada.
   pause
@@ -44,13 +44,24 @@ if errorlevel 2 (
 py -3 -m pip install "vosk>=0.3.45" "sounddevice>=0.4.6" "pyttsx3>=2.90"
 if errorlevel 1 (
   echo.
-  echo La instalacion opcional de voz fallo. Clara seguira funcionando por texto.
+  echo La instalacion opcional de paquetes de voz fallo. Clara seguira funcionando por texto.
   pause
   exit /b 1
 )
+
+if exist "%~dp0models\vosk-model-small-es-0.42" (
+  echo.
+  echo [OK] El modelo vosk-model-small-es-0.42 ya existe en models\vosk-model-small-es-0.42.
+) else (
+  echo.
+  echo Creando carpeta 'models' y descargando/extrayendo vosk-model-small-es-0.42 ^(39 MB^)...
+  py -3 -c "import pathlib, urllib.request, zipfile; root = pathlib.Path('models'); root.mkdir(parents=True, exist_ok=True); zpath = root / 'vosk-model-small-es-0.42.zip'; req = urllib.request.Request('https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip', headers={'User-Agent':'CLARA-V/2.0'}); resp = urllib.request.urlopen(req, timeout=120); zpath.write_bytes(resp.read()); resp.close(); zf = zipfile.ZipFile(zpath, 'r'); zf.extractall(root); zf.close(); zpath.unlink(missing_ok=True); print('[OK] Modelo extraido en:', (root / 'vosk-model-small-es-0.42').resolve())"
+  if errorlevel 1 (
+    echo [AVISO] No se pudo completar la descarga del modelo Vosk. Puedes instalarlo tambien desde CLARA-V en Diagnostico de voz.
+  )
+)
+
 echo.
-echo Paquetes de voz instalados. Si deseas dictado Push-to-Talk, descarga manualmente
-echo vosk-model-small-es-0.42.zip desde https://alphacephei.com/vosk/models/ y extraelo en:
-echo   models\vosk-model-small-es-0.42
+echo Listo: voz hablada ^(TTS^) y dictado Push-to-Talk ^(Vosk^) configurados en CLARA-V.
 pause
 exit /b 0
