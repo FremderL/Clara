@@ -1,0 +1,7 @@
+# Empaquetado opcional en Windows para CLARA Unificada
+# La aplicacion funciona directamente con Python 3.10+ (iniciar.bat) sin necesidad de compilar.
+pyinstaller==6.19.0
+pyttsx3==2.99
+winotify==1.1.0
+pystray==0.19.5
+Pillow==12.2.0
